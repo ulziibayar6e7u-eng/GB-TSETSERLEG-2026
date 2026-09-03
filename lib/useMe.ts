@@ -49,7 +49,7 @@ async function loadEmployee(supabase: ReturnType<typeof createClient>, empId: st
     .from('clubs')
     .select('id, name, icon, color')
     .eq('teacher_id', emp.id)
-  const groups = ((gt || []) as {role_in_group: string; groups: {id:number;code:string;name:string;icon:string;color:string}}[]).map((row) => ({
+  const groups = ((gt || []) as unknown as {role_in_group: string; groups: {id:number;code:string;name:string;icon:string;color:string}}[]).map((row) => ({
     ...row.groups,
     role_in_group: row.role_in_group,
   }))

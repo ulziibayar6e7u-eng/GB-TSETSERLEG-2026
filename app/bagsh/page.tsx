@@ -62,7 +62,7 @@ export default function BagshListPage() {
       const plans = (plansRes.data as {id:string; author_id:string|null; status:string; created_at:string}[]) || []
       const obs = (obsRes.data as {id:string; observer_id:string|null; date:string; created_at:string}[]) || []
 
-      const stats: TeacherStats[] = (emps as Employee[] || []).map((emp) => {
+      const stats: TeacherStats[] = ((emps as unknown as Employee[]) || []).map((emp) => {
         const primaryGroupRow = gts.find((g) => g.employee_id === emp.id && g.role_in_group === 'bagsh') ||
                                  gts.find((g) => g.employee_id === emp.id)
         const primaryClub = clubs.find((c) => c.teacher_id === emp.id)

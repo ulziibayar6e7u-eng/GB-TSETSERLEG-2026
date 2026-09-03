@@ -127,7 +127,7 @@ export default function JuuruPage() {
     setSaving(false)
     if (error) { alert('Алдаа: ' + error.message); return }
     setShowRepForm(false)
-    setRepForm({ date: today(), category: 'general', title: '', description: '', file: null, extraLinks: '' })
+    setRepForm({ date: today(), category: 'training', title: '', description: '', file: null, extraLinks: '' })
     load()
   }
   async function removeReport(id: string) {
