@@ -1,0 +1,358 @@
+<meta charset="UTF-8">
+<title>🔬 Хөгжим Өлзий — Судалгааны Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, sans-serif; background: linear-gradient(135deg,#f0f9ff,#faf5ff); color: #1e293b; padding: 24px; min-height: 100vh; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 { color: #7c3aed; margin-bottom: 8px; font-size: 28px; }
+  .subtitle { color: #64748b; margin-bottom: 24px; }
+  .login { background: white; padding: 32px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); max-width: 400px; margin: 100px auto; }
+  input, button { width: 100%; padding: 12px 16px; font-size: 15px; border: 2px solid #e5e7eb; border-radius: 10px; margin-top: 8px; }
+  button { background: linear-gradient(135deg,#be185d,#7c3aed); color: white; border: none; font-weight: 700; cursor: pointer; margin-top: 16px; }
+  .dashboard { display: none; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .stat-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .stat-value { font-size: 36px; font-weight: 800; color: #be185d; }
+  .stat-label { color: #64748b; font-size: 14px; margin-top: 4px; }
+  .stat-icon { font-size: 32px; margin-bottom: 8px; }
+  .section { background: white; padding: 24px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  h2 { color: #7c3aed; margin-bottom: 16px; font-size: 20px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 10px; text-align: left; border-bottom: 1px solid #f3f4f6; }
+  th { background: #faf5ff; font-weight: 700; color: #7c3aed; }
+  .bar { background: #f3f4f6; height: 24px; border-radius: 12px; overflow: hidden; margin: 4px 0; }
+  .bar-fill { background: linear-gradient(90deg,#be185d,#7c3aed); height: 100%; }
+  .config-warn { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
+</style>
+
+<div class="container">
+  <!-- Login хэсэг -->
+  <div id="loginBox" class="login">
+    <h1>🔬 Судалгааны Dashboard</h1>
+    <p class="subtitle">Хөгжим Өлзий систем — статистик харах</p>
+    <input id="urlInput" type="text" placeholder="Supabase URL (жишээ: https://xxxxx.supabase.co)">
+    <input id="keyInput" type="text" placeholder="API Key (sb_publishable_...)">
+    <input id="pw" type="password" placeholder="Нэвтрэх нууц үг" onkeypress="if(event.key==='Enter')login()">
+    <button onclick="login()">Нэвтрэх</button>
+    <p style="font-size:12px;color:#64748b;margin-top:12px;text-align:center">URL/Key нэг удаа оруулбал хадгалагдана</p>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" class="dashboard">
+    <h1>🔬 Судалгааны Dashboard</h1>
+    <p class="subtitle">Бүх багш нарын анонимжуулсан статистик</p>
+
+    <div id="configWarn" class="config-warn" style="display:none">
+      ⚠️ Судалгааны Supabase тохиргоо хийгдээгүй. <code>research.html</code>-ын дээд талд RESEARCH_URL, RESEARCH_KEY-ыг тохируулна уу.
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="section">
+      <h2>🌍 Бүсчлэлээр багш нар</h2>
+      <div id="regionChart"></div>
+    </div>
+
+    <div class="section">
+      <h2>👶 Хүүхдийн насны бүтэц</h2>
+      <div id="ageChart"></div>
+    </div>
+
+    <div class="section">
+      <h2>🎵 Хөгжмийн шалгуурын хэрэгжилт (түвшнээр)</h2>
+      <div id="musicChart"></div>
+    </div>
+
+    <div class="section">
+      <h2>📊 Багшийн жагсаалт (сүүлийн sync)</h2>
+      <div id="teacherTable"></div>
+    </div>
+
+    <div class="section">
+      <h2>❓ Судалгааны асуултууд</h2>
+      <button onclick="showAddQuestion()" style="width:auto;padding:10px 20px;margin-bottom:12px">➕ Шинэ асуулт нэмэх</button>
+      <div id="questionsList"></div>
+    </div>
+
+    <div class="section">
+      <h2>💬 Багшийн хариултууд</h2>
+      <div id="answersView"></div>
+    </div>
+
+    <div class="section">
+      <h2>📜 Сүүлийн sync лог</h2>
+      <div id="syncLog"></div>
+    </div>
+
+    <!-- Асуулт нэмэх modal -->
+    <div id="addQModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;padding:20px;overflow:auto">
+      <div style="max-width:500px;margin:40px auto;background:white;padding:24px;border-radius:16px">
+        <h2>➕ Шинэ асуулт</h2>
+        <label style="display:block;margin-top:12px"><b>Асуултын текст:</b>
+          <textarea id="newQText" style="width:100%;padding:10px;margin-top:4px;border:2px solid #e5e7eb;border-radius:8px;min-height:60px"></textarea>
+        </label>
+        <label style="display:block;margin-top:12px"><b>Төрөл:</b>
+          <select id="newQType" onchange="toggleChoices()" style="width:100%;padding:10px;margin-top:4px;border:2px solid #e5e7eb;border-radius:8px">
+            <option value="text">Текст (чөлөөт бичих)</option>
+            <option value="choice">Сонголт (нэгийг сонгох)</option>
+            <option value="rating">Үнэлгээ (1-5 од)</option>
+            <option value="yesno">Тийм/Үгүй</option>
+          </select>
+        </label>
+        <label id="choicesLabel" style="display:none;margin-top:12px"><b>Сонголтууд (1 мөрөнд 1):</b>
+          <textarea id="newQChoices" style="width:100%;padding:10px;margin-top:4px;border:2px solid #e5e7eb;border-radius:8px;min-height:80px" placeholder="Сонголт 1&#10;Сонголт 2&#10;Сонголт 3"></textarea>
+        </label>
+        <label style="display:block;margin-top:12px"><b>Ангилал:</b>
+          <input id="newQCategory" style="width:100%;padding:10px;margin-top:4px;border:2px solid #e5e7eb;border-radius:8px" placeholder="ерөнхий">
+        </label>
+        <label style="display:flex;gap:8px;margin-top:12px;align-items:center">
+          <input type="checkbox" id="newQRequired"> <b>Заавал хариулах</b>
+        </label>
+        <div style="display:flex;gap:8px;margin-top:20px">
+          <button onclick="closeAddQ()" style="flex:1;background:#e5e7eb;color:#1e293b">Болих</button>
+          <button onclick="saveNewQuestion()" style="flex:2">💾 Хадгалах</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// ТОХИРУУЛГА — ЗААВАЛ өөрчлөх шаардлагатай
+// ═══════════════════════════════════════════════════════════
+let RESEARCH_URL = localStorage.getItem('r_url') || "https://hpjunyxgkdbtblbunane.supabase.co";
+let RESEARCH_KEY = localStorage.getItem('r_key') || "";
+const RESEARCH_PW = "Ulziibayar2026"; // ← Танай нэвтрэх нууц үг
+
+// Хадгалсан утгыг form-т буцаан харуулах
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('urlInput').value = RESEARCH_URL;
+  document.getElementById('keyInput').value = RESEARCH_KEY;
+});
+// ═══════════════════════════════════════════════════════════
+
+let sb = null;
+
+function login() {
+  const url = document.getElementById('urlInput').value.trim().replace(/\/$/,'').replace(/\/rest\/v1\/?$/,'');
+  const key = document.getElementById('keyInput').value.trim();
+  const pw = document.getElementById('pw').value;
+
+  if (pw !== RESEARCH_PW) { alert('Нэвтрэх нууц үг буруу!'); return; }
+  if (!url || !key) { alert('Supabase URL болон API Key оруулна уу'); return; }
+
+  RESEARCH_URL = url;
+  RESEARCH_KEY = key;
+  localStorage.setItem('r_url', url);
+  localStorage.setItem('r_key', key);
+
+  document.getElementById('loginBox').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+
+  sb = supabase.createClient(RESEARCH_URL, RESEARCH_KEY);
+  loadDashboard();
+}
+
+async function loadDashboard() {
+  // Тоолуур
+  const [teachers, children, assessments, music] = await Promise.all([
+    sb.from('research_teachers').select('*', { count: 'exact' }),
+    sb.from('research_children').select('*', { count: 'exact' }),
+    sb.from('research_assessments').select('*', { count: 'exact', head: true }),
+    sb.from('research_music_scores').select('*', { count: 'exact', head: true })
+  ]);
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card"><div class="stat-icon">👩‍🏫</div><div class="stat-value">${teachers.count || 0}</div><div class="stat-label">Нийт багш</div></div>
+    <div class="stat-card"><div class="stat-icon">👶</div><div class="stat-value">${children.count || 0}</div><div class="stat-label">Нийт хүүхэд</div></div>
+    <div class="stat-card"><div class="stat-icon">📝</div><div class="stat-value">${assessments.count || 0}</div><div class="stat-label">Үнэлгээ</div></div>
+    <div class="stat-card"><div class="stat-icon">🎵</div><div class="stat-value">${music.count || 0}</div><div class="stat-label">Хөгжмийн шалгуур</div></div>
+  `;
+
+  // Бүсчлэлээр
+  const regions = {};
+  (teachers.data || []).forEach(t => {
+    regions[t.region || 'Тодорхойгүй'] = (regions[t.region || 'Тодорхойгүй'] || 0) + 1;
+  });
+  const maxRegion = Math.max(...Object.values(regions), 1);
+  document.getElementById('regionChart').innerHTML = Object.entries(regions)
+    .sort((a, b) => b[1] - a[1])
+    .map(([r, c]) => `
+      <div style="margin:8px 0">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span>${r}</span><b>${c}</b>
+        </div>
+        <div class="bar"><div class="bar-fill" style="width:${c/maxRegion*100}%"></div></div>
+      </div>
+    `).join('');
+
+  // Насны бүтэц
+  const ages = {};
+  (children.data || []).forEach(c => {
+    const key = c.age ? `${c.age} нас` : 'Тодорхойгүй';
+    ages[key] = (ages[key] || 0) + 1;
+  });
+  const maxAge = Math.max(...Object.values(ages), 1);
+  document.getElementById('ageChart').innerHTML = Object.entries(ages)
+    .sort()
+    .map(([a, c]) => `
+      <div style="margin:8px 0">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span>${a}</span><b>${c}</b>
+        </div>
+        <div class="bar"><div class="bar-fill" style="width:${c/maxAge*100}%"></div></div>
+      </div>
+    `).join('');
+
+  // Хөгжмийн шалгуурын түвшин
+  const { data: musicByLevel } = await sb.from('research_music_scores').select('level, status').limit(10000);
+  const levels = { 1: { done: 0, total: 0 }, 2: { done: 0, total: 0 }, 3: { done: 0, total: 0 }, 4: { done: 0, total: 0 } };
+  (musicByLevel || []).forEach(m => {
+    if (levels[m.level]) {
+      levels[m.level].total++;
+      if (m.status === 'done' || m.status === 'checked') levels[m.level].done++;
+    }
+  });
+  document.getElementById('musicChart').innerHTML = Object.entries(levels)
+    .map(([lv, s]) => {
+      const pct = s.total > 0 ? Math.round(s.done / s.total * 100) : 0;
+      return `
+        <div style="margin:8px 0">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span>Түвшин ${lv}</span><b>${pct}% (${s.done}/${s.total})</b>
+          </div>
+          <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
+        </div>
+      `;
+    }).join('');
+
+  // Багшийн жагсаалт
+  document.getElementById('teacherTable').innerHTML = `
+    <table>
+      <tr><th>ID</th><th>Бүс</th><th>Хүүхэд</th><th>Сүүлд sync</th></tr>
+      ${(teachers.data || []).map(t => `
+        <tr>
+          <td>${t.teacher_hash.slice(0, 8)}...</td>
+          <td>${t.region || '—'}</td>
+          <td>${t.total_children || 0}</td>
+          <td>${t.last_sync_at ? new Date(t.last_sync_at).toLocaleDateString('mn-MN') : '—'}</td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+
+  // Судалгааны асуултууд
+  loadQuestions();
+  loadAnswers();
+
+  // Sync лог
+  const { data: logs } = await sb.from('research_sync_log').select('*').order('created_at', { ascending: false }).limit(20);
+  document.getElementById('syncLog').innerHTML = `
+    <table>
+      <tr><th>Огноо</th><th>Багш</th><th>Төрөл</th><th>Records</th><th>Статус</th></tr>
+      ${(logs || []).map(l => `
+        <tr>
+          <td>${new Date(l.created_at).toLocaleString('mn-MN')}</td>
+          <td>${l.teacher_hash.slice(0, 8)}...</td>
+          <td>${l.sync_type}</td>
+          <td>${l.records_synced}</td>
+          <td>${l.success ? '✅' : '❌'}</td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+}
+
+async function loadQuestions() {
+  const { data: qs } = await sb.from('research_questions').select('*').order('order_num');
+  document.getElementById('questionsList').innerHTML = `
+    <table>
+      <tr><th>#</th><th>Асуулт</th><th>Төрөл</th><th>Ангилал</th><th>Статус</th><th></th></tr>
+      ${(qs || []).map(q => `
+        <tr>
+          <td>${q.order_num}</td>
+          <td>${q.question_text} ${q.required ? '<span style="color:#dc2626">*</span>' : ''}</td>
+          <td>${q.question_type}</td>
+          <td>${q.category || '—'}</td>
+          <td>${q.active ? '✅' : '⏸️'}</td>
+          <td>
+            <button onclick="toggleActive('${q.id}', ${!q.active})" style="width:auto;padding:6px 10px;background:#e5e7eb;color:#1e293b;margin:0">${q.active ? '⏸️ Зогсоох' : '▶️ Идэвхжүүлэх'}</button>
+            <button onclick="deleteQuestion('${q.id}')" style="width:auto;padding:6px 10px;background:#dc2626;margin:0 0 0 4px">🗑️</button>
+          </td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+}
+
+async function loadAnswers() {
+  const { data: ans } = await sb.from('research_answers')
+    .select('*, research_questions(question_text, question_type)')
+    .order('answered_at', { ascending: false })
+    .limit(50);
+  document.getElementById('answersView').innerHTML = `
+    <table>
+      <tr><th>Огноо</th><th>Багш</th><th>Асуулт</th><th>Хариулт</th></tr>
+      ${(ans || []).map(a => {
+        const val = a.answer_text || a.answer_choice || a.answer_rating || (a.answer_bool === true ? 'Тийм' : a.answer_bool === false ? 'Үгүй' : '');
+        return `<tr>
+          <td>${new Date(a.answered_at).toLocaleDateString('mn-MN')}</td>
+          <td>${a.teacher_hash.slice(0, 8)}...</td>
+          <td>${a.research_questions?.question_text || '—'}</td>
+          <td>${val}</td>
+        </tr>`;
+      }).join('')}
+    </table>
+  `;
+}
+
+function showAddQuestion() {
+  document.getElementById('addQModal').style.display = 'block';
+}
+
+function closeAddQ() {
+  document.getElementById('addQModal').style.display = 'none';
+}
+
+function toggleChoices() {
+  const t = document.getElementById('newQType').value;
+  document.getElementById('choicesLabel').style.display = t === 'choice' ? 'block' : 'none';
+}
+
+async function saveNewQuestion() {
+  const text = document.getElementById('newQText').value.trim();
+  if (!text) { alert('Асуулт бичнэ үү'); return; }
+  const type = document.getElementById('newQType').value;
+  const category = document.getElementById('newQCategory').value.trim() || 'ерөнхий';
+  const required = document.getElementById('newQRequired').checked;
+  const choicesText = document.getElementById('newQChoices').value.trim();
+  const choices = type === 'choice' ? choicesText.split('\n').map(s => s.trim()).filter(Boolean) : [];
+
+  // Дараагийн order_num
+  const { data: last } = await sb.from('research_questions').select('order_num').order('order_num', { ascending: false }).limit(1);
+  const nextOrder = (last?.[0]?.order_num || 0) + 1;
+
+  const { error } = await sb.from('research_questions').insert({
+    question_text: text, question_type: type, choices, category, required, order_num: nextOrder, active: true
+  });
+  if (error) { alert('Алдаа: ' + error.message); return; }
+  closeAddQ();
+  document.getElementById('newQText').value = '';
+  document.getElementById('newQChoices').value = '';
+  loadQuestions();
+}
+
+async function toggleActive(id, val) {
+  await sb.from('research_questions').update({ active: val }).eq('id', id);
+  loadQuestions();
+}
+
+async function deleteQuestion(id) {
+  if (!confirm('Устгах уу? Багшийн хариултууд ч устгана.')) return;
+  await sb.from('research_questions').delete().eq('id', id);
+  loadQuestions();
+  loadAnswers();
+}
+</script>

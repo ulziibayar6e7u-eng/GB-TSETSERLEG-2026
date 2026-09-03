@@ -1,0 +1,786 @@
+<meta charset="UTF-8">
+<title>Жилийн матриц — СӨБ Багш Өлзий</title>
+<script src="config.js" onerror="0"></script>
+<script src="outcomes-data.js" onerror="0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1e293b; padding: 12px; }
+  .header { background: linear-gradient(135deg,#7c3aed,#be185d); color: white; padding: 14px 20px; border-radius: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .header h1 { font-size: 17px; margin: 0; }
+  .header p { opacity: 0.9; font-size: 12px; margin-top: 3px; }
+  .back { background: white; color: #7c3aed; padding: 6px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tabs button { padding: 8px 16px; background: white; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; }
+  .tabs button.active { background: linear-gradient(135deg,#be185d,#7c3aed); color: white; border-color: transparent; }
+  .toolbar { background: white; padding: 10px 14px; border-radius: 10px; margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+  .toolbar button { padding: 8px 14px; border: 2px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; }
+  .toolbar button.primary { background: linear-gradient(135deg,#be185d,#7c3aed); color: white; border-color: transparent; }
+  .toolbar button.success { background: #10b981; color: white; border-color: transparent; }
+  .toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .status { padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 12px; }
+  .status.pending { background: #fef3c7; color: #92400e; }
+  .status.approved { background: #d1fae5; color: #065f46; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; margin-left: auto; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-box { width: 16px; height: 16px; border-radius: 3px; border: 1px solid #cbd5e1; }
+  .matrix-wrap { background: white; border-radius: 10px; overflow: auto; box-shadow: 0 2px 6px rgba(0,0,0,0.04); max-height: 78vh; }
+  table.matrix { border-collapse: collapse; width: 100%; font-size: 12px; }
+  table.matrix th, table.matrix td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: center; }
+  table.matrix thead th { background: #f8fafc; position: sticky; top: 0; z-index: 5; font-weight: 700; }
+  table.matrix thead th.month { background: #ede9fe; color: #7c3aed; font-size: 13px; min-width: 55px; }
+  table.matrix tbody th.subj-col { background: #fef3c7; color: #78350f; font-weight: 700; font-size: 12px; text-align: center; width: 130px; vertical-align: middle; }
+  table.matrix tbody th.syd-col  { background: #f8fafc; text-align: left; font-weight: 600; padding: 8px 10px; min-width: 260px; max-width: 380px; white-space: normal; font-size: 12px; line-height: 1.4; }
+  table.matrix tbody th.syd-col b { color: #7c3aed; }
+  td.month-cell { min-width: 55px; height: 42px; font-size: 11px; line-height: 1.2; }
+  td.new  { background: #86efac; color: #14532d; font-weight: 800; }
+  td.rep  { background: #bfdbfe; color: #1e3a8a; font-weight: 700; }
+  td.link { background: #fde047; color: #713f12; font-weight: 700; }
+  td.new-link  { background: linear-gradient(135deg,#86efac 50%,#fde047 50%); color: #14532d; font-weight: 800; }
+  td.rep-link  { background: linear-gradient(135deg,#bfdbfe 50%,#fde047 50%); color: #1e3a8a; font-weight: 700; }
+  td.empty { background: #fff; }
+  .edit-mode td.month-cell { cursor: pointer; }
+  .edit-mode td.month-cell:hover { outline: 3px solid #7c3aed; outline-offset: -3px; z-index: 3; position: relative; }
+  td.total-cell { background: #f1f5f9; font-weight: 800; color: #1e293b; }
+  tr.summary-row th, tr.summary-row td { font-weight: 700; font-size: 12px; padding: 8px 6px; }
+  tr.summary-row th { background: #f1f5f9; color: #334155; }
+  tr.summary-new td { background: #dcfce7; color: #14532d; }
+  tr.summary-link td { background: #fef9c3; color: #713f12; }
+  tr.summary-rep td { background: #dbeafe; color: #1e3a8a; }
+  tr.summary-total th, tr.summary-total td { background: #64748b !important; color: #fff !important; font-size: 13px; }
+  @media print {
+    body { padding: 0; background: white; }
+    .header, .tabs, .toolbar, .msg, .modal-bg { display: none !important; }
+    .matrix-wrap { max-height: none; box-shadow: none; overflow: visible; }
+    table.matrix { font-size: 10px; }
+    table.matrix thead th { position: static; }
+    table.matrix tbody th.syd-col { position: static; min-width: 200px; max-width: 300px; }
+    @page { size: A4 landscape; margin: 10mm; }
+  }
+  .msg { padding: 10px 14px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; }
+  .msg.info { background: #dbeafe; color: #1e40af; }
+  .msg.success { background: #d1fae5; color: #065f46; }
+  .msg.error { background: #fee2e2; color: #991b1b; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+  .modal-bg.show { display: flex; }
+  .modal { background: white; padding: 20px; border-radius: 12px; max-width: 400px; width: 100%; }
+  .modal h3 { color: #7c3aed; margin-bottom: 12px; }
+  .modal label { display: block; margin: 10px 0 4px; font-weight: 600; font-size: 13px; }
+  .modal select, .modal input { width: 100%; padding: 8px 10px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 13px; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .modal-actions button { flex: 1; padding: 10px; border-radius: 8px; border: 2px solid #e5e7eb; background: white; cursor: pointer; font-weight: 600; }
+  .modal-actions .save { background: linear-gradient(135deg,#be185d,#7c3aed); color: white; border-color: transparent; }
+</style>
+
+<div class="header">
+  <div>
+    <h1>📊 Жилийн интеграцчилсэн матриц</h1>
+    <p>Бүх судлагдахуун · Уялдаатай төлөвлөгөө · 9 сар</p>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button onclick="document.getElementById('ymHelp').classList.add('open')" style="background:white;color:#7c3aed;padding:6px 14px;border-radius:8px;font-weight:600;font-size:13px;border:none;cursor:pointer">❓ Заавар</button>
+    <a href="javascript:history.length>1?history.back():location.href='index.html'" class="back">← Буцах</a>
+  </div>
+</div>
+
+<style>
+  .ym-help { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:200; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
+  .ym-help.open { display:flex; }
+  .ym-help-box { background:white; border-radius:14px; max-width:640px; width:100%; padding:24px 28px; box-shadow:0 10px 40px rgba(0,0,0,.25); max-height:90vh; overflow-y:auto; }
+  .ym-help-box h2 { color:#7c3aed; margin-bottom:14px; padding-bottom:10px; border-bottom:2px solid #f3f4f6; display:flex; justify-content:space-between; align-items:center; }
+  .ym-help-box h2 .x { background:none; border:none; font-size:1.6em; cursor:pointer; color:#94a3b8; }
+  .ym-help-box .card2 { padding:12px 14px; background:#f0fdf4; border-left:4px solid #10b981; border-radius:8px; margin:10px 0; font-size:13px; }
+  .ym-help-box .card2 b { color:#065f46; }
+  .ym-help-box .row { display:flex; gap:10px; margin:8px 0; align-items:center; font-size:13px; }
+  .ym-help-box .box { width:22px; height:22px; border:1px solid #cbd5e1; border-radius:3px; flex-shrink:0; }
+  .ym-help-box button.ok { background:linear-gradient(135deg,#be185d,#7c3aed); color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer; margin-top:12px; }
+</style>
+
+<div class="ym-help" id="ymHelp" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="ym-help-box">
+    <h2>📊 Жилийн матриц — Заавар <button class="x" onclick="document.getElementById('ymHelp').classList.remove('open')">×</button></h2>
+    <p style="color:#64748b;font-size:13px;margin-bottom:10px">7 судлагдахууны бүх СҮД-ийг жилийн турш хэрхэн тархаасныг харуулах, npfiles шиг харагдац.</p>
+
+    <div class="card2">
+      <b>🎯 Автомат үүсгэлт:</b> Бүх СҮД <b>9-4 сарын хооронд тэгш хуваарилагдана</b>. <b>5-р сар</b> — зөвхөн давталтаар бататгана.
+    </div>
+
+    <div class="card2">
+      <b>🎨 Өнгөт тэмдэглэгээ:</b>
+      <div class="row"><span class="box" style="background:#86efac"></span>🟢 Ногоон — Шинэ мэдлэг</div>
+      <div class="row"><span class="box" style="background:#bfdbfe"></span>🔵 Цэнхэр — Давталт</div>
+      <div class="row"><span class="box" style="background:#fde047"></span>🟡 Шар — Уялдах СҮД (код харагдана)</div>
+      <div class="row"><span class="box" style="background:#fff"></span>⚪ Хоосон — Тухайн сард орохгүй</div>
+    </div>
+
+    <div class="card2">
+      <b>✏️ Багш засах:</b> «Багш засах» товч дараад нүд бүр дээр товшин 4 долоо хоногийн төрлийг сонго. Дараа нь <b>💾 Хадгалах</b> дар.
+    </div>
+
+    <div class="card2">
+      <b>📥 Word татах / 🖨️ Хэвлэх:</b> A4 landscape 1 хуудсанд багтана. Арга зүйчид өгөх боломжтой.
+    </div>
+
+    <div class="card2">
+      <b>📊 Доод үзүүлэлт:</b> Сар тус бүрд хэдэн шинэ СҮД, хэдэн уялдаа, хэдэн давталт орсныг нэгтгэн тоолж харуулна.
+    </div>
+
+    <div style="text-align:right"><button class="ok" onclick="document.getElementById('ymHelp').classList.remove('open')">Ойлголоо</button></div>
+  </div>
+</div>
+
+<div class="tabs" id="tabs"></div>
+
+<div class="toolbar">
+  <button id="editBtn" onclick="toggleEdit()">✏️ Багш засах</button>
+  <button id="saveBtn" class="primary" onclick="save()" disabled>💾 Системд хадгалах</button>
+  <button onclick="downloadWord()">📥 Word татах</button>
+  <button onclick="window.print()">🖨️ Хэвлэх</button>
+  <span id="statusBadge" class="status pending">⏳ Батлаагүй</span>
+  <button id="approveBtn" class="success" onclick="approve()">✅ Арга зүйч батлах</button>
+  <div class="legend">
+    <div class="legend-item"><span class="legend-box" style="background:#86efac"></span>🟢 Шинэ мэдлэг</div>
+    <div class="legend-item"><span class="legend-box" style="background:#bfdbfe"></span>🔵 Давталт</div>
+    <div class="legend-item"><span class="legend-box" style="background:#fde047"></span>🟡 Уялдаа</div>
+    <div class="legend-item"><span class="legend-box" style="background:#fff;border:1px dashed #cbd5e1"></span>⚪ Хоосон</div>
+  </div>
+</div>
+
+<div id="msg"></div>
+<div class="matrix-wrap"><table class="matrix" id="matrix"></table></div>
+
+<!-- Cell editor modal -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3>Нүд засах</h3>
+    <div id="modalInfo" style="font-size:13px;color:#64748b;margin-bottom:8px"></div>
+    <label>Төрөл:</label>
+    <select id="cellType">
+      <option value="empty">⚪ Хоосон</option>
+      <option value="new">🟢 Шинэ СҮД</option>
+      <option value="rep">🔵 Давталт</option>
+    </select>
+    <label>Уялдах СҮД (сонголт):</label>
+    <select id="cellLink"><option value="">— Үгүй —</option></select>
+    <div class="modal-actions">
+      <button onclick="closeModal()">Болих</button>
+      <button class="save" onclick="saveCell()">💾 Хадгалах</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════ SUPABASE ═══════
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_KEY = window.SUPABASE_KEY || "";
+let sb = null;
+if (SUPABASE_URL && SUPABASE_KEY && window.supabase) {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+
+// ═══════ ӨГӨГДӨЛ ═══════
+const SUBJECTS_LIST = [
+  {id:"hel_yaria", name:"🗣️ Хэл яриа"},
+  {id:"matematik", name:"🔢 Математик"},
+  {id:"bno",       name:"🌍 БНО"},
+  {id:"niigem",    name:"🤝 Нийгэмшихүй"},
+  {id:"urlag",     name:"🎨 Урлаг, зураг"},
+  {id:"hodolgoon", name:"🤸 Хөдөлгөөн"},
+  {id:"aa_uhaan",  name:"🚦 Аюулгүй ухаан"}
+];
+
+const OUTCOMES_BAGA = {
+  hel_yaria: [
+    {code:"ХЯ1.1а",text:"Бусдын яриаг сонсоод үг, үйлдлээр илэрхийлнэ"},
+    {code:"ХЯ1.1б",text:"Ярианд хэлсэн үгийг сонсож, давтан хэлнэ"},
+    {code:"ХЯ1.2а",text:"Харилцан яриаг ажиглан үг, өгүүлбэрийг дуурайна"},
+    {code:"ХЯ1.2б",text:"Ярилцах явцдаа асуулт асуух оролдлого хийнэ"},
+    {code:"ХЯ1.2в",text:"Танил эд юмсыг нэрлэнэ"},
+    {code:"ХЯ1.2г",text:"Хүсэл, хэрэгцээгээ үгээр илэрхийлнэ"},
+    {code:"ХЯ1.2д",text:"Энгийн өгүүлбэрийг давтан хэлнэ"},
+    {code:"ХЯ1.3а",text:"Номыг сонирхож үзнэ"},
+    {code:"ХЯ1.3б",text:"Зурган тэмдэг тэмдэглэгээг таньж заана"},
+    {code:"ХЯ1.3в",text:"Харандаа барьж, цаасан дээр мөр гаргана"}
+  ],
+  matematik: [
+    {code:"МАТ1.1а",text:"1-3 хүртэлх тоог таньж нэрлэнэ"},
+    {code:"МАТ1.1б",text:"Тоо болон юмсыг нэг-нэгээр тохируулна"},
+    {code:"МАТ1.2а",text:"Дугуй, дөрвөлжин, гурвалжин хэлбэрийг ялгана"},
+    {code:"МАТ1.2б",text:"Улаан, шар, хөх үндсэн өнгийг нэрлэнэ"},
+    {code:"МАТ1.3а",text:"Том/жижиг, урт/богиныг ялгана"},
+    {code:"МАТ1.3б",text:"Байрлал (дээр/доор/дунд) ойлгоно"}
+  ],
+  bno: [
+    {code:"БНО1.1а",text:"Ойр орчны амьтдыг нэрлэнэ"},
+    {code:"БНО1.1б",text:"Ойр орчны ургамлыг таньна"},
+    {code:"БНО1.2а",text:"Улирлыг ажигладаг"},
+    {code:"БНО1.2в",text:"Багшийн зааврыг биелүүлнэ"}
+  ],
+  niigem: [
+    {code:"НСХ1.1а",text:"Өөрийн нэр, гэр бүлээ хэлнэ"},
+    {code:"НСХ1.1б",text:"Мэндлэх, баярлалаа гэх дадалтай"},
+    {code:"НСХ1.2а",text:"Найз нартайгаа хамтран тоглоно"},
+    {code:"НСХ1.2б",text:"Сэтгэл хөдлөл (баяр, гуниг) ялгана"}
+  ],
+  urlag: [
+    {code:"УЗ1.1а",text:"Харандаа, бийрээр эмх замбараагүй зурна"},
+    {code:"УЗ1.1б",text:"3 үндсэн өнгөөр зурна"},
+    {code:"УЗ1.2а",text:"Цаас урж, наана"},
+    {code:"УЗ1.3а",text:"Шавраар бөмбөлөг, урт хиам хийнэ"}
+  ],
+  hodolgoon: [
+    {code:"ХЭМ1.1а",text:"Гарын сарвууг атгах, тэнийлгэх"},
+    {code:"ХЭМ1.1б",text:"Алхах, гүйх, зогсох, эргэх"},
+    {code:"ХЭМ1.2а",text:"2 хөл дээр газраас үсэрнэ"},
+    {code:"ХЭМ1.2б",text:"Бөмбөг өнхрүүлэх, шидэх"}
+  ],
+  aa_uhaan: [
+    {code:"ААУ1.1а",text:"Халуун, хурц, өндөр зүйлээс сэрэмжлэнэ"},
+    {code:"ААУ1.2а",text:"Ээж, аав, багшийн туслалцаа гуйна"}
+  ]
+};
+
+const GROUP_META = [
+  {id:"baga",    name:"🧸 Бага (2-3)"},
+  {id:"dund",    name:"🧒 Дунд (3-4)"},
+  {id:"ahlah",   name:"👦 Ахлах (4-5)"},
+  {id:"beltgel", name:"🎒 Бэлтгэл (5-6)"}
+];
+
+// Бүх бүлгийн СҮД: OUTCOMES_REAL байвал ашиглана, үгүй бол Бага-с үүсгэнэ
+const OUTCOMES = {};
+GROUP_META.forEach((gm, i) => {
+  if (window.OUTCOMES_REAL && window.OUTCOMES_REAL[gm.id]) {
+    OUTCOMES[gm.id] = window.OUTCOMES_REAL[gm.id];
+  } else if (gm.id === 'baga') {
+    OUTCOMES[gm.id] = OUTCOMES_BAGA;
+  } else {
+    const lvl = i + 1;
+    const out = {};
+    Object.keys(OUTCOMES_BAGA).forEach(sid => {
+      out[sid] = OUTCOMES_BAGA[sid].map(o => ({
+        code: o.code.replace(/([А-ЯӨҮ]+)1\./, `$1${lvl}.`),
+        text: o.text
+      }));
+    });
+    OUTCOMES[gm.id] = out;
+  }
+});
+
+const MONTHS = [
+  {num:9,name:"IX"},{num:10,name:"X"},{num:11,name:"XI"},{num:12,name:"XII"},
+  {num:1,name:"I"},{num:2,name:"II"},{num:3,name:"III"},{num:4,name:"IV"},{num:5,name:"V"}
+];
+
+// ═══════ АВТОМАТ ТӨЛӨВЛӨГӨӨ ҮҮСГЭХ ═══════
+// Дүрэм:
+//   • 9-4 сар (32 долоо хоног): бүх СҮД-ийг тэгш хуваарилан ШИНЭ мэдлэг болгож оруулна
+//   • 5 сар (4 долоо хоног): жилийн турш үзсэн СҮД-үүдийг ДАВТАЖ БАТАТГАНА
+function buildYearlyPlan(outcomes) {
+  const subjectIds = Object.keys(outcomes);
+  const totalWeeks = 36;
+  const introWeeks = 32;  // 9-4 сар = 8 сар × 4 долоо хоног
+  const plan = {};
+  const monthMap = [9,10,11,12,1,2,3,4,5];
+
+  const schedules = {};
+  subjectIds.forEach(sid => {
+    const codes = outcomes[sid].map(o => o.code);
+    if (!codes.length) return;
+    const sched = new Array(totalWeeks).fill(null);
+
+    // 1. Бүх ШИНЭ СҮД-ийг 9-4 сар (0..31 долоо хоног) хооронд тэгш хуваарилна
+    codes.forEach((code, i) => {
+      // Тэгш тархалт: week = floor(i * introWeeks / codes.length)
+      let week = Math.floor(i * introWeeks / codes.length);
+      // Хэрэв нүд аль хэдийн эзлэгдсэн бол дараагийн хоосонг олох
+      while (week < introWeeks && sched[week] !== null) week++;
+      if (week < introWeeks) sched[week] = { code, isNew: true };
+    });
+
+    // 2. 5-р сар (32..35 долоо хоног) = зөвхөн давталт
+    // Долоо хоног бүрт СҮД-ийг ээлжлэн буулгана
+    for (let w = introWeeks; w < totalWeeks; w++) {
+      const idx = (w - introWeeks) % codes.length;
+      sched[w] = { code: codes[idx], isNew: false };
+    }
+
+    schedules[sid] = sched;
+  });
+
+  // 3. Долоо хоногт нэгтгэн, уялдах СҮД-ийг зохицуулна
+  for (let w = 0; w < totalWeeks; w++) {
+    const month = monthMap[Math.floor(w/4)];
+    const weekInMonth = (w % 4) + 1;
+    const key = `${month}-${weekInMonth}`;
+    const weekPlan = { new: {}, rep: {}, links: {} };
+    const newCodes = [];
+    subjectIds.forEach(sid => {
+      const s = schedules[sid]; if (!s) return;
+      const cell = s[w];
+      if (!cell) return;
+      if (cell.isNew) { weekPlan.new[sid] = cell.code; newCodes.push(cell.code); }
+      else weekPlan.rep[sid] = cell.code;
+    });
+    // Уялдаа: тухайн долоо хоногт орсон бүх СҮД өөр судлагдахууны ШИНЭ СҮД-тэй холбогдоно
+    Object.entries({...weekPlan.new, ...weekPlan.rep}).forEach(([sid, code], i) => {
+      const others = newCodes.filter(c => c !== code);
+      if (others.length > 0) weekPlan.links[code] = others[i % others.length];
+    });
+    plan[key] = weekPlan;
+  }
+  return plan;
+}
+
+// ═══════ ГЛОБАЛ ТӨЛӨВ ═══════
+const YEARLY_PLAN = {};
+Object.keys(OUTCOMES).forEach(g => YEARLY_PLAN[g] = buildYearlyPlan(OUTCOMES[g]));
+
+let currentGroup = "baga";
+let editMode = false;
+let hasChanges = false;
+let approvals = {}; // {group: {approved_at, approved_by}}
+let editingCell = null; // {group, code, subjectId, weekKey}
+
+// ═══════ ЭХЛЭЛ ═══════
+async function init() {
+  renderTabs();
+  await loadFromDB();
+  render();
+}
+
+function renderTabs() {
+  document.getElementById('tabs').innerHTML = GROUP_META.map(g =>
+    `<button class="${g.id===currentGroup?'active':''}" onclick="switchGroup('${g.id}')">${g.name}</button>`
+  ).join('');
+}
+
+function switchGroup(g) {
+  if (hasChanges && !confirm('Хадгалаагүй өөрчлөлт байна. Үргэлжлүүлэх үү?')) return;
+  currentGroup = g;
+  hasChanges = false;
+  document.getElementById('saveBtn').disabled = true;
+  renderTabs();
+  render();
+}
+
+function toggleEdit() {
+  editMode = !editMode;
+  document.getElementById('editBtn').textContent = editMode ? '✅ Дуусгах' : '✏️ Багш засах';
+  document.getElementById('editBtn').style.background = editMode ? '#10b981' : '';
+  document.getElementById('editBtn').style.color = editMode ? 'white' : '';
+  render();
+}
+
+// Сарын аль долоо хоногт СҮД орсныг нэгтгэн буцаана
+// Буцах: { status: 'new'|'rep'|'empty', weeks: [1,3], links: ['НСХ4.1а', ...] }
+function aggregateMonth(plan, subjectId, code, monthNum) {
+  const info = { status: 'empty', weeks: [], links: [] };
+  for (let w = 1; w <= 4; w++) {
+    const cell = plan[`${monthNum}-${w}`] || {new:{},rep:{},links:{}};
+    if (cell.new[subjectId] === code) {
+      info.status = 'new';
+      info.weeks.push(w);
+      if (cell.links[code]) info.links.push(cell.links[code]);
+    } else if (cell.rep[subjectId] === code && info.status !== 'new') {
+      info.status = 'rep';
+      info.weeks.push(w);
+      if (cell.links[code]) info.links.push(cell.links[code]);
+    }
+  }
+  return info;
+}
+
+function render() {
+  const g = currentGroup;
+  const outcomes = OUTCOMES[g];
+  const plan = YEARLY_PLAN[g];
+
+  // Approval status
+  const ap = approvals[g];
+  const badge = document.getElementById('statusBadge');
+  if (ap && ap.approved_at) {
+    badge.className = 'status approved';
+    badge.textContent = `✅ Батласан: ${ap.approved_by||'арга зүйч'} · ${new Date(ap.approved_at).toLocaleDateString('mn-MN')}`;
+    document.getElementById('approveBtn').style.display = 'none';
+  } else {
+    badge.className = 'status pending';
+    badge.textContent = '⏳ Батлаагүй';
+    document.getElementById('approveBtn').style.display = '';
+  }
+
+  // Header: Сургалтын чиглэл | СҮД | 9 | 10 | ... | 5 | Нийт
+  let html = '<thead><tr><th>Сургалтын чиглэл</th><th>Суралцахуйн үр дүн (СҮД)</th>';
+  MONTHS.forEach(m => html += `<th class="month">${m.num}</th>`);
+  html += '<th class="month" style="background:#f1f5f9;color:#334155">Нийт</th>';
+  html += '</tr></thead><tbody>';
+
+  // Сар бүрийн тоог хураах — Шинэ, Уялдаа, Давталт
+  const totals = {}; // {monthNum: {new:0, link:0, rep:0}}
+  MONTHS.forEach(m => totals[m.num] = { new: 0, link: 0, rep: 0 });
+
+  SUBJECTS_LIST.forEach(subj => {
+    const list = outcomes[subj.id] || [];
+    if (!list.length) return;
+    list.forEach((o, idx) => {
+      html += '<tr>';
+      // Сургалтын чиглэлийн нүд — эхний СҮД дээр rowspan-тай
+      if (idx === 0) {
+        html += `<th class="subj-col" rowspan="${list.length}">${subj.name}</th>`;
+      }
+      // СҮД мөр (код + текст)
+      html += `<th class="syd-col"><b>${o.code}</b> ${o.text}</th>`;
+      // 9 сарын нүд + тухайн мөрийн нийт (шинэ+давт орсон сарын тоо)
+      let rowTotal = 0;
+      MONTHS.forEach(m => {
+        const info = aggregateMonth(plan, subj.id, o.code, m.num);
+        let cls = 'month-cell ' + info.status;
+        let label = '';
+        if (info.status === 'new') {
+          cls = 'month-cell ' + (info.links.length ? 'new-link' : 'new');
+          label = info.links.length ? info.links[0] : `●`;
+          totals[m.num].new++;
+          if (info.links.length) totals[m.num].link++;
+          rowTotal++;
+        } else if (info.status === 'rep') {
+          cls = 'month-cell ' + (info.links.length ? 'rep-link' : 'rep');
+          label = info.links.length ? info.links[0] : `↻`;
+          totals[m.num].rep++;
+          if (info.links.length) totals[m.num].link++;
+          rowTotal++;
+        } else {
+          cls = 'month-cell empty';
+        }
+        const wksTitle = info.weeks.length ? ` · ${info.weeks.join(',')}-р 7хоног` : '';
+        const onclick = editMode ? `onclick="editMonthCell('${subj.id}','${o.code}',${m.num})"` : '';
+        html += `<td class="${cls}" ${onclick} title="${o.code} · ${m.num}-р сар${wksTitle}">${label}</td>`;
+      });
+      html += `<td class="total-cell">${rowTotal || ''}</td>`;
+      html += '</tr>';
+    });
+  });
+
+  // ═══════ ДОДОР: Нэгтгэсэн үзүүлэлтүүд ═══════
+  // 1) Шинэ СҮД
+  const totalNew = MONTHS.reduce((s,m) => s + totals[m.num].new, 0);
+  html += `<tr class="summary-row summary-new">
+    <th colspan="2" style="text-align:right">🟢 Шинэ СҮД (сар тус бүр)</th>
+    ${MONTHS.map(m => `<td>${totals[m.num].new || ''}</td>`).join('')}
+    <td class="total-cell" style="background:#86efac">${totalNew}</td>
+  </tr>`;
+
+  // 2) Уялдаа
+  const totalLink = MONTHS.reduce((s,m) => s + totals[m.num].link, 0);
+  html += `<tr class="summary-row summary-link">
+    <th colspan="2" style="text-align:right">🟡 Уялдаа (сар тус бүр)</th>
+    ${MONTHS.map(m => `<td>${totals[m.num].link || ''}</td>`).join('')}
+    <td class="total-cell" style="background:#fde047">${totalLink}</td>
+  </tr>`;
+
+  // 3) Давталт
+  const totalRep = MONTHS.reduce((s,m) => s + totals[m.num].rep, 0);
+  html += `<tr class="summary-row summary-rep">
+    <th colspan="2" style="text-align:right">🔵 Давталт (сар тус бүр)</th>
+    ${MONTHS.map(m => `<td>${totals[m.num].rep || ''}</td>`).join('')}
+    <td class="total-cell" style="background:#bfdbfe">${totalRep}</td>
+  </tr>`;
+
+  // 4) Нийт
+  const grandTotal = totalNew + totalRep;
+  html += `<tr class="summary-row summary-total">
+    <th colspan="2" style="text-align:right">НИЙТ ҮЗҮҮЛЭЛТ</th>
+    ${MONTHS.map(m => `<td>${(totals[m.num].new + totals[m.num].rep) || ''}</td>`).join('')}
+    <td class="total-cell">${grandTotal}</td>
+  </tr>`;
+
+  html += '</tbody>';
+  const tbl = document.getElementById('matrix');
+  tbl.innerHTML = html;
+  tbl.className = 'matrix' + (editMode ? ' edit-mode' : '');
+}
+
+// ═══════ ЗАСВАРЛАХ (сарын нүд) ═══════
+// Багш сарын нүд дээр товшсоны дараа: тухайн сарын аль долоо хоногт ямар төрлөөр
+// оруулахыг сонгоно (нэг сард 4 долоо хоног)
+function editMonthCell(subjectId, code, monthNum) {
+  const plan = YEARLY_PLAN[currentGroup];
+  editingCell = { subjectId, code, monthNum };
+
+  document.getElementById('modalInfo').innerHTML =
+    `<b>${code}</b> · ${monthNum}-р сар<br>` +
+    `<span style="font-size:11px;color:#94a3b8">Долоо хоног болгонд төрлөө сонго. Уялдах СҮД нь сарын турш ижил.</span>`;
+
+  // Долоо хоногийн мөрүүд
+  const wksHtml = [1,2,3,4].map(w => {
+    const cell = plan[`${monthNum}-${w}`] || {new:{},rep:{},links:{}};
+    const type = cell.new[subjectId] === code ? 'new' : cell.rep[subjectId] === code ? 'rep' : 'empty';
+    return `
+      <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
+        <span style="min-width:70px;font-weight:600;font-size:12px">${w}-р 7хоног:</span>
+        <select data-week="${w}" style="flex:1;padding:6px 8px;border:2px solid #e5e7eb;border-radius:6px;font-size:12px">
+          <option value="empty" ${type==='empty'?'selected':''}>⚪ Хоосон</option>
+          <option value="new"   ${type==='new'?'selected':''}>🟢 Шинэ</option>
+          <option value="rep"   ${type==='rep'?'selected':''}>🔵 Давталт</option>
+        </select>
+      </div>`;
+  }).join('');
+
+  // Одоогийн уялдах СҮД (аль нэг долоо хоногт бий бол)
+  let currentLink = '';
+  for (let w = 1; w <= 4; w++) {
+    const c = plan[`${monthNum}-${w}`];
+    if (c && c.links && c.links[code]) { currentLink = c.links[code]; break; }
+  }
+
+  // Modal засаж форматлана
+  const modalBody = document.querySelector('#modalBg .modal');
+  modalBody.innerHTML = `
+    <h3>Нүд засах</h3>
+    <div id="modalInfo" style="font-size:13px;color:#64748b;margin-bottom:12px">
+      <b>${code}</b> · ${monthNum}-р сар<br>
+      <span style="font-size:11px;color:#94a3b8">Долоо хоног болгонд төрлөө сонго. Уялдах СҮД нь сарын турш ижил.</span>
+    </div>
+    <div id="weekSelectors">${wksHtml}</div>
+    <label style="display:block;margin:12px 0 4px;font-weight:600;font-size:13px">Уялдах СҮД (сонголт):</label>
+    <select id="cellLink" style="width:100%;padding:8px 10px;border:2px solid #e5e7eb;border-radius:6px;font-size:13px">
+      <option value="">— Үгүй —</option>
+    </select>
+    <div class="modal-actions">
+      <button onclick="closeModal()">Болих</button>
+      <button class="save" onclick="saveMonthCell()">💾 Хадгалах</button>
+    </div>`;
+
+  const linkSel = document.getElementById('cellLink');
+  Object.entries(OUTCOMES[currentGroup]).forEach(([sid, list]) => {
+    if (sid === subjectId) return;
+    list.forEach(o => {
+      linkSel.innerHTML += `<option value="${o.code}" ${o.code===currentLink?'selected':''}>${o.code} — ${o.text.substr(0,30)}</option>`;
+    });
+  });
+
+  document.getElementById('modalBg').classList.add('show');
+}
+
+function saveMonthCell() {
+  if (!editingCell) return;
+  const { subjectId, code, monthNum } = editingCell;
+  const link = document.getElementById('cellLink').value;
+  const plan = YEARLY_PLAN[currentGroup];
+
+  document.querySelectorAll('#weekSelectors select').forEach(sel => {
+    const w = sel.dataset.week;
+    const type = sel.value;
+    const key = `${monthNum}-${w}`;
+    if (!plan[key]) plan[key] = { new:{}, rep:{}, links:{} };
+    delete plan[key].new[subjectId];
+    delete plan[key].rep[subjectId];
+    if (type === 'new') plan[key].new[subjectId] = code;
+    else if (type === 'rep') plan[key].rep[subjectId] = code;
+    if (type !== 'empty' && link) plan[key].links[code] = link;
+    else delete plan[key].links[code];
+  });
+
+  hasChanges = true;
+  document.getElementById('saveBtn').disabled = false;
+  closeModal();
+  render();
+}
+
+// Хуучин функц (weekly-plan-ээс ирэх ирж болзошгүй) хадгалагдана
+function editCell(subjectId, code, weekKey) {
+  const plan = YEARLY_PLAN[currentGroup][weekKey];
+  const currentType = plan.new[subjectId] === code ? 'new' : plan.rep[subjectId] === code ? 'rep' : 'empty';
+  const currentLink = plan.links[code] || '';
+
+  editingCell = { subjectId, code, weekKey };
+  document.getElementById('modalInfo').textContent = `${code} · ${weekKey.replace('-','/')} долоо хоног`;
+  document.getElementById('cellType').value = currentType;
+
+  const linkSel = document.getElementById('cellLink');
+  linkSel.innerHTML = '<option value="">— Үгүй —</option>';
+  Object.entries(OUTCOMES[currentGroup]).forEach(([sid, list]) => {
+    if (sid === subjectId) return;
+    list.forEach(o => {
+      linkSel.innerHTML += `<option value="${o.code}" ${o.code===currentLink?'selected':''}>${o.code} — ${o.text.substr(0,30)}</option>`;
+    });
+  });
+
+  document.getElementById('modalBg').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modalBg').classList.remove('show');
+  editingCell = null;
+}
+
+function saveCell() {
+  if (!editingCell) return;
+  const {subjectId, code, weekKey} = editingCell;
+  const type = document.getElementById('cellType').value;
+  const link = document.getElementById('cellLink').value;
+  const plan = YEARLY_PLAN[currentGroup][weekKey];
+  // Clear all previous entries for this subject in this cell
+  delete plan.new[subjectId]; delete plan.rep[subjectId];
+  if (type === 'new') plan.new[subjectId] = code;
+  else if (type === 'rep') plan.rep[subjectId] = code;
+  if (type !== 'empty') {
+    if (link) plan.links[code] = link;
+    else delete plan.links[code];
+  } else {
+    delete plan.links[code];
+  }
+  hasChanges = true;
+  document.getElementById('saveBtn').disabled = false;
+  closeModal();
+  render();
+}
+
+// ═══════ SUPABASE ХАДГАЛАХ/АЧААЛАХ ═══════
+async function loadFromDB() {
+  if (!sb) return;
+  try {
+    const { data } = await sb.from('plans')
+      .select('*')
+      .eq('tab','yearly_matrix')
+      .in('group_id', GROUP_META.map(g=>g.id));
+    (data||[]).forEach(row => {
+      try {
+        const content = JSON.parse(row.content || '{}');
+        if (content.plan) YEARLY_PLAN[row.group_id] = content.plan;
+        if (row.approved_at) approvals[row.group_id] = {approved_at: row.approved_at, approved_by: row.approved_by};
+      } catch(e) {}
+    });
+  } catch(e) { console.warn('Load failed:', e); }
+}
+
+async function save() {
+  if (!sb) { showMsg('error', 'Supabase холбогдоогүй байна'); return; }
+  const g = currentGroup;
+  try {
+    const content = JSON.stringify({ plan: YEARLY_PLAN[g] });
+    const { data: existing } = await sb.from('plans')
+      .select('id').eq('tab','yearly_matrix').eq('group_id',g).limit(1);
+    if (existing && existing.length) {
+      await sb.from('plans').update({content, title:`Жилийн матриц — ${g}`}).eq('id', existing[0].id);
+    } else {
+      await sb.from('plans').insert({group_id:g, tab:'yearly_matrix', title:`Жилийн матриц — ${g}`, content});
+    }
+    hasChanges = false;
+    document.getElementById('saveBtn').disabled = true;
+    showMsg('success', '✅ Хадгалагдлаа');
+  } catch(e) {
+    showMsg('error', 'Алдаа: ' + e.message);
+  }
+}
+
+async function approve() {
+  const name = prompt('Батлаж буй арга зүйчийн нэр:');
+  if (!name) return;
+  const g = currentGroup;
+  const now = new Date().toISOString();
+  approvals[g] = {approved_at: now, approved_by: name};
+  if (sb) {
+    try {
+      const { data: existing } = await sb.from('plans')
+        .select('id').eq('tab','yearly_matrix').eq('group_id',g).limit(1);
+      if (existing && existing.length) {
+        await sb.from('plans').update({approved_at: now, approved_by: name}).eq('id', existing[0].id);
+      } else {
+        await sb.from('plans').insert({group_id:g, tab:'yearly_matrix', title:`Жилийн матриц — ${g}`, content: JSON.stringify({plan: YEARLY_PLAN[g]}), approved_at: now, approved_by: name});
+      }
+      showMsg('success', '✅ Батласан');
+    } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+  }
+  render();
+}
+
+function showMsg(type, text) {
+  const el = document.getElementById('msg');
+  el.innerHTML = `<div class="msg ${type}">${text}</div>`;
+  setTimeout(() => el.innerHTML = '', 4000);
+}
+
+function downloadWord() {
+  const g = currentGroup;
+  const gname = GROUP_META.find(x=>x.id===g).name;
+  const ap = approvals[g];
+  const approveLine = (ap && ap.approved_at)
+    ? `БАТЛАВ: АРГА ЗҮЙЧ ${ap.approved_by} · ${new Date(ap.approved_at).toLocaleDateString('mn-MN')}`
+    : 'БАТЛАВ: АРГА ЗҮЙЧ ______________________ · 20___ оны ____ сарын ____ өдөр';
+
+  // Хүснэгтийн HTML-ыг гараар зөв бүтээх
+  const outcomes = OUTCOMES[g];
+  const plan = YEARLY_PLAN[g];
+  const escape = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  let table = `<table style="border-collapse:collapse;width:100%;font-family:Arial;font-size:9pt">
+    <thead><tr style="background:#ede9fe">
+      <th style="border:1px solid #999;padding:5px 6px;color:#7c3aed;width:110px">Сургалтын чиглэл</th>
+      <th style="border:1px solid #999;padding:5px 6px;color:#7c3aed">Суралцахуйн үр дүн (СҮД)</th>
+      ${MONTHS.map(m => `<th style="border:1px solid #999;padding:5px 6px;color:#7c3aed;width:44px">${m.num}</th>`).join('')}
+    </tr></thead>
+    <tbody>`;
+
+  SUBJECTS_LIST.forEach(subj => {
+    const list = outcomes[subj.id] || [];
+    if (!list.length) return;
+    list.forEach((o, idx) => {
+      table += '<tr>';
+      if (idx === 0) {
+        table += `<th rowspan="${list.length}" style="border:1px solid #999;padding:5px 6px;background:#fef3c7;color:#78350f;text-align:center;vertical-align:middle;font-weight:700">${escape(subj.name)}</th>`;
+      }
+      table += `<th style="border:1px solid #999;padding:5px 8px;background:#f8fafc;text-align:left;font-weight:600"><span style="color:#7c3aed">${escape(o.code)}</span> ${escape(o.text)}</th>`;
+      MONTHS.forEach(m => {
+        const info = aggregateMonth(plan, subj.id, o.code, m.num);
+        let bg = '#fff', txt = '';
+        if (info.status === 'new') {
+          bg = info.links.length ? 'background:linear-gradient(135deg,#86efac 50%,#fde047 50%)' : 'background:#86efac';
+          txt = info.links.length ? escape(info.links[0]) : '●';
+        } else if (info.status === 'rep') {
+          bg = info.links.length ? 'background:linear-gradient(135deg,#bfdbfe 50%,#fde047 50%)' : 'background:#bfdbfe';
+          txt = info.links.length ? escape(info.links[0]) : '↻';
+        } else {
+          bg = 'background:#fff';
+        }
+        table += `<td style="border:1px solid #999;padding:4px 3px;text-align:center;font-size:8pt;${bg}">${txt}</td>`;
+      });
+      table += '</tr>';
+    });
+  });
+  table += '</tbody></table>';
+
+  const doc = `<html xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+    <head><meta charset="utf-8"><title>Жилийн матриц — ${gname}</title>
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 11pt; }
+      .approve { text-align: right; margin-bottom: 10px; font-size: 10pt; }
+      h2 { text-align: center; color: #7c3aed; margin: 6px 0; }
+      h3 { text-align: center; margin: 4px 0 14px; color: #374151; font-weight: normal; font-size: 12pt; }
+      .legend { margin-top: 12px; font-size: 9pt; }
+      .legend span { display: inline-block; margin-right: 14px; }
+      .legend .box { display: inline-block; width: 12px; height: 12px; border: 1px solid #999; vertical-align: middle; margin-right: 4px; }
+    </style></head>
+    <body>
+      <div class="approve">${escape(approveLine)}</div>
+      <h2>${gname.toUpperCase()} · ЖИЛИЙН ИНТЕГРАЦЧИЛСАН МАТРИЦ</h2>
+      <h3>Сургалтын хөтөлбөрийн 7 чиглэлийн уялдаатай төлөвлөгөө · 2026-2027 оны хичээлийн жил</h3>
+      ${table}
+      <div class="legend">
+        <b>Тэмдэглэгээ:</b>
+        <span><span class="box" style="background:#86efac"></span>Шинэ мэдлэг</span>
+        <span><span class="box" style="background:#bfdbfe"></span>Давталт</span>
+        <span><span class="box" style="background:#fde047"></span>Уялдах СҮД</span>
+        <span><span class="box" style="background:#fff"></span>Хоосон</span>
+      </div>
+    </body></html>`;
+
+  const blob = new Blob(['﻿', doc], {type:'application/msword'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `yearly-matrix-${g}.doc`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+init();
+</script>

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="mn"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎓 СӨБ бүлэг PRO — Бага</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+:root{ --a:#ec4899; --a2:#8b5cf6; --a3:#06b6d4;
+  --bg1:#fef7f0; --bg2:#fef3f8; --bg3:#f0f9ff;
+  --text:#1e293b; --muted:#64748b; --border:rgba(0,0,0,.08); }
+body { font-family: -apple-system, "Segoe UI", "Segoe UI Emoji", Roboto, sans-serif;
+  background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 50%, var(--bg3) 100%);
+  background-attachment:fixed; color:var(--text); min-height:100vh; line-height:1.5; padding:16px; }
+.wrap { max-width:1200px; margin:0 auto; }
+header { background:rgba(255,255,255,.85); backdrop-filter:blur(10px); border:2px solid rgba(0,0,0,.06);
+  padding:24px 28px; border-radius:20px; text-align:center; box-shadow:0 8px 30px rgba(0,0,0,.08);
+  margin-bottom:20px; position:relative; overflow:hidden; }
+header::before { content:''; position:absolute; top:-50%; right:-20%; width:400px; height:400px;
+  background:radial-gradient(circle, var(--a) 0%, transparent 70%); opacity:.08; }
+header h1 { font-size:1.9em; font-weight:800; letter-spacing:.3px;
+  background:linear-gradient(135deg, var(--a), var(--a2), var(--a3));
+  -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:6px; }
+header .sub { color:var(--muted); font-size:1.05em; margin-bottom:8px; }
+header .tag { display:inline-block; padding:5px 14px; background:linear-gradient(135deg, var(--a), var(--a2));
+  color:#fff; border-radius:20px; font-size:.85em; font-weight:600; }
+.stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; margin-bottom:20px; }
+.stat { background:#fff; padding:16px 12px; border-radius:14px; text-align:center;
+  box-shadow:0 4px 14px rgba(0,0,0,.06); border:2px solid transparent;
+  transition:.2s; }
+.stat:hover { transform:translateY(-3px); border-color:var(--a); box-shadow:0 8px 22px rgba(0,0,0,.1); }
+.stat b { display:block; font-size:2em; font-weight:800;
+  background:linear-gradient(135deg, var(--a), var(--a2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.stat small { color:var(--muted); font-size:.85em; font-weight:500; }
+.tabs { display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; justify-content:center; }
+.tab { padding:12px 24px; background:rgba(255,255,255,.9); border:2px solid rgba(0,0,0,.08);
+  border-radius:14px; cursor:pointer; font-weight:600; font-size:.98em; transition:.2s; color:var(--text); }
+.tab.active { background:linear-gradient(135deg, var(--a), var(--a2)); color:#fff; border-color:transparent;
+  box-shadow:0 4px 14px rgba(0,0,0,.15); }
+.tab:hover:not(.active) { border-color:var(--a); color:var(--a); }
+.section { background:rgba(255,255,255,.95); border-radius:18px; padding:24px 26px; margin-bottom:16px;
+  box-shadow:0 6px 24px rgba(0,0,0,.06); display:none; }
+.section.active { display:block; }
+.section h2 { font-size:1.4em; margin-bottom:16px; padding-bottom:12px;
+  background:linear-gradient(135deg, var(--a), var(--a2)); -webkit-background-clip:text; background-clip:text; color:transparent;
+  border-bottom:3px solid var(--a); font-weight:800; }
+.note { background:linear-gradient(135deg, #fff9c4, #fff3cd); border-left:5px solid #f59e0b;
+  padding:14px 18px; border-radius:12px; margin-bottom:16px; font-size:.95em; color:#78350f; }
+.legend { background:rgba(255,255,255,.9); padding:14px 18px; border-radius:12px; margin-bottom:16px;
+  display:flex; gap:20px; flex-wrap:wrap; align-items:center; font-size:.95em; border:2px dashed var(--border); }
+.legend .lit { display:flex; align-items:center; gap:8px; font-weight:600; }
+.legend .dot { width:18px; height:18px; border-radius:5px; border:1px solid rgba(0,0,0,.15); }
+.file { display:flex; align-items:center; gap:14px; padding:14px 18px; background:linear-gradient(135deg,#fff,rgba(255,255,255,.7));
+  border:2px solid rgba(0,0,0,.06); border-radius:14px; margin-bottom:10px; transition:.2s; }
+.file:hover { border-color:var(--a); transform:translateX(3px); box-shadow:0 6px 18px rgba(0,0,0,.08); }
+.file .icon { font-size:2.2em; }
+.file .info { flex:1; min-width:0; }
+.file .info strong { display:block; margin-bottom:3px; word-break:break-word; font-size:1.02em; }
+.file .info small { color:var(--muted); font-size:.85em; }
+.file .actions { display:flex; gap:6px; }
+.btn { padding:10px 18px; border-radius:10px; text-decoration:none; font-weight:700; font-size:.9em;
+  white-space:nowrap; transition:.15s; display:inline-block; border:2px solid; }
+.btn-view { background:linear-gradient(135deg, var(--a), var(--a2)); color:#fff; border-color:transparent;
+  box-shadow:0 3px 10px rgba(0,0,0,.15); }
+.btn-view:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.2); }
+.btn-dl { background:#fff; color:#f59e0b; border-color:#f59e0b; }
+.btn-dl:hover { background:#f59e0b; color:#fff; }
+.mgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; }
+.mcard { padding:18px 16px; border-radius:16px; border:2px solid rgba(0,0,0,.08);
+  box-shadow:0 4px 14px rgba(0,0,0,.06); transition:.2s; text-align:center; }
+.mcard:hover { transform:translateY(-4px) rotate(-1deg); box-shadow:0 10px 28px rgba(0,0,0,.12); border-color:var(--a); }
+.mnum { font-size:2.5em; line-height:1; margin-bottom:6px; }
+.mlabel { font-size:.9em; color:var(--muted); font-weight:600; margin-bottom:4px; }
+.mtheme { font-size:1.05em; font-weight:800; color:var(--text); margin-bottom:6px; }
+.msubs { font-size:.8em; color:var(--muted); line-height:1.4; margin-bottom:10px; min-height:32px; }
+.mbtns { display:flex; gap:4px; justify-content:center; flex-wrap:wrap; }
+.mbtn { padding:5px 10px; border-radius:6px; text-decoration:none; font-size:.75em; font-weight:600; }
+.mbtn.view { background:linear-gradient(135deg, var(--a), var(--a2)); color:#fff; }
+.mbtn.dl { background:#fff9c4; color:#78350f; border:1px solid #f59e0b; }
+.help { position:fixed; bottom:20px; right:20px; background:linear-gradient(135deg, var(--a), var(--a2));
+  color:#fff; border:none; padding:14px 22px; border-radius:50px; font-size:1em; font-weight:700; cursor:pointer;
+  box-shadow:0 6px 20px rgba(0,0,0,.2); z-index:100; }
+.help:hover { transform:translateY(-3px); }
+.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:200;
+  align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
+.modal.open { display:flex; }
+.modal-box { background:#fff; border-radius:18px; max-width:720px; width:100%; padding:28px 32px; margin:20px 0;
+  box-shadow:0 15px 50px rgba(0,0,0,.3); }
+.modal-box h2 { background:linear-gradient(135deg, var(--a), var(--a2)); -webkit-background-clip:text;
+  background-clip:text; color:transparent; margin-bottom:14px; padding-bottom:10px; border-bottom:2px solid var(--a); }
+.modal-close { float:right; background:none; border:none; font-size:1.8em; cursor:pointer; color:var(--muted); }
+.modal-box p, .modal-box li { margin-bottom:8px; }
+.modal-box ul, .modal-box ol { margin-left:24px; margin-bottom:12px; }
+@media (max-width:640px) { header h1 { font-size:1.4em; } .tab { padding:10px 14px; font-size:.9em; }
+  .file { flex-wrap:wrap; } .file .actions { width:100%; margin-top:8px; } .btn { flex:1; text-align:center; } }
+</style></head><body>
+<div class="wrap">
+<header>
+<a href="index.html" class="hub-back" style="position:absolute;top:14px;right:16px;background:rgba(255,255,255,.92);color:#334155;padding:7px 14px;border-radius:10px;text-decoration:none;font-weight:700;font-size:.8em;box-shadow:0 2px 8px rgba(0,0,0,.12);z-index:5">🏠 Нүүр</a>
+  <h1>🎓 СӨБ бүлэг <span style="background:linear-gradient(135deg,#f59e0b,#dc2626);-webkit-background-clip:text;background-clip:text;color:transparent">PRO</span></h1>
+  <p class="sub">БАГА БҮЛЭГ · I түвшин (2-3 нас) · 2026-2027</p>
+  <span class="tag">✨ Жилийн + Сарын + 7 хоногийн + Ээлжит сургалт үйл ажиллагаа</span>
+</header>
+<div style="background:linear-gradient(135deg,#fff,rgba(255,255,255,.9));border-radius:16px;padding:18px 22px;margin-bottom:18px;box-shadow:0 6px 22px rgba(0,0,0,.06);display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+  <div style="font-size:2.4em">🌱</div>
+  <div style="flex:1">
+    <h3 style="color:#ec4899;font-size:1.1em;font-weight:800;margin-bottom:4px">Хүүхдийн хөгжлийн явц</h3>
+    <p style="color:#64748b;font-size:.9em">Бүлгийн хүүхэд бүрийн 6 судлагдахуунаар үнэлгээ, ахиц харах</p>
+  </div>
+  <a href="Хүүхдийн_хөгжил.html" style="background:linear-gradient(135deg,#ec4899,#f472b6);color:#fff;padding:11px 22px;border-radius:10px;text-decoration:none;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.15)">📊 Нээх →</a>
+</div>
+
+<div class="stats">
+  <div class="stat"><b>9</b><small>сар</small></div>
+  <div class="stat"><b>36</b><small>долоо хоног</small></div>
+  <div class="stat"><b>144</b><small>ээлжит үйл ажиллагаа</small></div>
+  <div class="stat"><b>53</b><small>СҮД</small></div>
+  <div class="stat"><b>20</b><small>Word файл</small></div>
+</div>
+
+<div class="legend">
+  <strong style="color:var(--a)">Матрицын өнгө:</strong>
+  <span class="lit"><span class="dot" style="background:#86EFAC"></span> Шинэ СҮД</span>
+  <span class="lit"><span class="dot" style="background:#BFDBFE"></span> Давталт</span>
+  <span class="lit"><span class="dot" style="background:#FDE047"></span> Уялдаа</span>
+</div>
+
+<button class="help" onclick="document.getElementById('m1').classList.add('open')">❓ Заавар</button>
+
+<div class="modal" id="m1" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-box">
+    <button class="modal-close" onclick="document.getElementById('m1').classList.remove('open')">×</button>
+    <h2>👋 Тавтай морил!</h2>
+    <p>Энэ бол Бага бүлгийн багшийн бэлэн төлөвлөгөөний сан. <b>Arial 12</b> фонттой, <b>дэлгэрэнгүй явцтай</b>, өнгөт кодтой матрицтай.</p>
+    <h3>📁 Юу байгаа вэ?</h3>
+    <ul>
+      <li>Жилийн матриц — СҮД × сар (🟢 шинэ, 🔵 давт, 🟡 уяа)</li>
+      <li>Сарын нэгдсэн — 9 сар нэг файлд</li>
+      <li>7-хоногийн төлөвлөлт — 36 долоо хоног, өдрийн жагсаалт</li>
+      <li>Ээлжит сургалт, үйл ажиллагааны төлөвлөлт — 144 дэлгэрэнгүй</li>
+    </ul>
+    <h3>🎯 Ашиглах</h3>
+    <ol><li>Сараас сэдвийг харна</li><li>7 хоногт тохирсон долоо хоногийг хэвлэнэ</li><li>Ээлжит-ээс дэлгэрэнгүй уншина</li></ol>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="show('all')">🗓 Сараар</div>
+  <div class="tab" onclick="show('year')">📅 Жилийн</div>
+  <div class="tab" onclick="show('month')">📆 Сарын</div>
+  <div class="tab" onclick="show('week')">📋 7 хоног</div>
+  <div class="tab" onclick="show('act')">📖 Ээлжит</div>
+</div>
+
+<div class="section active" id="tab-all"><h2>🗓 Сараар бүлэглэсэн</h2>
+  <div class="note">💡 Сар бүрд нэг картанд 7 хоногийн + Ээлжит үйл ажиллагааны файлууд байрлана.</div>
+  <div class="mgrid">
+    <div class="mcard" style="background:linear-gradient(135deg,#fef3c7,#fff)">
+      <div class="mnum">🌻</div>
+      <div class="mlabel">09-р сар · IX</div>
+      <div class="mtheme">ШИНЭ ОРЧИН</div>
+      <div class="msubs">Ангитайгаа танилцъя · Миний хөөрхөн гар нүүр · Дуулцгаая · Найзууд</div>
+      <div class="mbtns">
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_09сар_7хоног_төлөвлөлт.html" target="_blank" class="mbtn view">📋 7 хоног</a>
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_09сар_7хоног_төлөвлөлт.docx" download class="mbtn dl">📥</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_09сар_ээлжит.html" target="_blank" class="mbtn view">📖 Ээлжит</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_09сар_ээлжит.docx" download class="mbtn dl">📥</a>
+      </div>
+    </div>
+    <div class="mcard" style="background:linear-gradient(135deg,#ffedd5,#fff)">
+      <div class="mnum">📅</div>
+      <div class="mlabel">10-р сар · X</div>
+      <div class="mtheme">НАМАРТАЙ ТАНИЛЦЪЯ</div>
+      <div class="msubs">Намар ирлээ · Жимс, ногоо · Гар цэвэрхэн · Дулаан хувцас</div>
+      <div class="mbtns">
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_10сар_7хоног_төлөвлөлт.html" target="_blank" class="mbtn view">📋 7 хоног</a>
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_10сар_7хоног_төлөвлөлт.docx" download class="mbtn dl">📥</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_10сар_ээлжит.html" target="_blank" class="mbtn view">📖 Ээлжит</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_10сар_ээлжит.docx" download class="mbtn dl">📥</a>
+      </div>
+    </div>
+    <div class="mcard" style="background:linear-gradient(135deg,#fce7f3,#fff)">
+      <div class="mnum">📅</div>
+      <div class="mlabel">11-р сар · XI</div>
+      <div class="mtheme">ГЭР БҮЛ</div>
+      <div class="msubs">Ээж аав · Эмээ өвөө · Ах эгч · Миний гэр</div>
+      <div class="mbtns">
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_11сар_7хоног_төлөвлөлт.html" target="_blank" class="mbtn view">📋 7 хоног</a>
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_11сар_7хоног_төлөвлөлт.docx" download class="mbtn dl">📥</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_11сар_ээлжит.html" target="_blank" class="mbtn view">📖 Ээлжит</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_11сар_ээлжит.docx" download class="mbtn dl">📥</a>
+      </div>
+    </div>
+    <div class="mcard" style="background:linear-gradient(135deg,#e0e7ff,#fff)">
+      <div class="mnum">📅</div>
+      <div class="mlabel">12-р сар · XII</div>
+      <div class="mtheme">ГУРВАН БААВГАЙ</div>
+      <div class="msubs">Ой амьтад · Баавгайн айл · Өвлийн үлгэр · Шинэ жил</div>
+      <div class="mbtns">
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_12сар_7хоног_төлөвлөлт.html" target="_blank" class="mbtn view">📋 7 хоног</a>
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_12сар_7хоног_төлөвлөлт.docx" download class="mbtn dl">📥</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_12сар_ээлжит.html" target="_blank" class="mbtn view">📖 Ээлжит</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_12сар_ээлжит.docx" download class="mbtn dl">📥</a>
+      </div>
+    </div>
+    <div class="mcard" style="background:linear-gradient(135deg,#dbeafe,#fff)">
+      <div class="mnum">🍁</div>
+      <div class="mlabel">01-р сар · I</div>
+      <div class="mtheme">ӨНГӨТ САВХААР НААДЪЯ</div>
+      <div class="msubs">Өнгө өнгийн юмс · Дүрсүүд · Том жижиг · Тоглоомын өдөр</div>
+      <div class="mbtns">
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_01сар_7хоног_төлөвлөлт.html" target="_blank" class="mbtn view">📋 7 хоног</a>
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_01сар_7хоног_төлөвлөлт.docx" download class="mbtn dl">📥</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_01сар_ээлжит.html" target="_blank" class="mbtn view">📖 Ээлжит</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_01сар_ээлжит.docx" download class="mbtn dl">📥</a>
+      </div>
+    </div>
+    <div class="mcard" style="background:linear-gradient(135deg,#e0f2fe,#fff)">
+      <div class="mnum">🎃</div>
+      <div class="mlabel">02-р сар · II</div>
+      <div class="mtheme">ЦАГААН САР</div>
+      <div class="msubs">Монгол гэр · Айраг ааруул · Мал сүрэг · Хүндэтгэл</div>
+      <div class="mbtns">
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_02сар_7хоног_төлөвлөлт.html" target="_blank" class="mbtn view">📋 7 хоног</a>
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_02сар_7хоног_төлөвлөлт.docx" download class="mbtn dl">📥</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_02сар_ээлжит.html" target="_blank" class="mbtn view">📖 Ээлжит</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_02сар_ээлжит.docx" download class="mbtn dl">📥</a>
+      </div>
+    </div>
+    <div class="mcard" style="background:linear-gradient(135deg,#d1fae5,#fff)">
+      <div class="mnum">🍂</div>
+      <div class="mlabel">03-р сар · III</div>
+      <div class="mtheme">ГУРВАН ТООРОЙ</div>
+      <div class="msubs">Ээжийн баяр · Гэрийн ажил · Ойн амьтад · Найз туслалцаа</div>
+      <div class="mbtns">
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_03сар_7хоног_төлөвлөлт.html" target="_blank" class="mbtn view">📋 7 хоног</a>
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_03сар_7хоног_төлөвлөлт.docx" download class="mbtn dl">📥</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_03сар_ээлжит.html" target="_blank" class="mbtn view">📖 Ээлжит</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_03сар_ээлжит.docx" download class="mbtn dl">📥</a>
+      </div>
+    </div>
+    <div class="mcard" style="background:linear-gradient(135deg,#dcfce7,#fff)">
+      <div class="mnum">❄️</div>
+      <div class="mlabel">04-р сар · IV</div>
+      <div class="mtheme">БАЛХҮҮ</div>
+      <div class="msubs">Хавар ирлээ · Шувуу · Цэцэг ургамал · Салхи бороо</div>
+      <div class="mbtns">
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_04сар_7хоног_төлөвлөлт.html" target="_blank" class="mbtn view">📋 7 хоног</a>
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_04сар_7хоног_төлөвлөлт.docx" download class="mbtn dl">📥</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_04сар_ээлжит.html" target="_blank" class="mbtn view">📖 Ээлжит</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_04сар_ээлжит.docx" download class="mbtn dl">📥</a>
+      </div>
+    </div>
+    <div class="mcard" style="background:linear-gradient(135deg,#fef9c3,#fff)">
+      <div class="mnum">⛄</div>
+      <div class="mlabel">05-р сар · V</div>
+      <div class="mtheme">ЦЭЦЭРЛЭГИЙН ДУРСАМЖ</div>
+      <div class="msubs">Найз нөхөд · Юу сурсан бэ? · Уламжлалт наадам · Урагшаа</div>
+      <div class="mbtns">
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_05сар_7хоног_төлөвлөлт.html" target="_blank" class="mbtn view">📋 7 хоног</a>
+        <a href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_05сар_7хоног_төлөвлөлт.docx" download class="mbtn dl">📥</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_05сар_ээлжит.html" target="_blank" class="mbtn view">📖 Ээлжит</a>
+        <a href="Ээлжит_хичээл/Бүлгийн_багш_Бага_05сар_ээлжит.docx" download class="mbtn dl">📥</a>
+      </div>
+    </div></div>
+</div>
+
+<div class="section" id="tab-year"><h2>📅 Жилийн төлөвлөлт</h2>
+  <div class="note">Бүх СҮД × 9 сарын хамаарлыг өнгөт кодоор харуулна.</div>
+  <div class="file"><span class="icon">📊</span>
+    <div class="info"><strong>Бага_жилийн_матриц.docx</strong><small>Landscape · СҮД × сар · 🟢🔵🟡 өнгөт код</small></div>
+    <div class="actions">
+      <a class="btn btn-view" href="Жилийн/Бүлгийн_багш_Бага_жилийн_матриц.html" target="_blank">👁 Харах</a>
+      
+    </div>
+  </div>
+</div>
+
+<div class="section" id="tab-month"><h2>📆 Сарын нэгдсэн төлөвлөгөө</h2>
+  <div class="file"><span class="icon">📚</span>
+    <div class="info"><strong>Бага_сарын_төлөвлөгөө.docx</strong><small>9 сарын гол сэдэв, дэд сэдэв, СҮД, зорилго</small></div>
+    <div class="actions">
+      <a class="btn btn-view" href="Сарын/Бүлгийн_багш_Бага_сарын_төлөвлөгөө.html" target="_blank">👁 Харах</a>
+      
+    </div>
+  </div>
+</div>
+
+<div class="section" id="tab-week"><h2>📋 7-хоногийн төлөвлөлт</h2>
+  <div class="note">Өдрийн жагсаалт × 5 өдөр. Landscape.</div>
+  
+    <div class="file"><span class="icon">🌻</span>
+      <div class="info"><strong>09-р сар — «ШИНЭ ОРЧИН»</strong><small>Ангитайгаа танилцъя · Миний хөөрхөн гар нүүр · Дуулцгаая · Найзууд</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_09сар_7хоног_төлөвлөлт.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">📋</span>
+      <div class="info"><strong>10-р сар — «НАМАРТАЙ ТАНИЛЦЪЯ»</strong><small>Намар ирлээ · Жимс, ногоо · Гар цэвэрхэн · Дулаан хувцас</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_10сар_7хоног_төлөвлөлт.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">📋</span>
+      <div class="info"><strong>11-р сар — «ГЭР БҮЛ»</strong><small>Ээж аав · Эмээ өвөө · Ах эгч · Миний гэр</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_11сар_7хоног_төлөвлөлт.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">📋</span>
+      <div class="info"><strong>12-р сар — «ГУРВАН БААВГАЙ»</strong><small>Ой амьтад · Баавгайн айл · Өвлийн үлгэр · Шинэ жил</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_12сар_7хоног_төлөвлөлт.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">🍁</span>
+      <div class="info"><strong>01-р сар — «ӨНГӨТ САВХААР НААДЪЯ»</strong><small>Өнгө өнгийн юмс · Дүрсүүд · Том жижиг · Тоглоомын өдөр</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_01сар_7хоног_төлөвлөлт.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">🎃</span>
+      <div class="info"><strong>02-р сар — «ЦАГААН САР»</strong><small>Монгол гэр · Айраг ааруул · Мал сүрэг · Хүндэтгэл</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_02сар_7хоног_төлөвлөлт.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">🍂</span>
+      <div class="info"><strong>03-р сар — «ГУРВАН ТООРОЙ»</strong><small>Ээжийн баяр · Гэрийн ажил · Ойн амьтад · Найз туслалцаа</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_03сар_7хоног_төлөвлөлт.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">❄️</span>
+      <div class="info"><strong>04-р сар — «БАЛХҮҮ»</strong><small>Хавар ирлээ · Шувуу · Цэцэг ургамал · Салхи бороо</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_04сар_7хоног_төлөвлөлт.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">⛄</span>
+      <div class="info"><strong>05-р сар — «ЦЭЦЭРЛЭГИЙН ДУРСАМЖ»</strong><small>Найз нөхөд · Юу сурсан бэ? · Уламжлалт наадам · Урагшаа</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="7_хоног_төлөвлөлт/Бүлгийн_багш_Бага_05сар_7хоног_төлөвлөлт.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+</div>
+
+<div class="section" id="tab-act"><h2>📖 Ээлжит сургалт, үйл ажиллагаа</h2>
+  <div class="note">Сар бүрд 16 үйл ажиллагаа. Явц 6-10 алхамтай дэлгэрэнгүй.</div>
+  
+    <div class="file"><span class="icon">📖</span>
+      <div class="info"><strong>09-р сар — «ШИНЭ ОРЧИН»</strong><small>16 ээлжит · дэлгэрэнгүй явц</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="Ээлжит_хичээл/Бүлгийн_багш_Бага_09сар_ээлжит.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">📖</span>
+      <div class="info"><strong>10-р сар — «НАМАРТАЙ ТАНИЛЦЪЯ»</strong><small>16 ээлжит · дэлгэрэнгүй явц</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="Ээлжит_хичээл/Бүлгийн_багш_Бага_10сар_ээлжит.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">📖</span>
+      <div class="info"><strong>11-р сар — «ГЭР БҮЛ»</strong><small>16 ээлжит · дэлгэрэнгүй явц</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="Ээлжит_хичээл/Бүлгийн_багш_Бага_11сар_ээлжит.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">📖</span>
+      <div class="info"><strong>12-р сар — «ГУРВАН БААВГАЙ»</strong><small>16 ээлжит · дэлгэрэнгүй явц</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="Ээлжит_хичээл/Бүлгийн_багш_Бага_12сар_ээлжит.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">📖</span>
+      <div class="info"><strong>01-р сар — «ӨНГӨТ САВХААР НААДЪЯ»</strong><small>16 ээлжит · дэлгэрэнгүй явц</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="Ээлжит_хичээл/Бүлгийн_багш_Бага_01сар_ээлжит.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">📖</span>
+      <div class="info"><strong>02-р сар — «ЦАГААН САР»</strong><small>16 ээлжит · дэлгэрэнгүй явц</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="Ээлжит_хичээл/Бүлгийн_багш_Бага_02сар_ээлжит.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">📖</span>
+      <div class="info"><strong>03-р сар — «ГУРВАН ТООРОЙ»</strong><small>16 ээлжит · дэлгэрэнгүй явц</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="Ээлжит_хичээл/Бүлгийн_багш_Бага_03сар_ээлжит.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">📖</span>
+      <div class="info"><strong>04-р сар — «БАЛХҮҮ»</strong><small>16 ээлжит · дэлгэрэнгүй явц</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="Ээлжит_хичээл/Бүлгийн_багш_Бага_04сар_ээлжит.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+    <div class="file"><span class="icon">📖</span>
+      <div class="info"><strong>05-р сар — «ЦЭЦЭРЛЭГИЙН ДУРСАМЖ»</strong><small>16 ээлжит · дэлгэрэнгүй явц</small></div>
+      <div class="actions">
+        <a class="btn btn-view" href="Ээлжит_хичээл/Бүлгийн_багш_Бага_05сар_ээлжит.html" target="_blank">👁 Харах</a>
+        
+      </div>
+    </div>
+</div>
+
+</div>
+<script>
+function show(name) {
+  const names=['all','year','month','week','act'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active', names[i]===name));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+</script>
+<script src="protection.js"></script></body></html>

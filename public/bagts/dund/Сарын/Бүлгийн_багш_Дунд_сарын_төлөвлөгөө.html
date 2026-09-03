@@ -1,0 +1,81 @@
+<!DOCTYPE html><html lang="mn"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Дунд сарын төлөвлөгөө</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Segoe UI',Arial,sans-serif; font-size:11pt; line-height:1.55;
+  background:linear-gradient(135deg,#faf5ff,#f0f9ff); color:#1f2937; padding:16px 12px; }
+.doc { max-width:1400px; margin:0 auto; background:#fff; padding:35px 42px;
+  border-radius:14px; box-shadow:0 6px 24px rgba(0,0,0,.06); }
+
+/* Toolbar */
+.controls { position:sticky; top:0; z-index:100; max-width:1400px; margin:0 auto 14px;
+  background:linear-gradient(135deg, #8b5cf6, #06b6d4); color:#fff;
+  padding:11px 18px; border-radius:12px; display:flex; gap:10px; align-items:center;
+  box-shadow:0 4px 14px rgba(0,0,0,.15); font-size:13px; }
+.controls .name { flex:1; font-weight:600; opacity:.95; }
+.controls a { background:rgba(255,255,255,.95); color:#8b5cf6; padding:6px 14px;
+  border-radius:8px; text-decoration:none; font-weight:600; font-size:12.5px; transition:.15s; }
+.controls a:hover { background:#fff; transform:translateY(-1px); }
+
+/* Headings — жижиг, зөөлөн өнгөтэй */
+.doc h1 { font-size:16pt; font-weight:700; color:#374151; text-align:center;
+  padding:10px 0 8px; margin:0 0 12px; border-bottom:2px solid #8b5cf6;
+  letter-spacing:.2px; }
+.doc h2 { font-size:13pt; font-weight:600; color:#4b5563; text-align:center;
+  padding:6px 0; margin:14px 0 10px; letter-spacing:.1px; }
+.doc h3 { font-size:12pt; font-weight:600; color:#8b5cf6; margin:12px 0 6px;
+  padding-left:10px; border-left:3px solid #8b5cf6; }
+.doc h4 { font-size:11pt; font-weight:600; color:#4b5563; margin:10px 0 5px; }
+
+.doc p { margin:6px 0; }
+.doc ul, .doc ol { margin:6px 0 6px 22px; }
+.doc li { margin:3px 0; }
+
+/* Tables */
+.doc table { border-collapse:collapse; width:100%; margin:10px 0; font-size:10.5pt; }
+.doc td, .doc th { border:1px solid #d1d5db; padding:7px 9px; vertical-align:top; }
+.doc th { background:#f3f4f6; font-weight:600; color:#374151; }
+.doc tr:nth-child(even) td { background:#fafafa; }
+
+/* Print */
+@media print {
+  .controls { display:none; }
+  body { background:#fff; padding:0; }
+  .doc { box-shadow:none; padding:20px; }
+}
+</style><style>
+.ctrl-btn { background:#fff; color:#8b5cf6; padding:6px 14px; border-radius:8px; border:none; font-weight:600; font-size:12.5px; cursor:pointer; font-family:inherit; }
+.ctrl-btn:hover { background:#f59e0b; color:#fff; }
+.doc[contenteditable="true"] { outline:2px dashed #8b5cf6; outline-offset:8px; }
+.doc[contenteditable="true"] table td { min-height:20px; }
+</style><script>
+function toggleEdit() {
+  const doc = document.querySelector('.doc');
+  const btn = document.getElementById('editBtn');
+  if (doc.contentEditable === 'true') {
+    doc.contentEditable = 'false';
+    btn.textContent = '✏ Засах';
+    // Save
+    const key = 'edit_' + location.pathname;
+    localStorage.setItem(key, doc.innerHTML);
+    alert('💾 Өөрчлөлт хадгалагдлаа.');
+  } else {
+    doc.contentEditable = 'true';
+    btn.textContent = '💾 Хадгалах';
+    doc.focus();
+  }
+}
+// Load saved edits
+window.addEventListener('DOMContentLoaded', () => {
+  const key = 'edit_' + location.pathname;
+  const saved = localStorage.getItem(key);
+  if (saved) document.querySelector('.doc').innerHTML = saved;
+});
+</script></head><body>
+<div class="controls">
+  <span class="name">👁 Дунд сарын төлөвлөгөө</span>
+  <button onclick="toggleEdit()" class="ctrl-btn" id="editBtn">✏ Засах</button> <button onclick="window.print()" class="ctrl-btn">🖨 Хэвлэх</button>
+  <a href="%D0%91%D2%AF%D0%BB%D0%B3%D0%B8%D0%B9%D0%BD_%D0%B1%D0%B0%D0%B3%D1%88_%D0%94%D1%83%D0%BD%D0%B4_%D1%81%D0%B0%D1%80%D1%8B%D0%BD_%D1%82%D3%A9%D0%BB%D3%A9%D0%B2%D0%BB%D3%A9%D0%B3%D3%A9%D3%A9.docx" download style="background:#f59e0b;color:#fff;padding:6px 14px;border-radius:8px;text-decoration:none;font-weight:700;font-size:12.5px;margin-right:4px">📥 Word татах</a><a href="../index.html">🏠 Сан</a>
+</div>
+<div class="doc"><h1><strong>ДУНД БҮЛГИЙН БАГШИЙН СУРГАЛТЫН</strong></h1><h2><strong>9 САРААС 5 САРЫН НЭГДСЭН ТӨЛӨВЛӨГӨӨ</strong></h2><p><em>2026-2027 оны хичээлийн жил · II түвшин (3-4 нас)</em></p><p><strong>IX (9) САР — «ХАМТДАА ТОГЛОЁ»</strong></p><table><tr><td><p><strong>Гол сэдэв</strong></p></td><td><p>ХАМТДАА ТОГЛОЁ</p></td></tr><tr><td><p><strong>Дэд сэдвүүд</strong></p></td><td><p>1-р 7 хоног: «Зогсоорой, Олоорой»  ·  2-р 7 хоног: «Алгаа ташаарай»  ·  3-р 7 хоног: «Олсоор наадъя»  ·  4-р 7 хоног: «Гараа угаацгаая»</p></td></tr><tr><td><p><strong>Сарын гол зорилго</strong></p></td><td><p>Хүүхэд хамтын үйл ажиллагаанд оролцож, эрүүл ахуйн дадал эзэмших.</p></td></tr><tr><td><p><strong>Гол СҮД</strong></p></td><td><p>БНО2.1в, БНО2.1г, БНО2.2а, ЗУ2.2б, ЗУ2.2в, МАТ2.1а, МАТ2.1б, МАТ2.2а, МАТ2.3а, НСХ2.1б, НСХ2.2б, НСХ2.2в, НСХ2.3а, НСХ2.3б, НСХ2.3в, ХЭМ2.1а, ХЭМ2.1г, ХЭМ2.1и, ХЭМ2.2а, ХЭМ2.2б, ХЭМ2.2г, ХЯ2.1а, ХЯ2.1б, ХЯ2.2б, ХЯ2.2в, ХЯ2.2г</p></td></tr><tr><td><p><strong>Аюулгүй байдал</strong></p></td><td><p><em>Ойрхон хүрээ, гүйхгүй байх, найзыгаа хүлээж бай.</em></p></td></tr></table><p><strong>X (10) САР — «НАМРЫН ЖИМС, НОГОО»</strong></p><table><tr><td><p><strong>Гол сэдэв</strong></p></td><td><p>НАМРЫН ЖИМС, НОГОО</p></td></tr><tr><td><p><strong>Дэд сэдвүүд</strong></p></td><td><p>1-р 7 хоног: «Жимсний өнгө»  ·  2-р 7 хоног: «Ногоо угаана»  ·  3-р 7 хоног: «Амтлаг, гашуун»  ·  4-р 7 хоног: «Хоолны булан»</p></td></tr><tr><td><p><strong>Сарын гол зорилго</strong></p></td><td><p>Намрын жимс, ногоог таньж, хоолны бэлдэл, эрүүл хоолны дадал.</p></td></tr><tr><td><p><strong>Гол СҮД</strong></p></td><td><p>БНО2.1б, БНО2.1в, БНО2.1г, БНО2.2б, ЗУ2.2в, ЗУ2.3а, ЗУ2.3б, ЗУ2.3в, МАТ2.2а, МАТ2.3а, МАТ2.3б, НСХ2.1а, НСХ2.2в, НСХ2.3в, ХЭМ2.2б, ХЭМ2.2в, ХЯ2.2а, ХЯ2.2в, ХЯ2.2г</p></td></tr><tr><td><p><strong>Аюулгүй байдал</strong></p></td><td><p><em>Хүйтэн бороо, зөв хувцаслах, ханиад томуугаас сэргийлэх.</em></p></td></tr></table><p><strong>XI (11) САР — «УЛААН ЛООЛЬ»</strong></p><table><tr><td><p><strong>Гол сэдэв</strong></p></td><td><p>УЛААН ЛООЛЬ</p></td></tr><tr><td><p><strong>Дэд сэдвүүд</strong></p></td><td><p>1-р 7 хоног: «Лоольны тухай»  ·  2-р 7 хоног: «Хүнс, ногоо»  ·  3-р 7 хоног: «Хийсэн бүтээл»  ·  4-р 7 хоног: «Хоолны цэс»</p></td></tr><tr><td><p><strong>Сарын гол зорилго</strong></p></td><td><p>Улаан лоол зэрэг ногооны талаар өргөн ойлголт, витамины ач тус.</p></td></tr><tr><td><p><strong>Гол СҮД</strong></p></td><td><p>БНО2.1б, БНО2.1в, БНО2.2в, БНО2.2г, ЗУ2.2б, ЗУ2.2в, ЗУ2.3б, ЗУ2.3в, МАТ2.2б, МАТ2.3а, МАТ2.3б, НСХ2.2б, НСХ2.3а, НСХ2.3б, ХЭМ2.1д, ХЭМ2.2а, ХЭМ2.2в, ХЭМ2.2г, ХЭМ2.2д, ХЯ2.1б, ХЯ2.2а, ХЯ2.2в, ХЯ2.2г, ХЯ2.3а, ХЯ2.3б</p></td></tr><tr><td><p><strong>Аюулгүй байдал</strong></p></td><td><p><em>Гэрийн орчин, цахилгаан, дулааны хэрэгсэлд болгоомжтой.</em></p></td></tr></table><p><strong>XII (12) САР — «БИД НАЙЗУУД»</strong></p><table><tr><td><p><strong>Гол сэдэв</strong></p></td><td><p>БИД НАЙЗУУД</p></td></tr><tr><td><p><strong>Дэд сэдвүүд</strong></p></td><td><p>1-р 7 хоног: «Найзууд бид хамтдаа»  ·  2-р 7 хоног: «Хуваалцах»  ·  3-р 7 хоног: «Найзад бэлэг»  ·  4-р 7 хоног: «Шинэ жил»</p></td></tr><tr><td><p><strong>Сарын гол зорилго</strong></p></td><td><p>Найз нөхөрлөл, хуваалцах, шинэ жилийн бэлдэл, баярын мэдрэмж.</p></td></tr><tr><td><p><strong>Гол СҮД</strong></p></td><td><p>БНО2.2д, ЗУ2.2б, ЗУ2.2в, ЗУ2.3б, НСХ2.2а, НСХ2.2б, НСХ2.2в, НСХ2.3а, НСХ2.3б, НСХ2.3в, ХЭМ2.1г, ХЯ2.1б, ХЯ2.2б, ХЯ2.2в, ХЯ2.2г, ХЯ2.3а, ХЯ2.3в</p></td></tr><tr><td><p><strong>Аюулгүй байдал</strong></p></td><td><p><em>Мөс, гулгаа зам, шинэ жилийн салют, дулаан хувцаслах.</em></p></td></tr></table><p><strong>I (1) САР — «ӨВӨЛ»</strong></p><table><tr><td><p><strong>Гол сэдэв</strong></p></td><td><p>ӨВӨЛ</p></td></tr><tr><td><p><strong>Дэд сэдвүүд</strong></p></td><td><p>1-р 7 хоног: «Цасан өвөл»  ·  2-р 7 хоног: «Хүйтэн, дулаан»  ·  3-р 7 хоног: «Өвлийн амьтад»  ·  4-р 7 хоног: «Өвлийн тоглоом»</p></td></tr><tr><td><p><strong>Сарын гол зорилго</strong></p></td><td><p>Өвлийн онцлог, амьтад, хүйтэн-дулаан ялгах, өвлийн тоглоом.</p></td></tr><tr><td><p><strong>Гол СҮД</strong></p></td><td><p>БНО2.1а, БНО2.1б, БНО2.1в, БНО2.1г, БНО2.2в, ЗУ2.2в, ЗУ2.3а, ЗУ2.3б, ЗУ2.3в, НСХ2.1а, НСХ2.2а, НСХ2.3а, НСХ2.3б, НСХ2.3в, ХЭМ2.1а, ХЭМ2.1г, ХЭМ2.2г, ХЭМ2.2ж, ХЯ2.1б, ХЯ2.2а, ХЯ2.2в, ХЯ2.3а, ХЯ2.3б</p></td></tr><tr><td><p><strong>Аюулгүй байдал</strong></p></td><td><p><em>Хурц ирмэгтэй тоглоом, өвлийн хүйтэн, жижиг эд зүйлсийн аюул.</em></p></td></tr></table><p><strong>II (2) САР — «НАЙЗДАА ТУСЛААРАЙ»</strong></p><table><tr><td><p><strong>Гол сэдэв</strong></p></td><td><p>НАЙЗДАА ТУСЛААРАЙ</p></td></tr><tr><td><p><strong>Дэд сэдвүүд</strong></p></td><td><p>1-р 7 хоног: «Тусалцаа»  ·  2-р 7 хоног: «Уучлалт хүсэх»  ·  3-р 7 хоног: «Хамтын ажил»  ·  4-р 7 хоног: «Цагаан сар»</p></td></tr><tr><td><p><strong>Сарын гол зорилго</strong></p></td><td><p>Хамтдаа туслалцах, уучлалт хүсэх, монгол уламжлал, Цагаан сар.</p></td></tr><tr><td><p><strong>Гол СҮД</strong></p></td><td><p>БНО2.1б, БНО2.2д, ЗУ2.2б, ЗУ2.3б, НСХ2.1а, НСХ2.1в, НСХ2.2а, НСХ2.2б, НСХ2.2в, НСХ2.3б, НСХ2.3в, ХЭМ2.1а, ХЭМ2.1в, ХЭМ2.1г, ХЯ2.1б, ХЯ2.2а, ХЯ2.2б, ХЯ2.2в, ХЯ2.2г</p></td></tr><tr><td><p><strong>Аюулгүй байдал</strong></p></td><td><p><em>Баярын үйл ажиллагаанд халдвар, хоолны цэвэрхэн байдал.</em></p></td></tr></table><p><strong>III (3) САР — «ГЭР БҮЛИЙН АЖИЛ МЭРГЭЖИЛ»</strong></p><table><tr><td><p><strong>Гол сэдэв</strong></p></td><td><p>ГЭР БҮЛИЙН АЖИЛ МЭРГЭЖИЛ</p></td></tr><tr><td><p><strong>Дэд сэдвүүд</strong></p></td><td><p>1-р 7 хоног: «Ээж, аав ажилладаг»  ·  2-р 7 хоног: «Эмч, багш»  ·  3-р 7 хоног: «Тогооч, жолооч»  ·  4-р 7 хоног: «Мэргэжлээ сонго»</p></td></tr><tr><td><p><strong>Сарын гол зорилго</strong></p></td><td><p>Ажил мэргэжлийн ойлголт, ролийн тоглоом, ирээдүйн мөрөөдөл.</p></td></tr><tr><td><p><strong>Гол СҮД</strong></p></td><td><p>БНО2.2б, ЗУ2.2в, ЗУ2.3в, МАТ2.1а, НСХ2.2а, НСХ2.2б, НСХ2.2в, НСХ2.3а, НСХ2.3б, НСХ2.3в, ХЭМ2.1а, ХЭМ2.2в, ХЭМ2.2е, ХЯ2.1б, ХЯ2.2в, ХЯ2.2г, ХЯ2.3а, ХЯ2.3б</p></td></tr><tr><td><p><strong>Аюулгүй байдал</strong></p></td><td><p><em>Хавар халдварт өвчин, гар угаах чухал.</em></p></td></tr></table><p><strong>IV (4) САР — «БАЙГАЛИА ХАЙРЛАЯ»</strong></p><table><tr><td><p><strong>Гол сэдэв</strong></p></td><td><p>БАЙГАЛИА ХАЙРЛАЯ</p></td></tr><tr><td><p><strong>Дэд сэдвүүд</strong></p></td><td><p>1-р 7 хоног: «Хавар ирлээ»  ·  2-р 7 хоног: «Мод тарья»  ·  3-р 7 хоног: «Хог ангилах»  ·  4-р 7 хоног: «Байгалийн явган аялал»</p></td></tr><tr><td><p><strong>Сарын гол зорилго</strong></p></td><td><p>Хавар, байгальд тохирсон харилцаа, хог хаягдал ангилах.</p></td></tr><tr><td><p><strong>Гол СҮД</strong></p></td><td><p>БНО2.1а, БНО2.1б, БНО2.1в, БНО2.1г, БНО2.2г, ЗУ2.2в, ЗУ2.3а, ЗУ2.3б, ЗУ2.3в, НСХ2.1а, НСХ2.2а, НСХ2.2б, НСХ2.2в, НСХ2.3а, НСХ2.3б, НСХ2.3в, ХЭМ2.1г, ХЭМ2.2а, ХЭМ2.2ж, ХЯ2.1а, ХЯ2.1б, ХЯ2.2а, ХЯ2.2в, ХЯ2.2г, ХЯ2.3б</p></td></tr><tr><td><p><strong>Аюулгүй байдал</strong></p></td><td><p><em>Гадаа зугаалгаар салхи, шороо нүдэнд, чихэнд орохоос сэргийлэх.</em></p></td></tr></table><p><strong>V (5) САР — «УС»</strong></p><table><tr><td><p><strong>Гол сэдэв</strong></p></td><td><p>УС</p></td></tr><tr><td><p><strong>Дэд сэдвүүд</strong></p></td><td><p>1-р 7 хоног: «Ус амьдралын үндэс»  ·  2-р 7 хоног: «Ус хэмнэх»  ·  3-р 7 хоног: «Усны амьтад»  ·  4-р 7 хоног: «Оны эцэс»</p></td></tr><tr><td><p><strong>Сарын гол зорилго</strong></p></td><td><p>Ус, амьдралын үндэс, оны эцсийн эргэцүүлэл, дараагийн бүлэгт бэлдэл.</p></td></tr><tr><td><p><strong>Гол СҮД</strong></p></td><td><p>БНО2.1а, БНО2.1в, БНО2.1г, БНО2.2г, ЗУ2.2в, ЗУ2.3а, ЗУ2.3б, ЗУ2.3в, МАТ2.3в, НСХ2.1а, НСХ2.1в, НСХ2.2а, НСХ2.2в, НСХ2.3а, НСХ2.3б, НСХ2.3в, ХЭМ2.1г, ХЯ2.1б, ХЯ2.2а, ХЯ2.2в, ХЯ2.2г, ХЯ2.3а</p></td></tr><tr><td><p><strong>Аюулгүй байдал</strong></p></td><td><p><em>Ус ойролцоо аюулгүй байдал, ойн явган аялалын дүрэм.</em></p></td></tr></table></div>
+<script src="../protection.js"></script></body></html>

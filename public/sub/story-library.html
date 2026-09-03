@@ -1,0 +1,281 @@
+<meta charset="UTF-8">
+<title>Үлгэр зохиолын сан — СӨБ Багш Өлзий</title>
+<script src="config.js" onerror="0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1e293b; padding: 14px; }
+  .header { background: linear-gradient(135deg,#7c3aed,#be185d); color: white; padding: 16px 20px; border-radius: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .header h1 { font-size: 20px; margin: 0; }
+  .back { background: white; color: #7c3aed; padding: 6px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; }
+  .toolbar { background: white; padding: 12px 16px; border-radius: 10px; margin-bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .toolbar select, .toolbar input { padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 13px; }
+  .toolbar input[type=text] { flex: 1; min-width: 200px; }
+  .add-btn { background: linear-gradient(135deg,#be185d,#7c3aed); color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 700; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .story { background: white; padding: 14px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); border-left: 4px solid #fbbf24; }
+  .story h3 { color: #7c3aed; font-size: 15px; margin-bottom: 6px; }
+  .story .meta { font-size: 12px; color: #64748b; margin-bottom: 8px; }
+  .story .tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+  .story .tag { background: #fef3c7; color: #78350f; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .story .actions { display: flex; gap: 6px; margin-top: 8px; }
+  .story .actions a, .story .actions button { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: none; border: none; }
+  .story .actions .watch { background: #7c3aed; color: white; }
+  .story .actions .del { background: #fee2e2; color: #dc2626; }
+  .empty { background: white; padding: 40px; text-align: center; color: #94a3b8; border-radius: 10px; }
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; padding: 20px; align-items: center; justify-content: center; }
+  .modal-bg.show { display: flex; }
+  .modal { background: white; padding: 22px; border-radius: 12px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
+  .modal h3 { color: #7c3aed; margin-bottom: 12px; }
+  .modal label { display: block; margin: 10px 0 4px; font-weight: 600; font-size: 13px; }
+  .modal input, .modal textarea, .modal select { width: 100%; padding: 8px 10px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 13px; font-family: inherit; }
+  .modal textarea { min-height: 60px; }
+  .msg { margin-top: 10px; font-size: 13px; padding: 8px; border-radius: 6px; }
+  .msg.success { background: #d1fae5; color: #065f46; }
+  .msg.error { background: #fee2e2; color: #991b1b; }
+</style>
+
+<div class="header">
+  <div><h1>📖 Үлгэр зохиолын сан</h1></div>
+  <a href="javascript:history.length>1?history.back():location.href='index.html'" class="back">← Буцах</a>
+</div>
+
+<div class="toolbar">
+  <label>Ангилал:
+    <select id="filterKind" onchange="render()">
+      <option value="">Бүх</option>
+      <option value="story">📖 Үлгэр</option>
+      <option value="poem">📜 Шүлэг</option>
+      <option value="song">🎵 Дуу</option>
+      <option value="tale">🐺 Ардын үлгэр</option>
+      <option value="fable">🌟 Сургаалт үлгэр</option>
+    </select>
+  </label>
+  <label>Бүлэг:
+    <select id="filterGroup" onchange="render()">
+      <option value="">Бүх</option>
+      <option value="baga">Бага (2-3)</option>
+      <option value="dund">Дунд (3-4)</option>
+      <option value="ahlah">Ахлах (4-5)</option>
+      <option value="beltgel">Бэлтгэл (5-6)</option>
+    </select>
+  </label>
+  <input type="text" id="search" placeholder="🔍 Хайх..." oninput="render()">
+  <button class="add-btn" onclick="openAdd()">➕ Шинэ нэмэх</button>
+</div>
+
+<div id="list"></div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3>➕ Шинэ үлгэр/зохиол нэмэх</h3>
+    <label>Гарчиг:</label>
+    <input id="mTitle" placeholder='Жишээ: "Чоно тарвага" ардын үлгэр'>
+    <label>Ангилал:</label>
+    <select id="mKind">
+      <option value="story">📖 Үлгэр</option>
+      <option value="poem">📜 Шүлэг</option>
+      <option value="song">🎵 Дуу</option>
+      <option value="tale">🐺 Ардын үлгэр</option>
+      <option value="fable">🌟 Сургаалт үлгэр</option>
+    </select>
+    <label>Бүлэг:</label>
+    <select id="mGroup">
+      <option value="baga">Бага (2-3)</option>
+      <option value="dund">Дунд (3-4)</option>
+      <option value="ahlah">Ахлах (4-5)</option>
+      <option value="beltgel">Бэлтгэл (5-6)</option>
+    </select>
+    <label>Зохиогч / Эх сурвалж:</label>
+    <input id="mAuthor" placeholder="Ардын аман зохиол, Ц.Дамдинсүрэн...">
+    <label>🎬 YouTube линк (сонголт):</label>
+    <input id="mUrl" placeholder="https://youtu.be/...">
+    <label>📎 Файл — PDF/PPT/зураг/аудио/видео (сонголт):</label>
+    <input id="mFile" type="file" accept="image/*,audio/*,video/*,.pdf,.ppt,.pptx,.doc,.docx">
+    <label>Тэмдэглэл:</label>
+    <textarea id="mNotes" placeholder="Хэрхэн заах, ямар мэдрэмж, гол санаа..."></textarea>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button onclick="closeAdd()" style="flex:1;padding:10px;background:#e5e7eb;border:none;border-radius:8px;cursor:pointer">Болих</button>
+      <button onclick="save()" style="flex:2;padding:10px;background:linear-gradient(135deg,#be185d,#7c3aed);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700">💾 Хадгалах</button>
+    </div>
+    <div id="msg"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_KEY = window.SUPABASE_KEY || "";
+let sb = null;
+if (SUPABASE_URL && SUPABASE_KEY && window.supabase) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const KIND_LABEL = {story:'📖 Үлгэр', poem:'📜 Шүлэг', song:'🎵 Дуу', tale:'🐺 Ардын', fable:'🌟 Сургаалт'};
+const GROUP_LABEL = {baga:'Бага', dund:'Дунд', ahlah:'Ахлах', beltgel:'Бэлтгэл'};
+let stories = [];
+
+// Бэлэн жишээ үлгэрүүд (насны бүлгээр)
+const SEED_STORIES = [
+  // БАГА (2-3 нас) — богино, дүрстэй
+  {kind:'story_poem', title:'Туулай', author:'Ардын шүлэг', notes:'baga', url:''},
+  {kind:'story_poem', title:'Ээж минь', author:'Ц.Гайтав', notes:'baga', url:''},
+  {kind:'story_song', title:'Найзууд', author:'Ардын дуу', notes:'baga', url:''},
+  {kind:'story_tale', title:'Улаан малгайт охин', author:'Ардын үлгэр', notes:'baga', url:''},
+  {kind:'story_poem', title:'Хос эрхтэн', author:'Д.Цэвэгмид', notes:'baga', url:''},
+
+  // ДУНД (3-4 нас) — дундаж хэмжээтэй
+  {kind:'story_tale', title:'Хос буурал өвгөн', author:'Ардын үлгэр', notes:'dund', url:''},
+  {kind:'story_fable', title:'Хулгана хумсаа тайрсан нь', author:'Сургаалт үлгэр', notes:'dund', url:''},
+  {kind:'story_poem', title:'Найз минь', author:'Х.Пүрэвсүрэн', notes:'dund', url:''},
+  {kind:'story_tale', title:'Гурван нөхөр', author:'Ардын үлгэр', notes:'dund', url:''},
+  {kind:'story_song', title:'Гэр бүл', author:'Ардын дуу', notes:'dund', url:''},
+
+  // АХЛАХ (4-5 нас) — уншиж өгдөг үлгэр
+  {kind:'story_tale', title:'Чоно тарвага', author:'Монгол ардын үлгэр', notes:'ahlah', url:''},
+  {kind:'story_tale', title:'Долоон буурал', author:'Ардын үлгэр', notes:'ahlah', url:''},
+  {kind:'story_fable', title:'Хумх өвгөний үлгэр', author:'Сургаалт үлгэр', notes:'ahlah', url:''},
+  {kind:'story_poem', title:'Монгол хүүхэд', author:'Б.Явуухулан', notes:'ahlah', url:''},
+  {kind:'story_tale', title:'Хамгийн хайртай ээж', author:'Ардын үлгэр', notes:'ahlah', url:''},
+  {kind:'story_fable', title:'Хов жив', author:'Сургаалт үлгэр', notes:'ahlah', url:''},
+
+  // БЭЛТГЭЛ (5-6 нас) — урт, гүнзгий
+  {kind:'story_tale', title:'Жангар', author:'Монгол баатарлаг тууль', notes:'beltgel', url:''},
+  {kind:'story_tale', title:'Хан Харангуй', author:'Монгол баатарлаг тууль', notes:'beltgel', url:''},
+  {kind:'story_fable', title:'Дөрвөн бэрх', author:'Ц.Дамдинсүрэн', notes:'beltgel', url:''},
+  {kind:'story_poem', title:'Миний Монгол', author:'Д.Нацагдорж', notes:'beltgel', url:''},
+  {kind:'story_tale', title:'Хоёр хөгшин, гурван эмгэн', author:'Ардын үлгэр', notes:'beltgel', url:''},
+  {kind:'story_fable', title:'Ухаант хов', author:'Сургаалт үлгэр', notes:'beltgel', url:''},
+  {kind:'story_poem', title:'Эх орон', author:'Б.Ринчен', notes:'beltgel', url:''}
+];
+
+async function load() {
+  const seedWithFlag = SEED_STORIES.map((s,i) => ({...s, id:'seed_'+i, isSeed:true}));
+  if (!sb) { stories = seedWithFlag; render(); return; }
+  try {
+    const { data } = await sb.from('song_library')
+      .select('*').like('kind', 'story_%').order('created_at', {ascending: false});
+    stories = [...(data || []), ...seedWithFlag];
+    render();
+  } catch(e) {
+    stories = seedWithFlag;
+    render();
+  }
+}
+
+function render() {
+  const fk = document.getElementById('filterKind').value;
+  const fg = document.getElementById('filterGroup').value;
+  const search = document.getElementById('search').value.toLowerCase().trim();
+
+  let filtered = stories;
+  if (fk) filtered = filtered.filter(s => s.kind === 'story_' + fk);
+  if (fg) filtered = filtered.filter(s => s.notes === fg);
+  if (search) filtered = filtered.filter(s =>
+    (s.title||'').toLowerCase().includes(search) || (s.author||'').toLowerCase().includes(search)
+  );
+
+  if (!filtered.length) {
+    document.getElementById('list').innerHTML = '<div class="empty">📖 Үлгэр байхгүй байна. "➕ Шинэ нэмэх" дар</div>';
+    return;
+  }
+
+  document.getElementById('list').innerHTML = `<div class="grid">${filtered.map(s => {
+    const kind = s.kind.replace('story_', '');
+    const isYT = s.url && s.url.includes('youtu');
+    return `
+      <div class="story">
+        <div class="tags">
+          <span class="tag">${KIND_LABEL[kind] || kind}</span>
+          ${s.notes ? '<span class="tag" style="background:#dbeafe;color:#1e40af">'+GROUP_LABEL[s.notes]+'</span>' : ''}
+        </div>
+        <h3>${escapeHTML(s.title)}</h3>
+        ${s.author ? '<div class="meta">✍️ ' + escapeHTML(s.author) + '</div>' : ''}
+        ${s.url ? `
+          ${isYT ? '<iframe width="100%" height="150" src="https://www.youtube.com/embed/'+ytid(s.url)+'" frameborder="0" allowfullscreen></iframe>' : ''}
+        ` : ''}
+        <div class="actions">
+          ${s.url ? '<a href="'+escapeHTML(s.url)+'" target="_blank" class="watch">🔗 Нээх</a>' : ''}
+          <button onclick="edit('${s.id}')" style="padding:6px 12px;background:#fef3c7;color:#78350f;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">✏️ Засах</button>
+          ${s.isSeed ? '<span style="padding:6px 10px;background:#f3f4f6;color:#64748b;border-radius:6px;font-size:11px">📚 Санал</span>' : '<button class="del" onclick="del(\''+s.id+'\')">🗑️</button>'}
+        </div>
+      </div>
+    `;
+  }).join('')}</div>`;
+}
+
+function ytid(url) {
+  const m = url.match(/(?:youtu\.be\/|v=|embed\/)([\w-]{11})/);
+  return m ? m[1] : '';
+}
+
+let editingId = null;
+let editingSeed = null;
+
+function openAdd() {
+  editingId = null; editingSeed = null;
+  ['mTitle','mAuthor','mUrl','mNotes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mFile').value = '';
+  document.getElementById('msg').innerHTML = '';
+  document.querySelector('#modalBg .modal h3').textContent = '➕ Шинэ үлгэр/зохиол нэмэх';
+  document.getElementById('modalBg').classList.add('show');
+}
+
+function edit(id) {
+  const s = stories.find(x => x.id === id);
+  if (!s) return;
+  editingId = s.isSeed ? null : id;
+  editingSeed = s.isSeed ? s : null;
+  document.getElementById('mTitle').value = s.title || '';
+  document.getElementById('mAuthor').value = s.author || '';
+  document.getElementById('mUrl').value = s.url || '';
+  document.getElementById('mNotes').value = s.desc || '';
+  document.getElementById('mKind').value = (s.kind||'story_story').replace('story_','');
+  document.getElementById('mGroup').value = s.notes || 'baga';
+  document.getElementById('mFile').value = '';
+  document.getElementById('msg').innerHTML = s.isSeed ? '<div class="msg" style="background:#dbeafe;color:#1e40af">💡 Санал болгосон үлгэр — засаж хадгалбал шинээр нэмэгдэнэ</div>' : '';
+  document.querySelector('#modalBg .modal h3').textContent = '✏️ ' + (s.isSeed ? 'Санал засах' : 'Үлгэр засах');
+  document.getElementById('modalBg').classList.add('show');
+}
+
+function closeAdd() { document.getElementById('modalBg').classList.remove('show'); editingId = null; editingSeed = null; }
+
+async function save() {
+  if (!sb) return;
+  const title = document.getElementById('mTitle').value.trim();
+  if (!title) { document.getElementById('msg').innerHTML = '<div class="msg error">Гарчиг оруулна уу</div>'; return; }
+  const kind = document.getElementById('mKind').value;
+  const group = document.getElementById('mGroup').value;
+  const author = document.getElementById('mAuthor').value.trim();
+  let url = document.getElementById('mUrl').value.trim();
+  const file = document.getElementById('mFile').files[0];
+  try {
+    if (file) {
+      document.getElementById('msg').innerHTML = '<div class="msg">⏳ Файл байршуулж байна...</div>';
+      const ext = file.name.split('.').pop();
+      const path = `stories/${Date.now()}.${ext}`;
+      const { error: upErr } = await sb.storage.from('media').upload(path, file);
+      if (upErr && !upErr.message.includes('already exists')) throw upErr;
+      const { data: pub } = sb.storage.from('media').getPublicUrl(path);
+      if (!url) url = pub.publicUrl;
+    }
+    const row = { kind: 'story_' + kind, title, author, url, notes: group };
+    if (editingId) {
+      await sb.from('song_library').update(row).eq('id', editingId);
+    } else {
+      await sb.from('song_library').insert(row);
+    }
+    document.getElementById('msg').innerHTML = '<div class="msg success">✅ Хадгалагдлаа</div>';
+    setTimeout(() => { closeAdd(); load(); }, 800);
+  } catch(e) {
+    document.getElementById('msg').innerHTML = '<div class="msg error">Алдаа: ' + e.message + '</div>';
+  }
+}
+
+async function del(id) {
+  if (!confirm('Устгах уу?')) return;
+  await sb.from('song_library').delete().eq('id', id);
+  load();
+}
+
+function escapeHTML(s) { return String(s==null?'':s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+load();
+</script>

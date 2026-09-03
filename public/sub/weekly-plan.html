@@ -1,0 +1,990 @@
+<meta charset="UTF-8">
+<title>7 хоногийн төлөвлөгөө — СӨБ Багш Өлзий</title>
+<script src="config.js" onerror="0"></script>
+<script src="curriculum-data.js" onerror="0"></script>
+<script src="outcomes-data.js" onerror="0"></script>
+<script src="weekly-plans-data.js" onerror="0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1e293b; padding: 14px; }
+  .header { background: linear-gradient(135deg,#7c3aed,#be185d); color: white; padding: 14px 20px; border-radius: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .header h1 { font-size: 18px; margin: 0; }
+  .back { background: white; color: #7c3aed; padding: 6px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tabs button { padding: 8px 16px; background: white; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; }
+  .tabs button.active { background: linear-gradient(135deg,#be185d,#7c3aed); color: white; border-color: transparent; }
+  .toolbar { background: white; padding: 12px 16px; border-radius: 10px; margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+  .toolbar select, .toolbar input { padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 13px; }
+  .toolbar button { padding: 8px 14px; border: 2px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; }
+  .toolbar button.primary { background: linear-gradient(135deg,#be185d,#7c3aed); color: white; border-color: transparent; }
+  .toolbar button.success { background: #10b981; color: white; border-color: transparent; }
+  .toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .status { padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 12px; }
+  .status.draft     { background: #f3f4f6; color: #6b7280; }
+  .status.submitted { background: #dbeafe; color: #1e40af; }
+  .status.approved  { background: #d1fae5; color: #065f46; }
+  .status.rejected  { background: #fee2e2; color: #991b1b; }
+  /* Тамга — approval seal */
+  .stamp-wrap { display: flex; justify-content: flex-end; padding: 12px 0; }
+  .stamp { display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+           width: 150px; height: 150px; border-radius: 50%; transform: rotate(-6deg);
+           font-family: "Georgia", serif; text-align: center; padding: 12px; box-shadow: 0 3px 8px rgba(0,0,0,0.12); }
+  .stamp .rating-icon { font-size: 22px; margin-bottom: -4px; }
+  .stamp .group-icon  { font-size: 38px; line-height: 1; margin: 2px 0; }
+  .stamp .name  { font-weight: 700; font-size: 11px; letter-spacing: 0.5px; }
+  .stamp .date  { font-size: 9px; opacity: 0.75; margin-top: 2px; }
+  .stamp .arc   { font-size: 8px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+  .stamp.excellent { border: 4px double #d97706; background: #fef3c7; color: #78350f; }
+  .stamp.good      { border: 4px double #059669; background: #d1fae5; color: #065f46; }
+  .stamp.revise    { border: 4px double #d97706; background: #fef9c3; color: #713f12; }
+  /* Санал шүүмж */
+  .feedback-box { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 8px; margin-top: 12px; }
+  .feedback-box h4 { color: #92400e; margin-bottom: 6px; font-size: 13px; }
+  .feedback-box .tag { display: inline-block; padding: 3px 10px; background: white; border: 1px solid #fbbf24; border-radius: 20px; font-size: 11px; color: #78350f; margin: 3px 3px 0 0; }
+  .feedback-box .comment { margin-top: 8px; padding: 8px 12px; background: white; border-radius: 6px; font-size: 12px; color: #78350f; font-style: italic; line-height: 1.5; }
+  .plan-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 12px; }
+  .plan-header { text-align: center; padding-bottom: 12px; border-bottom: 2px solid #f3f4f6; margin-bottom: 16px; }
+  .plan-header .approve-line { text-align: right; font-size: 13px; color: #64748b; margin-bottom: 12px; }
+  .plan-header h2 { font-size: 17px; color: #7c3aed; margin: 6px 0; }
+  .plan-header input.theme { font-size: 15px; padding: 6px 10px; border: 2px dashed #cbd5e1; border-radius: 6px; width: 60%; text-align: center; margin-top: 8px; }
+  table.week { border-collapse: collapse; width: 100%; font-size: 12px; }
+  table.week th, table.week td { border: 1px solid #e5e7eb; padding: 8px 6px; text-align: left; vertical-align: top; }
+  table.week thead th { background: linear-gradient(135deg,#fce7f3,#ddd6fe); color: #7c3aed; font-weight: 700; text-align: center; }
+  table.week tbody th { background: #f8fafc; font-weight: 700; width: 90px; font-size: 11px; }
+  table.week tbody th .dur { color: #7c3aed; font-size: 10px; display: block; margin-bottom: 3px; }
+  table.week td textarea { width: 100%; border: none; background: transparent; font-family: inherit; font-size: 12px; resize: vertical; min-height: 44px; padding: 2px; }
+  table.week td textarea:focus { outline: 2px solid #7c3aed; outline-offset: -1px; background: #faf5ff; }
+  .syd-section { background: #f0fdf4; border-left: 4px solid #10b981; padding: 14px 18px; border-radius: 8px; margin-top: 14px; }
+  .syd-section h3 { color: #065f46; margin-bottom: 8px; font-size: 14px; }
+  .syd-list { display: flex; flex-direction: column; gap: 6px; }
+  .syd-item { background: white; padding: 8px 12px; border-radius: 6px; font-size: 12px; display: flex; gap: 8px; align-items: center; }
+  .syd-item.new { border-left: 4px solid #10b981; }
+  .syd-item.link { border-left: 4px solid #f59e0b; background: #fffbeb; }
+  .syd-item b { color: #7c3aed; min-width: 80px; }
+  .footer-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; padding-top: 14px; border-top: 2px solid #f3f4f6; }
+  .footer-fields label { display: block; font-weight: 700; margin-bottom: 4px; font-size: 13px; color: #64748b; }
+  .footer-fields input, .footer-fields textarea { width: 100%; padding: 6px 10px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 13px; font-family: inherit; }
+  .msg { padding: 10px 14px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; }
+  .msg.info { background: #dbeafe; color: #1e40af; }
+  .msg.success { background: #d1fae5; color: #065f46; }
+  .msg.error { background: #fee2e2; color: #991b1b; }
+</style>
+
+<div class="header">
+  <div><h1>📅 7 хоногийн төлөвлөгөө</h1></div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button onclick="showHelp()" style="background:white;color:#7c3aed;padding:6px 14px;border-radius:8px;font-weight:600;font-size:13px;border:none;cursor:pointer">❓ Заавар</button>
+    <a href="javascript:history.length>1?history.back():location.href='index.html'" class="back">← Буцах</a>
+  </div>
+</div>
+
+<style>
+  .help-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:200; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
+  .help-modal.open { display:flex; }
+  .help-box { background:white; border-radius:14px; max-width:700px; width:100%; padding:24px 28px; box-shadow:0 10px 40px rgba(0,0,0,.25); max-height:90vh; overflow-y:auto; }
+  .help-box h2 { color:#7c3aed; margin-bottom:14px; padding-bottom:10px; border-bottom:2px solid #f3f4f6; display:flex; justify-content:space-between; align-items:center; }
+  .help-box h2 .x { background:none; border:none; font-size:1.6em; cursor:pointer; color:#94a3b8; }
+  .help-step { display:flex; gap:14px; margin:14px 0; padding:12px 14px; background:#faf5ff; border-radius:10px; border-left:4px solid #7c3aed; }
+  .help-step .num { flex-shrink:0; width:36px; height:36px; background:#7c3aed; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; }
+  .help-step .body h4 { color:#7c3aed; margin-bottom:4px; font-size:15px; }
+  .help-step .body p { font-size:13px; color:#334155; line-height:1.5; }
+  .help-step .body code { background:#ede9fe; padding:2px 6px; border-radius:4px; font-size:12px; color:#7c3aed; font-weight:600; }
+  .help-footer { display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:14px; border-top:2px solid #f3f4f6; }
+  .help-footer label { font-size:12px; color:#64748b; display:flex; gap:6px; align-items:center; cursor:pointer; }
+  .help-footer button { background:linear-gradient(135deg,#be185d,#7c3aed); color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer; }
+</style>
+
+<div class="help-modal" id="helpModal" onclick="if(event.target===this)closeHelp()">
+  <div class="help-box">
+    <h2>🎁 7 хоногийн төлөвлөгөө — 4 алхам <button class="x" onclick="closeHelp()">×</button></h2>
+    <p style="color:#64748b;font-size:13px;margin-bottom:10px">Долоо хоногт багш болгоны хийдэг ажлыг 5 минутанд амжуулах шинэ багаж.</p>
+
+    <div class="help-step">
+      <div class="num">1</div>
+      <div class="body">
+        <h4>Бүлэг + Сар + Долоо хоног сонго</h4>
+        <p>Дээд табнаас өөрийн бүлгээ сонгож, <code>Сар</code>, <code>Долоо хоног</code> цонхнуудаас тохирохоо олно.</p>
+      </div>
+    </div>
+
+    <div class="help-step">
+      <div class="num">2</div>
+      <div class="body">
+        <h4><code>🎁 Гарын авлагаас автомат бөглөх</code> дар</h4>
+        <p>Гарын авлагаас <b>үйл ажиллагаанууд автомат задалж</b> 40 нүд бүгдийг бөглөнө. Өдрийн хуваарийн стандарт цагууд (Өглөөний хүлээн авалт, Зугаалга, Төвийн цаг) — сарын сэдэвтэй холбогдсон агуулгаар автомат бөглөгдөнө. <b>СҮД жагсаалт</b> ч мөн доор автомат гарна.</p>
+      </div>
+    </div>
+
+    <div class="help-step">
+      <div class="num">3</div>
+      <div class="body">
+        <h4>Нүд бүрийг засварла (сонголтоор)</h4>
+        <p>Ямар ч нүдэн дээр товшин өөрчлөх боломжтой. Сэдэв, арга зүй, багшийн нэр, эргэцүүлэл талбаруудыг бөглөнө. Дахин бөглөх бол <code>🧹 Цэвэрлэх</code> дараад <code>🎁 Автомат бөглөх</code> дахин дар.</p>
+      </div>
+    </div>
+
+    <div class="help-step">
+      <div class="num">4</div>
+      <div class="body">
+        <h4><code>💾 Хадгалах</code> → <code>📥 Word татах</code> → <code>✅ Арга зүйч батлах</code></h4>
+        <p><b>Хадгалах</b> — өөрийн Supabase-т хадгална, дараа нээхэд буцаж татагдана. <b>Word татах</b> — файлыг компьютерт татаж хэвлэх, ирүүлэх. <b>Батлуулах</b> — арга зүйчид зөвшөөрөл авах.</p>
+      </div>
+    </div>
+
+    <div class="help-footer">
+      <label><input type="checkbox" id="dontShowIntro"> Дахин бүү үзүүл</label>
+      <button onclick="closeHelp()">Ойлголоо, эхэлье!</button>
+    </div>
+  </div>
+</div>
+
+<div class="tabs" id="groupTabs"></div>
+
+<div class="toolbar">
+  <label>📅 Сар:
+    <select id="monthSel" onchange="loadPlan()">
+      <option value="9">9-р сар (IX)</option>
+      <option value="10">10-р сар (X)</option>
+      <option value="11">11-р сар (XI)</option>
+      <option value="12">12-р сар (XII)</option>
+      <option value="1">1-р сар (I)</option>
+      <option value="2">2-р сар (II)</option>
+      <option value="3">3-р сар (III)</option>
+      <option value="4">4-р сар (IV)</option>
+      <option value="5">5-р сар (V)</option>
+    </select>
+  </label>
+  <label>Долоо хоног:
+    <select id="weekSel" onchange="loadPlan()">
+      <option value="1">1-р</option><option value="2">2-р</option><option value="3">3-р</option><option value="4">4-р</option>
+    </select>
+  </label>
+  <button onclick="fillFromGuide()" style="background:#10b981;color:white;border-color:transparent">🎁 Гарын авлагаас автомат бөглөх</button>
+  <button onclick="clearAllCells()" style="background:#f87171;color:white;border-color:transparent" title="Бүх нүдийг цэвэрлээд шинээр бөглөх">🧹 Цэвэрлэх</button>
+  <button id="saveBtn" class="primary" onclick="save()" disabled>💾 Хадгалах</button>
+  <button onclick="downloadWord()">📥 Word татах</button>
+  <button onclick="window.print()">🖨️ Хэвлэх</button>
+  <span id="statusBadge" class="status draft">📝 Ноорог</span>
+  <button id="submitBtn" class="success" onclick="submitForApproval()">📤 Батлуулахаар илгээх</button>
+</div>
+
+<div id="msg"></div>
+
+<div class="plan-card">
+  <div class="plan-header">
+    <div class="approve-line" id="approveInfo">
+      БАТЛАВ: АРГА ЗҮЙЧ __________________
+    </div>
+    <h2 id="planTitle">Бүлэг · Сар · Долоо хоног</h2>
+    <input class="theme" id="theme" placeholder="7 хоногийн сэдэв (жишээ: Пионер толгой)">
+  </div>
+
+  <table class="week">
+    <thead>
+      <tr>
+        <th style="min-width:110px">Хугацаа / Өдөр</th>
+        <th>Даваа</th><th>Мягмар</th><th>Лхагва</th><th>Пүрэв</th><th>Баасан</th>
+      </tr>
+    </thead>
+    <tbody id="weekBody"></tbody>
+  </table>
+
+  <div class="syd-section">
+    <h3>🎯 Суралцахуйн үр дүн (Жилийн матрицаас автомат)</h3>
+    <div class="syd-list" id="sydList"></div>
+  </div>
+
+  <div style="background:#fffbeb;border-left:4px solid #f59e0b;padding:14px 18px;border-radius:8px;margin-top:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 style="color:#92400e;font-size:14px;margin:0">📖 Гарын авлагаас тухайн сарын агуулга</h3>
+      <button onclick="toggleGuide()" id="guideToggle" style="padding:4px 10px;border:1px solid #f59e0b;background:white;border-radius:6px;cursor:pointer;font-size:12px">Харах ▼</button>
+    </div>
+    <pre id="guideRef" style="display:none;white-space:pre-wrap;font-family:inherit;font-size:12px;color:#78350f;max-height:400px;overflow-y:auto;background:white;padding:12px;border-radius:6px;line-height:1.6"></pre>
+  </div>
+
+  <div class="footer-fields">
+    <div>
+      <label>📖 Сургалтын арга зүй:</label>
+      <input id="method" placeholder="жишээ: Зохиолд суурилсан арга зүй">
+    </div>
+    <div>
+      <label>👩‍🏫 Төлөвлөлт хийсэн багш:</label>
+      <input id="teacherName" placeholder="Багшийн нэр">
+    </div>
+    <div style="grid-column:1/-1">
+      <label>💭 Эргэцүүлэл:</label>
+      <textarea id="reflection" rows="2" placeholder="7 хоногийн эцэст бөглөнө"></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════ SUPABASE ═══════
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_KEY = window.SUPABASE_KEY || "";
+let sb = null;
+if (SUPABASE_URL && SUPABASE_KEY && window.supabase) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ═══════ ТОГТМОЛУУД ═══════
+const GROUP_META = [
+  {id:"baga",    name:"👶 Нархан (Бага)",       nickname:"НАРХАН",      icon:"👶"},
+  {id:"dund",    name:"🧒 Багачууд (Дунд)",     nickname:"БАГАЧУУД",    icon:"🧒"},
+  {id:"ahlah",   name:"🐣 Дэгдээхий (Ахлах)",  nickname:"ДЭГДЭЭХИЙ",   icon:"🐣"},
+  {id:"beltgel", name:"🐰 Бүжинхэн (Бэлтгэл)", nickname:"БҮЖИНХЭН",    icon:"🐰"}
+];
+const DAYS = ["Даваа","Мягмар","Лхагва","Пүрэв","Баасан"];
+const TIME_SLOTS = [
+  { name:"Өглөөний хүлээн авалт",      dur:"30 мин" },
+  { name:"Өглөөний дасгал",             dur:"20 мин" },
+  { name:"Тойргын цаг",                 dur:"15 мин" },
+  { name:"Чиглүүлэгтэй тоглоом",        dur:"30 мин" },
+  { name:"Зугаалгын цаг",                dur:"30 мин" },
+  { name:"Номын цаг",                    dur:"15 мин" },
+  { name:"Төвийн цаг",                   dur:"40 мин" },
+  { name:"Хөгжөөн баясгах ажил",         dur:"30 мин" }
+];
+
+// URL-с бүлэг авах
+const urlParams = new URLSearchParams(location.search);
+let currentGroup = urlParams.get('group') || 'baga';
+let currentMonth = 9;
+let currentWeek = 1;
+let hasChanges = false;
+let currentApproval = null;
+let cellData = {}; // {slotIdx: {dayIdx: text}}
+
+// ═══════ ЭХЛЭЛ ═══════
+function init() {
+  renderTabs();
+  renderWeekBody();
+  document.getElementById('monthSel').value = currentMonth;
+  document.getElementById('weekSel').value = currentWeek;
+  loadPlan();
+}
+
+function renderTabs() {
+  document.getElementById('groupTabs').innerHTML = GROUP_META.map(g =>
+    `<button class="${g.id===currentGroup?'active':''}" onclick="switchGroup('${g.id}')">${g.name}</button>`
+  ).join('');
+}
+
+function switchGroup(g) {
+  if (hasChanges && !confirm('Хадгалаагүй өөрчлөлт байна. Үргэлжлүүлэх үү?')) return;
+  currentGroup = g;
+  hasChanges = false;
+  document.getElementById('saveBtn').disabled = true;
+  renderTabs();
+  loadPlan();
+}
+
+function renderWeekBody() {
+  const body = document.getElementById('weekBody');
+  body.innerHTML = TIME_SLOTS.map((slot, si) => `
+    <tr>
+      <th><span class="dur">${slot.dur}</span>${slot.name}</th>
+      ${DAYS.map((_,di) => `
+        <td><textarea data-slot="${si}" data-day="${di}" oninput="markChange(this)" placeholder="үйл ажиллагаа..."></textarea></td>
+      `).join('')}
+    </tr>
+  `).join('');
+}
+
+function markChange(el) {
+  const si = el.dataset.slot, di = el.dataset.day;
+  if (!cellData[si]) cellData[si] = {};
+  cellData[si][di] = el.value;
+  hasChanges = true;
+  document.getElementById('saveBtn').disabled = false;
+}
+
+function clearAllCells() {
+  if (!confirm('Бүх нүдийг цэвэрлэх үү? Хадгалаагүй өөрчлөлт устана.')) return;
+  document.querySelectorAll('#weekBody textarea').forEach(t => t.value = '');
+  cellData = {};
+  hasChanges = true;
+  document.getElementById('saveBtn').disabled = false;
+  showMsg('info', '🧹 Нүд цэвэрлэгдлээ. Дахин «Автомат бөглөх» дарж болно.');
+}
+
+// ═══════ ЗААВРЫН МОДАЛЬ ═══════
+function showHelp() { document.getElementById('helpModal').classList.add('open'); }
+function closeHelp() {
+  if (document.getElementById('dontShowIntro') && document.getElementById('dontShowIntro').checked) {
+    try { localStorage.setItem('weeklyPlan_introSeen', '1'); } catch(e) {}
+  }
+  document.getElementById('helpModal').classList.remove('open');
+}
+// Эхний удаа автомат гарах
+try {
+  if (!localStorage.getItem('weeklyPlan_introSeen')) {
+    setTimeout(() => showHelp(), 400);
+  }
+} catch(e) {}
+
+async function loadPlan() {
+  currentMonth = document.getElementById('monthSel').value;
+  currentWeek = document.getElementById('weekSel').value;
+  const gname = GROUP_META.find(g => g.id === currentGroup).name;
+  document.getElementById('planTitle').textContent = `${gname} · ${currentMonth}-р сар · ${currentWeek}-р долоо хоног`;
+
+  cellData = {};
+  document.querySelectorAll('#weekBody textarea').forEach(t => t.value = '');
+  document.getElementById('theme').value = '';
+  document.getElementById('method').value = '';
+  document.getElementById('teacherName').value = window.TEACHER_NAME || '';
+  document.getElementById('reflection').value = '';
+  currentApproval = null;
+  updateStatus();
+
+  // Жилийн матрицаас СҮД татах
+  loadSYDsFromYearlyMatrix();
+
+  // Supabase-с татах
+  if (sb) {
+    try {
+      const { data } = await sb.from('plans')
+        .select('*')
+        .eq('tab','weekly')
+        .eq('group_id', currentGroup)
+        .eq('period', `${currentMonth}-${currentWeek}`)
+        .limit(1);
+      if (data && data.length) {
+        const row = data[0];
+        const c = JSON.parse(row.content || '{}');
+        cellData = c.cells || {};
+        document.getElementById('theme').value = c.theme || row.title || '';
+        document.getElementById('method').value = c.method || '';
+        document.getElementById('teacherName').value = c.teacher || '';
+        document.getElementById('reflection').value = c.reflection || '';
+        // approval объектийг contentJSON эсвэл row дээрх approved_at-с бүтээнэ
+        if (row.approved_at) {
+          currentApproval = {
+            approved_at: row.approved_at,
+            approved_by: row.approved_by,
+            rating:   c.approval?.rating   || 'good',
+            comments: c.approval?.comments || '',
+            tags:     c.approval?.tags     || []
+          };
+        } else if (c.submitted_at) {
+          currentApproval = {
+            submitted_at: c.submitted_at,
+            submitted_by: c.submitted_by || ''
+          };
+        }
+        // Restore cells
+        Object.entries(cellData).forEach(([si, days]) => {
+          Object.entries(days).forEach(([di, txt]) => {
+            const t = document.querySelector(`textarea[data-slot="${si}"][data-day="${di}"]`);
+            if (t) t.value = txt;
+          });
+        });
+        updateStatus();
+      }
+    } catch(e) { console.warn('Load failed:', e); }
+  }
+  hasChanges = false;
+  document.getElementById('saveBtn').disabled = true;
+}
+
+// yearly-matrix.html-тэй ижил алгоритм — Supabase-с олдохгүй бол автомат үүсгэнэ
+function buildAutoYearlyPlan(outcomes) {
+  const subjectIds = Object.keys(outcomes);
+  const totalWeeks = 36, introWeeks = 32;
+  const plan = {};
+  const monthMap = [9,10,11,12,1,2,3,4,5];
+  const schedules = {};
+  subjectIds.forEach(sid => {
+    const codes = outcomes[sid].map(o => o.code);
+    if (!codes.length) return;
+    const sched = new Array(totalWeeks).fill(null);
+    codes.forEach((code, i) => {
+      let week = Math.floor(i * introWeeks / codes.length);
+      while (week < introWeeks && sched[week] !== null) week++;
+      if (week < introWeeks) sched[week] = { code, isNew: true };
+    });
+    for (let w = introWeeks; w < totalWeeks; w++) {
+      const idx = (w - introWeeks) % codes.length;
+      sched[w] = { code: codes[idx], isNew: false };
+    }
+    schedules[sid] = sched;
+  });
+  for (let w = 0; w < totalWeeks; w++) {
+    const month = monthMap[Math.floor(w/4)];
+    const weekInMonth = (w % 4) + 1;
+    const key = `${month}-${weekInMonth}`;
+    const wp = { new:{}, rep:{}, links:{} };
+    const newCodes = [];
+    subjectIds.forEach(sid => {
+      const cell = (schedules[sid]||[])[w];
+      if (!cell) return;
+      if (cell.isNew) { wp.new[sid] = cell.code; newCodes.push(cell.code); }
+      else wp.rep[sid] = cell.code;
+    });
+    Object.entries({...wp.new, ...wp.rep}).forEach(([sid, code], i) => {
+      const others = newCodes.filter(c => c !== code);
+      if (others.length > 0) wp.links[code] = others[i % others.length];
+    });
+    plan[key] = wp;
+  }
+  return plan;
+}
+
+// Долоо хоногийн СҮД-үүдийг харуулах helper
+function renderWeekSYDs(cell) {
+  const list = document.getElementById('sydList');
+  const news = Object.entries(cell.new || {});
+  const reps = Object.entries(cell.rep || {});
+  if (!news.length && !reps.length) {
+    list.innerHTML = '<div style="color:#94a3b8;font-size:12px">Энэ долоо хоногт СҮД байхгүй байна</div>';
+    return;
+  }
+  const outcomesData = (window.OUTCOMES_REAL || {})[currentGroup] || {};
+  // Код → бүрэн тексттэй холбох
+  const findText = code => {
+    for (const sid in outcomesData) {
+      const found = (outcomesData[sid]||[]).find(o => o.code === code);
+      if (found) return found.text;
+    }
+    return '';
+  };
+  let html = '';
+  news.forEach(([sid, code]) => {
+    const partner = cell.links[code] || '';
+    const txt = findText(code);
+    html += `<div class="syd-item new">🟢 <b>${code}</b> Шинэ${txt?` · ${txt.substr(0,55)}${txt.length>55?'…':''}`:''}${partner?`<br><span style="margin-left:14px;color:#78350f">🟡 Уялдах: <b>${partner}</b></span>`:''}</div>`;
+  });
+  reps.forEach(([sid, code]) => {
+    const partner = cell.links[code] || '';
+    const txt = findText(code);
+    html += `<div class="syd-item link">🔵 <b>${code}</b> Давталт${txt?` · ${txt.substr(0,55)}${txt.length>55?'…':''}`:''}${partner?`<br><span style="margin-left:14px;color:#78350f">🟡 Уялдах: <b>${partner}</b></span>`:''}</div>`;
+  });
+  list.innerHTML = html;
+}
+
+async function loadSYDsFromYearlyMatrix() {
+  const list = document.getElementById('sydList');
+  const key = `${currentMonth}-${currentWeek}`;
+
+  // 1. Эхлээд Supabase-с шалгах (багш өөрөө өөрчилсөн эсэх)
+  if (sb) {
+    list.innerHTML = '<div style="color:#94a3b8;font-size:12px">⏳ Ачаалж байна...</div>';
+    try {
+      const { data } = await sb.from('plans')
+        .select('*').eq('tab','yearly_matrix').eq('group_id', currentGroup).limit(1);
+      if (data && data.length) {
+        const yp = JSON.parse(data[0].content || '{}').plan || {};
+        const cell = yp[key] || {new:{}, rep:{}, links:{}};
+        renderWeekSYDs(cell);
+        return;
+      }
+    } catch(e) { console.warn('Load failed:', e); }
+  }
+
+  // 2. Supabase-т байхгүй бол — outcomes-data.js-с автомат үүсгэнэ
+  const outcomes = (window.OUTCOMES_REAL || {})[currentGroup];
+  if (!outcomes || !Object.keys(outcomes).length) {
+    list.innerHTML = '<div style="color:#94a3b8;font-size:12px">⚠️ Ямар ч СҮД өгөгдөл олдсонгүй (outcomes-data.js ачаалагдсан уу?)</div>';
+    return;
+  }
+  const autoPlan = buildAutoYearlyPlan(outcomes);
+  const cell = autoPlan[key] || {new:{}, rep:{}, links:{}};
+  renderWeekSYDs(cell);
+}
+
+function updateStatus() {
+  const badge = document.getElementById('statusBadge');
+  const info = document.getElementById('approveInfo');
+  const submitBtn = document.getElementById('submitBtn');
+  const grp = GROUP_META.find(g => g.id === currentGroup);
+  const ap = currentApproval || {};
+
+  // Approval object structure (жижиг Supabase өөрчлөлтгүй JSON бүхий approval field):
+  //   approved_at, approved_by, rating: "excellent"|"good"|"revise", comments: "...", tags: [...]
+
+  if (ap.approved_at) {
+    // ✅ БАТЛАГДСАН (rating == excellent | good)
+    const rating = ap.rating || 'good';
+    const cls = rating === 'excellent' ? 'excellent' : rating === 'revise' ? 'revise' : 'good';
+    const label = rating === 'excellent' ? '🌟 ОНЦ САЙН' : rating === 'revise' ? '📝 ЗАСВАРЛАХ' : '👍 БАТЛАГДСАН';
+    const arc = rating === 'excellent' ? 'ЗАГВАР БОЛОХУЙЦ' : rating === 'revise' ? 'САНАЛ ӨГСӨН' : 'БАТЛАГДСАН';
+    badge.className = 'status ' + (rating === 'revise' ? 'rejected' : 'approved');
+    badge.textContent = rating === 'excellent' ? '🌟 Онц сайн' : rating === 'revise' ? '📝 Засварлах' : '✅ Батлагдсан';
+    submitBtn.style.display = 'none';
+
+    // Тамга байдлаар харуулах
+    info.innerHTML = `
+      <div class="stamp-wrap">
+        <div class="stamp ${cls}">
+          <div class="rating-icon">${rating === 'excellent' ? '🌟' : rating === 'revise' ? '📝' : '✅'}</div>
+          <div class="group-icon">${grp?.icon || '🎓'}</div>
+          <div class="name">АРГА ЗҮЙЧ<br>${ap.approved_by || '—'}</div>
+          <div class="date">${new Date(ap.approved_at).toLocaleDateString('mn-MN')}</div>
+          <div class="arc">${arc}</div>
+        </div>
+      </div>`;
+
+    // Санал шүүмж
+    let fbHtml = '';
+    if ((ap.tags && ap.tags.length) || ap.comments) {
+      fbHtml = '<div class="feedback-box"><h4>📝 Арга зүйчийн санал:</h4>';
+      if (ap.tags && ap.tags.length) fbHtml += ap.tags.map(t => `<span class="tag">${t}</span>`).join('');
+      if (ap.comments) fbHtml += `<div class="comment">« ${ap.comments} »</div>`;
+      fbHtml += '</div>';
+    }
+    info.innerHTML += fbHtml;
+
+  } else if (ap.submitted_at) {
+    // 📤 Илгээсэн, хариу хүлээж байна
+    badge.className = 'status submitted';
+    badge.textContent = '📤 Илгээсэн';
+    submitBtn.style.display = 'none';
+    info.innerHTML = `<div style="color:#1e40af;font-size:13px;padding:8px 12px;background:#dbeafe;border-radius:6px;text-align:center">
+      📤 <b>Батлуулахаар илгээгдсэн</b> · ${new Date(ap.submitted_at).toLocaleDateString('mn-MN')} · Арга зүйчийн хариу хүлээж байна.
+    </div>`;
+
+  } else {
+    // 📝 Ноорог
+    badge.className = 'status draft';
+    badge.textContent = '📝 Ноорог';
+    submitBtn.style.display = '';
+    info.innerHTML = 'БАТЛАВ: АРГА ЗҮЙЧ __________________ · 20___ он ___ сар ___ өдөр';
+  }
+}
+
+async function save() {
+  if (!sb) { showMsg('error', 'Supabase холбогдоогүй'); return; }
+  const period = `${currentMonth}-${currentWeek}`;
+  const content = JSON.stringify({
+    cells: cellData,
+    theme: document.getElementById('theme').value,
+    method: document.getElementById('method').value,
+    teacher: document.getElementById('teacherName').value,
+    reflection: document.getElementById('reflection').value
+  });
+  const title = document.getElementById('theme').value || `${currentGroup} · ${period}`;
+  try {
+    const { data: existing } = await sb.from('plans')
+      .select('id').eq('tab','weekly').eq('group_id',currentGroup).eq('period',period).limit(1);
+    if (existing && existing.length) {
+      await sb.from('plans').update({content, title}).eq('id', existing[0].id);
+    } else {
+      await sb.from('plans').insert({group_id: currentGroup, tab:'weekly', period, title, content});
+    }
+    hasChanges = false;
+    document.getElementById('saveBtn').disabled = true;
+    showMsg('success', '✅ Хадгалагдлаа');
+  } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+}
+
+async function submitForApproval() {
+  if (hasChanges) {
+    if (!confirm('Хадгалагдаагүй өөрчлөлт байна. Илгээхийн өмнө хадгалах уу?')) return;
+    await save();
+  }
+  if (!sb) { showMsg('error', 'Supabase холбогдоогүй байна'); return; }
+  const now = new Date().toISOString();
+  const period = `${currentMonth}-${currentWeek}`;
+  try {
+    // content JSON-т submitted_at нэмэх
+    const { data: existing } = await sb.from('plans')
+      .select('*').eq('tab','weekly').eq('group_id',currentGroup).eq('period',period).limit(1);
+    if (!existing || !existing.length) {
+      await save();
+      showMsg('info', 'Эхлээд хадгалаад дахин илгээнэ үү.');
+      return;
+    }
+    const row = existing[0];
+    const content = JSON.parse(row.content || '{}');
+    content.submitted_at = now;
+    content.submitted_by = window.TEACHER_NAME || '';
+    // Хэрэв өмнө нь батлагдсан бол шинэ илгээлт → approval-ыг цуцлана
+    delete content.approval;
+    await sb.from('plans').update({
+      content: JSON.stringify(content),
+      approved_at: null, approved_by: null
+    }).eq('id', row.id);
+
+    currentApproval = { submitted_at: now, submitted_by: content.submitted_by };
+    updateStatus();
+    showMsg('success', '📤 Батлуулахаар илгээгдлээ. Арга зүйч хариу өгөх хүртэл хүлээнэ үү.');
+  } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+}
+
+function showMsg(type, text) {
+  const el = document.getElementById('msg');
+  el.innerHTML = `<div class="msg ${type}">${text}</div>`;
+  setTimeout(() => el.innerHTML = '', 4000);
+}
+
+function toggleGuide() {
+  const el = document.getElementById('guideRef');
+  const btn = document.getElementById('guideToggle');
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+    btn.textContent = 'Хаах ▲';
+    loadGuideContent();
+  } else {
+    el.style.display = 'none';
+    btn.textContent = 'Харах ▼';
+  }
+}
+
+function loadGuideContent() {
+  const key = `${currentGroup}_${currentMonth}`;
+  const content = (window.CURRICULUM || {})[key] || '⚠️ Гарын авлагаас олдсонгүй';
+  document.getElementById('guideRef').textContent = content;
+}
+
+// Сар тус бүрийн сэдвүүд
+const MONTH_THEMES = {
+  9:  {name:"Танилцах, шинэ орчин", topics:["мэндлэх","найзууд","цэцэрлэг","гэр бүл","өөрийн нэр"]},
+  10: {name:"Намар, ургамал, амьтад", topics:["навч","хураангуй","хөрөнгө","хэрэм","шар өнгө"]},
+  11: {name:"Гэр бүл, гэрийн ажил", topics:["ээж","аав","ах эгч","гэрийн ажил","хайр"]},
+  12: {name:"Өвөл, шинэ жил", topics:["цас","гацуур","шинэ жил","бэлэг","хүйтэн"]},
+  1:  {name:"Цагаан сар, ёс заншил", topics:["цагаан идээ","хадаг","мэндчилгээ","гэрэл","морь"]},
+  2:  {name:"Хот, гудамж, тээвэр", topics:["машин","гэрлэн дохио","явган зам","автобус","онгоц"]},
+  3:  {name:"Эх, эмэгтэйчүүд, хавар", topics:["ээж","хавар","цэцэг","шувуу","дулаан"]},
+  4:  {name:"Мод, цэцэг, шувууд", topics:["мод","цэцэг","шувуу","модны навч","үндэс"]},
+  5:  {name:"Хүүхдийн баяр, амралт", topics:["баяр","тоглоом","найзууд","аюулгүй байдал","зуны амралт"]}
+};
+
+// Хугацаа тус бүрийн үйл ажиллагааны загвар
+const ACTIVITY_TEMPLATES = {
+  0: (topic, day) => [
+    `Хүүхдийг угтан авах, "${topic}" сэдвээр ярилцах`,
+    `Найзтайгаа мэндлэх, өнөөдрийн "${topic}"-ыг ажиглах`,
+    `"${topic}" зургаар танилцуулах, тоглоомоор угтах`,
+    `Гэрийн орчны "${topic}"-ы тухай ярилцах`,
+    `Долоо хоногийн товч дүгнэлт хийх, найзтайгаа хуваалцах`
+  ][day],
+  1: (topic, day) => [
+    `"${topic}" сэдэвт хөгжимт дасгал`,
+    `Бөмбөгтэй "${topic}" дасгал`,
+    `Уян хатан дасгал ("${topic}" хэсэгт зориулав)`,
+    `Хамтын бүжиг ("${topic}" темпоор)`,
+    `Хөгжимд ${topic}-ын хөдөлгөөн дуурайх`
+  ][day],
+  2: (topic, day) => [
+    `Танилцах тоглоом: "${topic}"-ын тухай ярилцах`,
+    `${topic}-ын нэр, тодорхойлолт хэлэх`,
+    `"${topic}" сэдвийн хүрээнд асуулт хариулт`,
+    `${topic}-той холбоотой шүлэг цээжлэх`,
+    `Долоо хоногт судалсан "${topic}"-ыг эргэцүүлэн ярих`
+  ][day],
+  3: (topic, day) => [
+    `"${topic}" сэдвээр зургийг ажиглан ярилцах`,
+    `${topic}-ын дүрстэй хайлт, ялгах тоглоом`,
+    `"${topic}"-ыг өнгөөр, хэлбэрээр ангилах`,
+    `${topic}-ын талаар харилцан яриа өрнүүлэх`,
+    `Багаар "${topic}"-ын тухай бүтээл хийх`
+  ][day],
+  4: (topic, day) => [
+    `Гадаа "${topic}"-ыг ажиглах, дүгнэх`,
+    `Байгальд гарч "${topic}"-той холбоотой юмс цуглуулах`,
+    `${topic}-ын тухай орчинд аялах`,
+    `${topic}-ыг зурж, наамал хийх зорилготой ажиглалт`,
+    `Долоо хоногийн ажиглалтын үр дүнг хуваалцах`
+  ][day],
+  5: (topic, day) => [
+    `"${topic}"-ын тухай зургаар дүрсэлсэн ном`,
+    `${topic}-той холбоотой үлгэр сонсох`,
+    `Багш "${topic}"-ын тухай уншиж өгөх`,
+    `${topic}-ын шүлэг, богино өгүүллэг`,
+    `Хүүхдүүд дуртай "${topic}"-ын номоо хуваалцах`
+  ][day],
+  6: (topic, day) => [
+    `Зургийн төвд "${topic}"-ыг зурах`,
+    `Бүтээлийн төвд ${topic}-с хийсэн бүтээл`,
+    `Дүрд тоглох: "${topic}"-той холбоотой хэсэг`,
+    `Шинжлэх ухааны төвд ${topic}-ыг судлах`,
+    `Хамтын бүтээл: "${topic}" сэдвээр том зураг`
+  ][day],
+  7: (topic, day) => [
+    `Хөгжөөнт тоглоом: "${topic}" тэмээ, хүлэг`,
+    `Дуу дуулах "${topic}"-ын сэдвээр`,
+    `Хамтын хөгжөөнт үйл ажиллагаа`,
+    `${topic}-той холбоотой бүжиг`,
+    `Долоо хоногийн баярын хөгжөөн`
+  ][day]
+};
+
+function fillFromGuide() {
+  // 1. Эхлээд бүтэцтэй WEEKLY_PLANS-с хайх (бодит гарын авлагаас)
+  const wkey = `${currentGroup}_${currentMonth}_${currentWeek}`;
+  const structured = (window.WEEKLY_PLANS || {})[wkey];
+
+  if (structured) {
+    // ── БҮТЭЦТЭЙ ӨГӨГДЛӨӨС БӨГЛӨХ ──
+    if (!document.getElementById('theme').value) {
+      document.getElementById('theme').value = structured.theme || '';
+    }
+    if (!document.getElementById('method').value && structured.method) {
+      document.getElementById('method').value = structured.method;
+    }
+
+    let filled = 0;
+    Object.entries(structured.cells || {}).forEach(([si, days]) => {
+      Object.entries(days).forEach(([di, txt]) => {
+        const t = document.querySelector(`textarea[data-slot="${si}"][data-day="${di}"]`);
+        if (t && !t.value.trim()) {
+          t.value = txt;
+          if (!cellData[si]) cellData[si] = {};
+          cellData[si][di] = txt;
+          filled++;
+        }
+      });
+    });
+
+    // СҮД-үүдийг үзүүлэх (жилийн матрицаас биш, гарын авлагаас)
+    if (structured.outcomes && structured.outcomes.length) {
+      const list = document.getElementById('sydList');
+      list.innerHTML = structured.outcomes.map(o => {
+        const cls = o.type === 'new' ? 'new' : 'link';
+        const icon = o.type === 'new' ? '🟢' : '🟡';
+        const label = o.type === 'new' ? 'Шинэ' : 'Уялдах';
+        return `<div class="syd-item ${cls}">${icon} <b>${o.code}</b> ${label} · ${o.text}</div>`;
+      }).join('');
+    }
+
+    hasChanges = true;
+    document.getElementById('saveBtn').disabled = false;
+    const outcomesInfo = structured.outcomes ? ` · ${structured.outcomes.length} СҮД` : '';
+    if (filled === 0) {
+      showMsg('info', `ℹ️ Нүд аль хэдийн дүүрсэн байна: ${structured.theme}${outcomesInfo}. Шинэчлэхийг хүсвэл нүдээ цэвэрлээд дахин дар.`);
+    } else {
+      showMsg('success', `🎁 Гарын авлагаас ${filled} нүд бөглөгдлөө: ${structured.theme}${outcomesInfo}`);
+    }
+    return;
+  }
+
+  // 2. Бүтэцтэй өгөгдөл байхгүй бол — raw curriculum текстээс парс хийж бөглөх
+  const key = `${currentGroup}_${currentMonth}`;
+  const guide = (window.CURRICULUM || {})[key];
+  if (!guide) {
+    showMsg('error', 'Гарын авлагаас олдсонгүй: ' + key);
+    return;
+  }
+
+  // ─── ГАРЫН АВЛАГЫН ТЕКСТИЙГ ПАРС ХИЙХ ───
+  // Долоо хоногоор задлах ("I долоо хоног", "II долоо хоног", ...)
+  const weekRomanMap = { 'I':1, 'II':2, 'III':3, 'IV':4 };
+  const weekSections = {}; // {1: "текст", 2: "текст", ...}
+  const weekRegex = /(\d+\s*(?:дугаар|дүгээр)\s*сарын\s+)([IV]+)\s+долоо\s+хоног([\s\S]*?)(?=(?:\d+\s*(?:дугаар|дүгээр)\s*сарын\s+[IV]+\s+долоо\s+хоног)|$)/g;
+  let wm;
+  while ((wm = weekRegex.exec(guide)) !== null) {
+    const wNum = weekRomanMap[wm[2]] || 0;
+    if (wNum) weekSections[wNum] = wm[3];
+  }
+  const targetWeekText = weekSections[parseInt(currentWeek)] || guide;
+
+  // Үйл ажиллагаа блокуудыг задлах: "Үйл ажиллагаа N. Нэр (Цаг)" ... "Аргачлал: ..."
+  // Slot нэрсийг Time slot index-т буулгах
+  const slotMap = {
+    'тойргийн цаг': 2,
+    'чиглүүлэгтэй тоглоом': 3,
+    'чиглүүлэгтэй тоглоом, үйл ажиллагаа': 3,
+    'зугаалг': 4,
+    'номын цаг': 5,
+    'төвийн': 6,
+    'хөгжөөн баясах': 7,
+    'хөгжөөн': 7
+  };
+
+  // Regex: үйл ажиллагааны эхлэлийг олох
+  const actRegex = /Үйл\s+ажиллагаа\s*\d+\.?\s*([^(]+?)\s*\(([^)]+)\)([\s\S]*?)(?=Үйл\s+ажиллагаа\s*\d+\.?|\d+\s*(?:дугаар|дүгээр)\s*сарын|$)/g;
+  const parsedActivities = []; // [{name, slotIdx, method}]
+  let am;
+  while ((am = actRegex.exec(targetWeekText)) !== null) {
+    const name = am[1].trim();
+    const slotName = am[2].trim().toLowerCase();
+    const body = am[3].trim();
+    let slotIdx = -1;
+    for (const k in slotMap) {
+      if (slotName.includes(k)) { slotIdx = slotMap[k]; break; }
+    }
+    if (slotIdx < 0) continue;
+    // Аргачлалыг хураангуйлах (эхний 200 тэмдэгт)
+    const method = body.replace(/^[\s\S]*?Аргачлал:\s*/,'').replace(/Багшийн чиглүүлэх асуулт[\s\S]*/,'').replace(/Хэрэглэгдэхүүн:[^.]*\./,'').trim().substr(0, 200);
+    parsedActivities.push({ name, slotIdx, method });
+  }
+
+  if (!parsedActivities.length) {
+    showMsg('error', `⚠️ Гарын авлагаас үйл ажиллагаа парс хийж чадсангүй. Raw текстийг «📖 Гарын авлагаас тухайн сарын агуулга» дороос харна уу.`);
+    return;
+  }
+
+  // Slot-оор бүлэглэж, өдөр өдөрт тархаах
+  const bySlot = {};
+  parsedActivities.forEach(a => {
+    if (!bySlot[a.slotIdx]) bySlot[a.slotIdx] = [];
+    bySlot[a.slotIdx].push(a);
+  });
+
+  // Сарын сэдэв — гарын авлагаас ТОМ ҮСГЭЭР бичсэн мөрийг олох (жишээ: "БИ-МИНИЙ НАЙЗУУД", "МИНИЙ ЭРҮҮЛ МЭНД")
+  if (!document.getElementById('theme').value) {
+    // Долоо хоногийн эхний хэдэн мөрөөс томоор бичсэн (Cyrillic uppercase) 3+ үг олох
+    const lines = targetWeekText.split('\n').filter(l => l.trim()).slice(0, 12);
+    let weekTheme = '';
+    for (const line of lines) {
+      const t = line.trim();
+      // Зөвхөн том үсэг, зай, тэмдэгтээс тогтсон мөр (үг тус бүр 3+ үсэг, нийт 2+ үг)
+      if (/^[А-ЯӨҮ\s,.\-]+$/.test(t) && t.length > 4 && t.length < 80 && t.split(/\s+/).length >= 2) {
+        weekTheme = t;
+        break;
+      }
+    }
+    // Fallback: эхний мөрийн эхний хэсэг
+    if (!weekTheme) weekTheme = (lines[0] || '').substr(0, 60);
+    document.getElementById('theme').value = weekTheme;
+  }
+
+  let filled = 0;
+  Object.entries(bySlot).forEach(([si, acts]) => {
+    DAYS.forEach((_, di) => {
+      const t = document.querySelector(`textarea[data-slot="${si}"][data-day="${di}"]`);
+      if (!t || t.value.trim()) return;
+      const act = acts[di % acts.length];
+      const txt = `«${act.name}» — ${act.method || 'аргачлал: гарын авлагаас дэлгэрэнгүй харна уу'}`;
+      t.value = txt;
+      if (!cellData[si]) cellData[si] = {};
+      cellData[si][di] = txt;
+      filled++;
+    });
+  });
+
+  // Ерөнхий стандарт агуулгаар үлдсэн хоосон нүдийг бөглөх
+  // (Гарын авлагад тусгайлан бичдэггүй өдөр тутмын режимийн цагууд)
+  const themeTxt = document.getElementById('theme').value || 'тухайн сэдэв';
+  const DAY_ROUTINES = {
+    0: [ // Өглөөний хүлээн авалт (30 мин)
+      `Хүүхэд бүрийг нэрээр нь мэндэлж угтах. «${themeTxt}» сэдвийн талаар богино ярилцлага.`,
+      `Мэндлэх, өнөөдөр ямар өдөр вэ гэдгийг календарын урд ярилцах. Найзуудаа тоолох.`,
+      `Найзуудтайгаа өчигдрийг сануулж мэндлэх. «${themeTxt}»-ын талаар нэмж ярилцах.`,
+      `Хүүхэд бүрийг угтах. Өнөөдрийн сонирхолтой юмсын талаар яриа өдөөх.`,
+      `Мэндлэх, долоо хоногийн эцсийг мэдрүүлэх. «${themeTxt}»-т хамгийн таалагдсан юу байсныг ярилцах.`
+    ],
+    1: [ // Өглөөний дасгал (20 мин)
+      `Танил дасгал: гар, хөл, толгойн хөдөлгөөн 6-8 удаа.`,
+      `«Найзаа дага» дасгал: багшийн үзүүлсэн хөдөлгөөнийг дараалан давтах.`,
+      `«${themeTxt}»-тэй холбогдсон хөдөлгөөнөөр дасгал хийх.`,
+      `Хосоороо хийх дасгал: гараа барин зэрэгцэн хөдөлгөөн.`,
+      `Долоо хоногт сурсан бүх дасгалыг ээлжлэн давтах.`
+    ],
+    4: [ // Зугаалгын цаг (30 мин)
+      `Ажиглалт: цэцэрлэгийн орчинд «${themeTxt}»-тэй холбоотой зүйлсийг ажиглах. Хөдөлмөр: хогоо цэвэрлэх. Тоглоом: чөлөөт хөдөлгөөн.`,
+      `Ажиглалт: улирлын онцлог, өнгө. Хөдөлмөр: цэцэрлэгийн газраа цэвэрлэх. Тоглоом: багаараа тоглох.`,
+      `Ажиглалт: тоглоомын талбайн эд юмс. Хөдөлмөр: тоглоомоо цуглуулах. Тоглоом: гүйлт, дасгал.`,
+      `Ажиглалт: байгалийн үзэгдэл. Хөдөлмөр: хамтын цэвэрлэгээ. Тоглоом: «${themeTxt}»-тэй холбогдсон дүрд орох.`,
+      `Ажиглалт: 7 хоногт өөрчлөгдсөн зүйлс. Хөдөлмөр: цэвэрлэгээ. Тоглоом: дуртай нэгээ сонгон тоглох.`
+    ],
+    6: [ // Төвийн цаг (40 мин)
+      `Зургийн төв: «${themeTxt}»-ыг зурах. Хэл яриа-номын төв: «${themeTxt}» сэдэвт үг унших. Тоглоомын төв: чөлөөт тоглоом.`,
+      `Математикийн төв: тоолох, ангилах тоглоом. Туршилтын төв: харьцуулах. Бүтээлийн төв: эвлүүлдэг зураг.`,
+      `Хэл ярианы төв: «${themeTxt}» сэдэвт өгүүлбэр зохиох. Математикийн төв: тоолох. Зургийн төв: дуртай сэдвээ зурах.`,
+      `Туршилтын төв: харьцуулах, ажиглах. Зургийн төв: сэдвээр зурах. Бүтээлийн төв: наамал.`,
+      `Бүх төвөөр эргэн явж, долоо хоногт хийсэн бүтээлүүдийн үзэсгэлэн зохиох.`
+    ]
+  };
+
+  let routineFilled = 0;
+  Object.entries(DAY_ROUTINES).forEach(([si, dayTexts]) => {
+    DAYS.forEach((_, di) => {
+      const t = document.querySelector(`textarea[data-slot="${si}"][data-day="${di}"]`);
+      if (!t || t.value.trim()) return;
+      const txt = dayTexts[di];
+      t.value = txt;
+      if (!cellData[si]) cellData[si] = {};
+      cellData[si][di] = txt;
+      routineFilled++;
+    });
+  });
+
+  hasChanges = true;
+  document.getElementById('saveBtn').disabled = false;
+  const totalFilled = filled + routineFilled;
+  if (totalFilled === 0) {
+    showMsg('info', `ℹ️ Нүд аль хэдийн дүүрсэн байна (${parsedActivities.length} үйл ажиллагаа задалсан). Шинэчлэхийг хүсвэл нүдээ цэвэрлээд дахин дар.`);
+  } else {
+    showMsg('success', `🎁 ${totalFilled} нүд бөглөгдлөө: ${parsedActivities.length} үйл ажиллагаа + ${routineFilled} өдрийн стандарт хуваарь (${currentWeek}-р 7 хоног).`);
+  }
+}
+
+function downloadWord() {
+  const gname = GROUP_META.find(g => g.id === currentGroup).name;
+  const theme = document.getElementById('theme').value;
+  const method = document.getElementById('method').value;
+  const teacher = document.getElementById('teacherName').value;
+  const reflection = document.getElementById('reflection').value;
+  const approveInfo = document.getElementById('approveInfo').textContent;
+
+  // ── Хүснэгтийг гараар зөв бүтээх (textarea биш plain text болгож) ──
+  const escapeHtml = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+
+  let tableHTML = `<table style="border-collapse:collapse;width:100%;font-size:10pt">
+    <thead><tr>
+      <th style="border:1px solid #666;padding:5px;background:#ede9fe;width:12%">Хугацаа / Өдөр</th>
+      ${DAYS.map(d => `<th style="border:1px solid #666;padding:5px;background:#ede9fe">${d}</th>`).join('')}
+    </tr></thead>
+    <tbody>`;
+
+  TIME_SLOTS.forEach((slot, si) => {
+    tableHTML += `<tr>
+      <th style="border:1px solid #666;padding:5px;background:#f8fafc;text-align:left;vertical-align:top">
+        <span style="color:#7c3aed;font-size:9pt;display:block">${slot.dur}</span>
+        <b>${slot.name}</b>
+      </th>`;
+    DAYS.forEach((_, di) => {
+      const t = document.querySelector(`textarea[data-slot="${si}"][data-day="${di}"]`);
+      const txt = t ? t.value : '';
+      tableHTML += `<td style="border:1px solid #666;padding:5px;vertical-align:top;font-size:10pt">${escapeHtml(txt)}</td>`;
+    });
+    tableHTML += `</tr>`;
+  });
+  tableHTML += `</tbody></table>`;
+
+  // ── СҮД жагсаалт (энгийн текст болгох) ──
+  let sydsHTML = '';
+  document.querySelectorAll('#sydList .syd-item').forEach(item => {
+    sydsHTML += `<div style="margin:4px 0;padding:6px 10px;background:#f0fdf4;border-left:3px solid #10b981">${item.textContent.trim()}</div>`;
+  });
+  if (!sydsHTML) sydsHTML = '<div style="color:#94a3b8">СҮД тодорхойлогдоогүй</div>';
+
+  const doc = `<html xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="utf-8">
+      <title>${gname} · ${currentMonth}-р сар · ${currentWeek}-р долоо хоног</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 11pt }
+        .approve { text-align: right; margin-bottom: 12px; font-size: 10pt }
+        h2 { text-align: center; color: #7c3aed; margin: 6px 0 }
+        h3 { text-align: center; margin: 4px 0 12px; color: #374151 }
+        h4 { color: #065f46; margin-top: 18px; margin-bottom: 8px; border-bottom: 2px solid #10b981; padding-bottom: 4px }
+        .meta { margin: 10px 0; font-size: 10pt }
+        .meta b { color: #7c3aed }
+      </style>
+    </head>
+    <body>
+      <div class="approve">${escapeHtml(approveInfo)}</div>
+      <h2>${gname.toUpperCase()} · ${currentMonth}-Р САРЫН ${currentWeek}-Р ДОЛОО ХОНОГИЙН ТӨЛӨВЛӨГӨӨ</h2>
+      <h3>${escapeHtml(theme) || ''}</h3>
+      <div class="meta">
+        <b>Сургалтын арга зүй:</b> ${escapeHtml(method)}<br>
+        <b>Төлөвлөлт хийсэн багш:</b> ${escapeHtml(teacher)}
+      </div>
+      ${tableHTML}
+      <h4>🎯 Суралцахуйн үр дүн (СҮД)</h4>
+      ${sydsHTML}
+      ${reflection ? `<h4>💭 Эргэцүүлэл</h4><p>${escapeHtml(reflection)}</p>` : ''}
+    </body></html>`;
+
+  const blob = new Blob(['﻿', doc], {type:'application/msword'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `weekly-${currentGroup}-${currentMonth}-${currentWeek}.doc`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+init();
+</script>

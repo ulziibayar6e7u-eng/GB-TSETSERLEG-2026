@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="mn"><head><meta charset="UTF-8">
+<title>Хөгжмийн жилийн төлөвлөлт 2026-2027</title>
+<style>
+  @page { size: A4 landscape; margin: 10mm; }
+  body { font-family: "Times New Roman", serif; color:#000; padding: 20px; font-size: 12px; line-height: 1.3; max-width: 1400px; margin: 0 auto; }
+  .toolbar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
+  .toolbar a, .toolbar button { padding:6px 12px; border:1px solid #444; border-radius:6px; text-decoration:none; color:#000; background:#fff; font-size:12px; cursor:pointer; font-family:inherit; }
+  .toolbar a.active { background:#111; color:#fff; }
+  .toolbar .dl { background:#059669; color:#fff; border-color:#059669; }
+  .head { text-align:center; margin-bottom: 20px; }
+  .head h1 { font-size: 14px; font-weight:bold; margin: 4px 0; }
+  .head .info { font-size: 12px; margin-top: 6px; }
+  .head .right { text-align:right; font-size:12px; margin-bottom:12px; }
+  table { width:100%; border-collapse: collapse; font-size:11px; margin: 10px 0; }
+  th, td { border:1px solid #000; padding:5px 6px; vertical-align:middle; text-align:center; }
+  th { background:#e5e7eb; font-weight:bold; }
+  .ai, .dai, .urdun { text-align:left; }
+  .urdun { font-size:11px; line-height:1.35 }
+  .n { background:#86efac; color:#14532d; font-weight:600; }   /* Ногоон — Шинэ мэдлэг */
+  .d { background:#fde047; color:#713f12; }                    /* Шар — Давталт */
+  .foot-n { background:#86efac; font-weight:600; }
+  .foot-d { background:#fde047; font-weight:600; }
+  .legend { margin-top: 16px; font-size:12px; display:flex; gap:20px; flex-wrap:wrap }
+  .legend div { display:flex; align-items:center; gap:8px }
+  .legend .sw { display:inline-block; width:20px; height:14px; border:1px solid #000; }
+  .note { margin-top:14px; font-size:11px; font-style:italic; }
+  .sig { margin-top: 30px; font-size: 12px; text-align:right; }
+  @media print { body { padding: 0; } .toolbar, .no-print { display:none !important; } }
+</style></head>
+<body>
+
+<div class="toolbar no-print">
+  <strong style="margin-right:8px">Түвшин:</strong>
+  <a href="#1" data-lvl="1">I · Бага</a>
+  <a href="#2" data-lvl="2">II · Дунд</a>
+  <a href="#3" data-lvl="3">III · Ахлах</a>
+  <a href="#4" data-lvl="4">IV · Бэлтгэл</a>
+  <span style="flex:1"></span>
+  <button id="editBtn" onclick="toggleEdit()" style="background:#ec4899;color:#fff;border-color:#ec4899">✏️ Засах горим</button>
+  <button onclick="resetLevel()" style="background:#fff;color:#dc2626;border-color:#dc2626" title="Тухайн түвшний өөрчлөлтийг цуцлаад автомат үүсгэсэн загварт эргүүлэх">↺ Автомат</button>
+  <button onclick="window.print()">🖨 Хэвлэх</button>
+  <button class="dl" onclick="downloadCurrent()">📥 Татаж авах</button>
+  <button onclick="saveToSystem()" style="background:#10b981;color:#fff;border-color:#10b981">💾 Системд хадгалах</button>
+</div>
+<div id="editHelp" style="display:none;background:#fef3c7;padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:12px;border-left:4px solid #f59e0b">
+  🎨 <strong>Засах горим идэвхтэй:</strong> Нүд дээр дар — өнгө сонгож код бичнэ. Автоматаар хадгалагдана. Дуусахдаа <strong>✏️ Засах горим</strong> дахин дараад унтраа.
+</div>
+
+<div id="plan"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js" onerror="0"></script>
+<script>
+const SUPABASE_URL = window.SUPABASE_URL || "https://dehxrmupnbilwlxsovpi.supabase.co";
+const SUPABASE_KEY = window.SUPABASE_KEY || "sb_publishable_VRNBeM9nqwFlrDhT2-wD3w_Gp3O85uy";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let EDIT_MODE = false;
+let OVERRIDES = { 1:[], 2:[], 3:[], 4:[] };
+
+async function loadOverrides() {
+  const { data } = await sb.from('plan_matrix').select('*');
+  OVERRIDES = { 1:[], 2:[], 3:[], 4:[] };
+  for (const r of (data||[])) OVERRIDES[r.level] = r.overrides || [];
+}
+async function saveOverride(level, r, c, cell) {
+  const arr = OVERRIDES[level].filter(x => !(x.r===r && x.c===c));
+  if (cell.type || cell.code) arr.push({r, c, type:cell.type, code:cell.code});
+  OVERRIDES[level] = arr;
+  await sb.from('plan_matrix').upsert({level, overrides:arr, updated_at:new Date().toISOString()});
+}
+function toggleEdit() {
+  EDIT_MODE = !EDIT_MODE;
+  document.getElementById("editBtn").style.background = EDIT_MODE ? "#10b981" : "#ec4899";
+  document.getElementById("editBtn").textContent = EDIT_MODE ? "✅ Дуусгах" : "✏️ Засах горим";
+  document.getElementById("editHelp").style.display = EDIT_MODE ? "block" : "none";
+  render(currentLevel());
+}
+async function saveToSystem() {
+  const lvl = currentLevel();
+  const groupMap = {1:'baga',2:'dund',3:'ahlah',4:'beltgel'};
+  const groupNames = {1:'Бага',2:'Дунд',3:'Ахлах',4:'Бэлтгэл'};
+  const gid = groupMap[lvl];
+  if (!confirm(`${groupNames[lvl]} бүлгийн жилийн матрицыг системд хадгалах уу?\n\nАрга зүйч харах, батлах боломжтой болно.`)) return;
+  const html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+  const blob = new Blob([html], {type:"text/html;charset=utf-8"});
+  const fname = `${Date.now()}-${gid}-yearly-matrix.html`;
+  const { error: upErr } = await sb.storage.from('media').upload(fname, blob);
+  if (upErr) { alert("Файл хадгалахад алдаа: "+upErr.message); return; }
+  const { data: {publicUrl} } = sb.storage.from('media').getPublicUrl(fname);
+  const L = LEVELS[lvl];
+  const content = `Жилийн матриц — ${L.outcomes.length} суралцахуйн үр дүн\n` +
+    L.outcomes.map(o => `• ${o.code}: ${o.text}`).join("\n") +
+    `\n\n🟢 Ногоон — Шинэ мэдлэг · 🟡 Шар — Давталт (уялдаа хамтарсан)`;
+  const { error: insErr } = await sb.from('plans').insert({
+    group_id: gid, tab: 'yearly',
+    title: `${groupNames[lvl]} бүлгийн жилийн төлөвлөлт (матриц) 2026-2027`,
+    period: '2026-2027 хичээлийн жил',
+    content: content,
+    files: [{ src: publicUrl, label: `${groupNames[lvl]}_жилийн_матриц.html` }]
+  });
+  if (insErr) { alert("Хадгалахад алдаа: "+insErr.message); return; }
+  alert(`✅ Амжилттай! Одоо системийн Хөтөлбөр төлөвлөгөө → ${groupNames[lvl]} бүлэг → Жилийн tab-т орсон байгаа.\n\nАрга зүйч нэвтэрч батлах боломжтой боллоо.`);
+}
+async function resetLevel() {
+  const lvl = currentLevel();
+  if (!confirm("Тухайн түвшний бүх өөрчлөлтийг цуцлах уу?")) return;
+  await sb.from('plan_matrix').delete().eq('level', lvl);
+  OVERRIDES[lvl] = [];
+  render(lvl);
+}
+function openCellEditor(r, c, currentType, currentCode) {
+  const modal = document.createElement("div");
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px";
+  modal.innerHTML = `
+    <div style="background:white;padding:24px;border-radius:12px;min-width:320px;max-width:400px" onclick="event.stopPropagation()">
+      <h3 style="margin-bottom:14px;font-size:16px">🎨 Нүд засах</h3>
+      <div style="margin-bottom:12px;font-size:13px;color:#6b7280">Мөр ${r+1}, багана ${c+1}</div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:12px;color:#6b7280;margin-bottom:6px">Өнгө:</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="pickColor('')" style="padding:8px 14px;border:2px solid #ddd;border-radius:8px;background:#fff;cursor:pointer">⬜ Хоосон</button>
+          <button onclick="pickColor('n')" style="padding:8px 14px;border:2px solid #86efac;border-radius:8px;background:#86efac;cursor:pointer">🟢 Шинэ</button>
+          <button onclick="pickColor('d')" style="padding:8px 14px;border:2px solid #fde047;border-radius:8px;background:#fde047;cursor:pointer">🟡 Давт</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label style="display:block;font-size:12px;color:#6b7280;margin-bottom:6px">Код (уялдаа):</label>
+        <input id="ce-code" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:14px" value="${currentCode.replace(/"/g,'&quot;')}" placeholder="Ж: БНО4.1в, ХӨГ4.1а">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button onclick="this.closest('div[style*=fixed]').remove()" style="padding:8px 16px;background:#f3f4f6;border:none;border-radius:6px;cursor:pointer">Болих</button>
+        <button onclick="saveCellEdit(${r},${c})" style="padding:8px 16px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer">💾 Хадгалах</button>
+      </div>
+    </div>`;
+  modal.onclick = () => modal.remove();
+  modal._state = { type: currentType, code: currentCode };
+  window._editModal = modal;
+  document.body.appendChild(modal);
+}
+function pickColor(t) {
+  window._editModal._state.type = t;
+  document.querySelectorAll('#_editModal button').forEach(b=>b.style.outline='');
+}
+async function saveCellEdit(r, c) {
+  const modal = window._editModal;
+  const type = modal._state.type;
+  const code = document.getElementById("ce-code").value.trim();
+  const lvl = currentLevel();
+  await saveOverride(lvl, r, c, { type, code });
+  modal.remove();
+  render(lvl);
+}
+
+
+const LEVELS = {
+  1: {
+    title: "БАГА БҮЛГИЙН",
+    outcomes: [
+      { dai:"Мэдрэх", code:"ХӨГ1.1а", text:"Хүн, амьтны дуу авиаг ялган таньдаг болно." },
+      { dai:"Илэрхийлэх", code:"ХӨГ1.1б", text:"Дууг анхааралтай сонсож, зарим үг, авиаг дуурайн хэлж, аялна." },
+      { dai:"Бүтээх", code:"ХӨГ1.1в", text:"Дуу, аялгууны хэмнэлд тохируулан хөдөлгөөн хийнэ." }
+    ]
+  },
+  2: {
+    title: "ДУНД БҮЛГИЙН",
+    outcomes: [
+      { dai:"Мэдрэх", code:"ХӨГ2.1а", text:"Байгаль, эд юмсын дуу чимээг ялгана." },
+      { dai:"Илэрхийлэх", code:"ХӨГ2.1б", text:"Дууны аялгууг дагаж, аялна." },
+      { dai:"Илэрхийлэх", code:"ХӨГ2.1в", text:"Жигд хэмнэлийг мэдэрч, биеийн хөдөлгөөнөөр илэрхийлнэ." },
+      { dai:"Бүтээх", code:"ХӨГ2.1г", text:"Дуу, аялгуунд тохирсон хөдөлгөөн хийнэ." },
+      { dai:"Бүтээх", code:"ХӨГ2.1д", text:"Үлгэр зохиол, дуу хөгжмийн дүрд тоглоно." }
+    ]
+  },
+  3: {
+    title: "АХЛАХ БҮЛГИЙН",
+    outcomes: [
+      { dai:"Мэдрэх", code:"ХӨГ3.1а", text:"Хөгжмийн энгийн зэмсгийн дуу чимээг ялган таньдаг болно." },
+      { dai:"Илэрхийлэх", code:"ХӨГ3.1б", text:"Богино үгтэй дууг аялгууны дагуу дуулна." },
+      { dai:"Илэрхийлэх", code:"ХӨГ3.1в", text:"Жигд ба жигд бус хэмнэлийг ялгана." },
+      { dai:"Бүтээх", code:"ХӨГ3.1г", text:"Аялгууны өөрчлөлтийг мэдэрч илэрхийлнэ." },
+      { dai:"Бүтээх", code:"ХӨГ3.1д", text:"Үлгэр зохиол, дуу, аялгууны дүрийг тоглоно." }
+    ]
+  },
+  4: {
+    title: "БЭЛТГЭЛ БҮЛГИЙН",
+    outcomes: [
+      { dai:"Мэдрэх", code:"ХӨГ4.1а", text:"Хөгжмийн энгийн зэмсгийг дуугаралтаар ялгаж, өнгө аясыг тодорхойлно." },
+      { dai:"Илэрхийлэх", code:"ХӨГ4.1б", text:"Дуу, аялгууг гарын дохиогоор дуулж, аялна." },
+      { dai:"Илэрхийлэх", code:"ХӨГ4.1в", text:"Аялгуу, хэмнэлийн дагуу хамтран хөгжимдөнө." },
+      { dai:"Бүтээх", code:"ХӨГ4.1г", text:"Хэмнэл, хурд, өнгө аяст тохируулан хөдөлгөөнөө илэрхийлнэ." },
+      { dai:"Бүтээх", code:"ХӨГ4.1д", text:"Дүрийн зан чанар, харилцааг илэрхийлж хамтран тоглоно." }
+    ]
+  }
+};
+
+// Уялдааны кодуудын сан
+const CROSS_CODES = {
+  1: ["БНО1.1в","ХЯ1.1а","НСХ1.1а","БНО1.2д","ХЭМ1.1г"],
+  2: ["БНО2.1в","ХЯ2.1а","НСХ2.1а","БНО2.2д","ХЭМ2.1г","ХЯ2.1б"],
+  3: ["БНО3.1в","ХЯ3.1а","НСХ3.1а","БНО3.2д","ХЭМ3.1г","ХЯ3.1б","БНО3.2в"],
+  4: ["БНО4.1в","ХЯ4.1а","НСХ4.1а","БНО4.2д","ХЭМ4.1г","ХЯ4.1б","БНО4.2в","ХЯ4.2в","ХЭМ4.2а","БНО4.1б"]
+};
+
+// Хүснэгт үүсгэх:
+// - Мөр бүр 1 суралцахуйн үр дүн
+// - Багана бүр 1 сар (9 сар)
+// - Ногоон нүд: Шинэ мэдлэг оруулсан сар + уялдааны код гарна
+// - Шар нүд: Давталт хийсэн сар (уялдааны код гарч болно)
+// - Хоосон нүд: Тухайн сард энэ үр дүн ороогүй
+function buildPlan(level, L) {
+  const totalOutcomes = L.outcomes.length;
+  const months = 9;
+  const cross = CROSS_CODES[level];
+
+  // Шинэ мэдлэгийг эхний хагас жилд тархаана
+  // Тухайн үр дүн 1 сар шинэ, дараа нь 5-7 удаа давталт хийнэ
+  const grid = L.outcomes.map((o, i) => {
+    const row = new Array(months).fill(null);
+    // Шинэ мэдлэг: outcome бүрийг ялгаж бүх сард тархаана
+    const newMonth = Math.min(Math.floor(i * months / totalOutcomes), months-1);
+    row[newMonth] = { type: 'n', code: cross[(i*2) % cross.length] };
+    // Давталт: шинэ мэдлэгээс хойш эхлээд бататгах, өөр сард уялдуулах
+    const repeatMonths = [];
+    for (let m = 0; m < months; m++) if (m !== newMonth) repeatMonths.push(m);
+    // 6-7 удаа давталт (сард 1) — үр дүн бүрд ойролцоогоор
+    repeatMonths.forEach((m, idx) => {
+      // Шинэ мэдлэгээс хойшхи 3 сар шууд бататгах
+      if (m > newMonth) {
+        row[m] = { type: 'd', code: cross[(i*2 + idx + 1) % cross.length] };
+      } else if (m < newMonth) {
+        // Шинэ мэдлэгээс өмнөх сар — хоосон (өөр үр дүн орж байгаа)
+        row[m] = null;
+      }
+    });
+    return { outcome:o, cells:row };
+  });
+
+  // Apply overrides
+  const overs = OVERRIDES[level] || [];
+  overs.forEach(o => {
+    if (grid[o.r]) {
+      if (!o.type && !o.code) grid[o.r].cells[o.c] = null;
+      else grid[o.r].cells[o.c] = { type: o.type, code: o.code };
+    }
+  });
+  return grid;
+}
+
+function render(level) {
+  const L = LEVELS[level];
+  const grid = buildPlan(level, L);
+  const months = ["9","10","11","12","1","2","3","4","5"];
+  const monthCount = 9;
+
+  // Багана толгойн долоо хоногийн дугаар: 4 долоо хоног × 9 сар = 36
+  // Гэхдээ сард нэг багана л харагдана
+  const weekLabels = ["4","4","4","4","4","4","4","4","4"]; // 4 хичээл сард (2 хичээл × 2 долоо хоног ажлын үзүүлэлт)
+
+  // Тоолуур
+  const totalPerMonth = new Array(monthCount).fill(0);
+  const newPerMonth = new Array(monthCount).fill(0);
+  const repPerMonth = new Array(monthCount).fill(0);
+  grid.forEach(row => {
+    row.cells.forEach((c, m) => {
+      if (c) {
+        totalPerMonth[m]++;
+        if (c.type === 'n') newPerMonth[m]++;
+        else repPerMonth[m]++;
+      }
+    });
+  });
+  const totalRow = grid.map(row => row.cells.filter(c => c && c.type === 'd').length);
+  const totalNew = grid.map(row => row.cells.filter(c => c && c.type === 'n').length);
+  const grandTotal = totalRow.reduce((a,b)=>a+b,0) + totalNew.reduce((a,b)=>a+b,0);
+
+  let html = `
+    <div class="head">
+      <div class="right">
+        <strong>БАТЛАВ:</strong> АРГА ЗҮЙЧ .............................. · 2026 оны 09-р сарын ..... өдөр
+      </div>
+      <h1>${L.title} БҮЛГИЙН ХӨГЖМИЙН СУРГАЛТЫН</h1>
+      <h1>ЖИЛИЙН ТӨЛӨВЛӨЛТ</h1>
+      <div class="info">2026-2027 оны хичээлийн жил · 7 хоногт 2 сургалтын үйл ажиллагаа · Нийт 72 үйл ажиллагаа</div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:36px" rowspan="2">№</th>
+          <th style="width:70px" rowspan="2">Ай</th>
+          <th style="width:90px" rowspan="2">Дэд ай</th>
+          <th style="width:340px" rowspan="2">Суралцахуйн үр дүн</th>
+          <th colspan="${monthCount}">САР</th>
+          <th style="width:80px" rowspan="2">Давтамж</th>
+        </tr>
+        <tr>${months.map(m=>`<th>${m}</th>`).join("")}</tr>
+      </thead>
+      <tbody>
+        ${grid.map((row, i) => `
+          <tr>
+            <td>${i+1}</td>
+            <td class="ai">Хөгжмийн илэрхийлэл</td>
+            <td class="dai">${row.outcome.dai}</td>
+            <td class="urdun"><strong>${row.outcome.code}.</strong> ${row.outcome.text}</td>
+            ${row.cells.map((c, ci) => {
+              const cls = c ? c.type : '';
+              const code = c ? c.code : '';
+              const clickAttr = EDIT_MODE ? `onclick="openCellEditor(${i},${ci},'${cls}','${code.replace(/'/g,"\\'")}')" style="cursor:pointer"` : '';
+              return `<td class="${cls}" ${clickAttr}>${code}</td>`;
+            }).join("")}
+            <td><strong>${row.cells.filter(c=>c).length}</strong></td>
+          </tr>
+        `).join("")}
+        <tr>
+          <td colspan="4" class="foot-n" style="text-align:right;padding-right:12px">🟢 Шинэ СҮД (сар тус бүр)</td>
+          ${newPerMonth.map(n => `<td class="foot-n">${n||''}</td>`).join("")}
+          <td class="foot-n"><strong>${totalNew.reduce((a,b)=>a+b,0)}</strong></td>
+        </tr>
+        <tr>
+          <td colspan="4" class="foot-d" style="text-align:right;padding-right:12px">🟡 Давталт (сар тус бүр)</td>
+          ${repPerMonth.map(n => `<td class="foot-d">${n||''}</td>`).join("")}
+          <td class="foot-d"><strong>${totalRow.reduce((a,b)=>a+b,0)}</strong></td>
+        </tr>
+        <tr>
+          <td colspan="4" style="text-align:right;padding-right:12px;background:#f3f4f6"><strong>Нийт үзүүлэлт</strong></td>
+          ${totalPerMonth.map(n => `<td style="background:#f3f4f6"><strong>${n}</strong></td>`).join("")}
+          <td style="background:#f3f4f6"><strong>${grandTotal}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="legend">
+      <div><span class="sw n"></span> <strong>🟢 Ногоон — Шинэ мэдлэг (СҮД)</strong> — тухайн үр дүнг шинээр таниулна</div>
+      <div><span class="sw d"></span> <strong>🟡 Шар — Давталт</strong> — сурсан мэдлэгийг бататгана + бусад хичээлтэй уялдуулна</div>
+    </div>
+
+    <div class="note">
+      <strong>Уялдаа холбоо:</strong> <strong>БНО</strong> — Байгаль нийгмийн орчин, <strong>ХЯ</strong> — Хэл яриа, <strong>НСХ</strong> — Нийгэм-сэтгэл хөдлөл, <strong>ХЭМ</strong> — Хэмжигдэхүүн (математик), <strong>ХӨГ</strong> — Хөгжим.<br>
+      Шинэ мэдлэг олгосон үр дүн бүрийг сар бүрт давхар давталтаар бататгана. Долоо хоногт 2 сургалтын үйл ажиллагаа × 36 долоо хоног = <strong>нийт 72 үйл ажиллагаа</strong>.
+    </div>
+
+    <div class="sig">
+      ХӨТӨЛБӨР БОЛОВСРУУЛСАН:<br>
+      ХӨГЖМИЙН БАГШ <strong>Г.ӨЛЗИЙБАЯР</strong>
+    </div>`;
+
+  document.getElementById("plan").innerHTML = html;
+  document.querySelectorAll(".toolbar a").forEach(a => a.classList.toggle("active", a.dataset.lvl === String(level)));
+  document.title = `${L.title} — Жилийн төлөвлөлт 2026-2027`;
+}
+
+function currentLevel() {
+  const h = parseInt(location.hash.replace("#","")) || 4;
+  return [1,2,3,4].includes(h) ? h : 4;
+}
+function downloadCurrent() {
+  const lvl = currentLevel();
+  const names = {1:"бага",2:"дунд",3:"ахлах",4:"бэлтгэл"};
+  const html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+  const blob = new Blob([html], {type:"text/html;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `жилийн_төлөвлөлт_${names[lvl]}_2026_2027.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+window.addEventListener("hashchange", () => render(currentLevel()));
+(async () => {
+  try { await loadOverrides(); } catch(e) { console.error(e); }
+  render(currentLevel());
+})();
+</script>
+</body></html>

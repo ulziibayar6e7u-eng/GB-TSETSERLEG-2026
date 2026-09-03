@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="mn"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📖 Өдрийн тэмдэглэл — СӨБ Хөгжим PRO</title>
+<style>
+  :root { --p:#f59e0b; --p2:#ef4444; --tx:#1f2937; --mut:#6b7280; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#fffbeb,#fef3c7,#fee2e2);color:var(--tx);min-height:100vh;padding:20px;padding-top:44px;line-height:1.5;background-attachment:fixed}
+  .lic-badge{position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,#7c3aed,#ec4899,#f59e0b);color:#fff;padding:6px 16px;font-size:12px;text-align:center;z-index:9999;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+  .wrap{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:280px 1fr;gap:20px}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}}
+  .back{display:inline-block;margin-bottom:16px;padding:8px 16px;background:#fff;color:var(--p);border:2px solid var(--p);border-radius:10px;text-decoration:none;font-weight:600;font-size:.9em;transition:.2s}
+  .back:hover{background:var(--p);color:#fff}
+  header{grid-column:1/-1;background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;padding:26px 30px;border-radius:20px;margin-bottom:0;box-shadow:0 10px 30px rgba(245,158,11,.25)}
+  header h1{font-size:1.8em;margin-bottom:6px}
+  header p{opacity:.95}
+
+  /* Зүүн панел — тэмдэглэлийн жагсаалт */
+  .sidebar{background:#fff;border-radius:16px;padding:16px;box-shadow:0 4px 20px rgba(0,0,0,.05);height:fit-content;position:sticky;top:64px}
+  .sidebar h3{color:var(--p);font-size:1em;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #fef3c7;display:flex;align-items:center;gap:6px}
+  .btn-new{width:100%;padding:12px;background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;box-shadow:0 6px 14px rgba(245,158,11,.3);margin-bottom:12px;font-size:.95em}
+  .btn-new:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(245,158,11,.4)}
+  .entry-list{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto;padding-right:4px}
+  .entry-item{padding:10px 12px;border-radius:10px;cursor:pointer;background:#fafafa;border:2px solid transparent;transition:.15s}
+  .entry-item:hover{background:#fef3c7;border-color:#fbbf24}
+  .entry-item.active{background:linear-gradient(135deg,#fff7ed,#fef3c7);border-color:var(--p)}
+  .entry-item .date{font-size:.75em;color:var(--mut);margin-bottom:2px}
+  .entry-item .title{font-weight:600;font-size:.9em;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .entry-item .preview{font-size:.78em;color:var(--mut);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* Гол хэсэг */
+  .main{background:#fff;border-radius:20px;padding:30px 36px;box-shadow:0 4px 30px rgba(0,0,0,.06);min-height:500px}
+  .form-row{margin-bottom:18px}
+  .form-row label{display:block;font-weight:600;color:#374151;margin-bottom:6px;font-size:.9em}
+  .form-row input,.form-row textarea,.form-row select{width:100%;padding:11px 14px;border:2px solid #e5e7eb;border-radius:10px;font-size:.95em;font-family:inherit;background:#fafafa}
+  .form-row input:focus,.form-row textarea:focus,.form-row select:focus{outline:none;border-color:var(--p);background:#fff}
+  .form-row textarea{resize:vertical;min-height:100px}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:600px){.grid-2{grid-template-columns:1fr}}
+
+  .section-t{color:var(--p);font-weight:700;font-size:.95em;margin-top:24px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #fef3c7;display:flex;align-items:center;gap:8px}
+
+  .mood{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .mood-btn{padding:10px 16px;border:2px solid #e5e7eb;background:#fafafa;border-radius:12px;cursor:pointer;font-weight:600;font-size:.9em;transition:.15s}
+  .mood-btn:hover{border-color:var(--p)}
+  .mood-btn.active{background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;border-color:var(--p);box-shadow:0 4px 12px rgba(245,158,11,.3)}
+
+  .actions{margin-top:26px;display:flex;gap:10px;flex-wrap:wrap;padding-top:20px;border-top:2px solid #f5f5f5}
+  .btn{padding:11px 22px;border-radius:10px;border:none;cursor:pointer;font-weight:700;font-size:.95em;transition:.15s}
+  .btn-save{background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;box-shadow:0 6px 14px rgba(245,158,11,.3)}
+  .btn-save:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(245,158,11,.4)}
+  .btn-print{background:#fff;color:var(--tx);border:2px solid #e5e7eb}
+  .btn-print:hover{background:#f9fafb}
+  .btn-del{background:#fef2f2;color:#c62828;border:2px solid #fecaca}
+  .btn-del:hover{background:#fee2e2}
+
+  .empty-main{text-align:center;padding:80px 20px;color:var(--mut)}
+  .empty-main .em-ic{font-size:80px;opacity:.3;margin-bottom:16px}
+
+  @media print{
+    .lic-badge,.sidebar,.back,.actions{display:none!important}
+    body{background:#fff;padding:0}
+    .main{box-shadow:none;padding:0}
+    .wrap{display:block}
+    header{margin-bottom:20px}
+  }
+</style></head><body>
+
+<div class="lic-badge">🎵 <b id="lbName">…</b> · <span id="lbSchool">…</span> · Өдрийн тэмдэглэл</div>
+
+<div style="max-width:1200px;margin:0 auto 16px">
+  <a href="index.html" class="back">← Гол хуудас руу</a>
+</div>
+
+<div class="wrap">
+
+<header>
+  <h1>📖 Өдрийн тэмдэглэл</h1>
+  <p>Багшийн эргэцүүлэл, ажиглалт, мэргэжлийн өсөлт. Өдөр бүр 5 минут — жилийн эцэст мэргэжлийн онцлох хөрөнгө.</p>
+</header>
+
+<aside class="sidebar">
+  <h3>📋 Тэмдэглэлүүд</h3>
+  <button class="btn-new" onclick="newEntry()">✏️ Шинэ тэмдэглэл</button>
+  <div class="entry-list" id="entryList"></div>
+</aside>
+
+<main class="main" id="mainArea">
+  <div class="empty-main">
+    <div class="em-ic">📖</div>
+    <p><b>Шинэ тэмдэглэл</b> товч дараад эхлэнэ үү,<br>эсвэл зүүн талын жагсаалтаас нэгийг сонгоно уу.</p>
+  </div>
+</main>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// СӨБ Хөгжим PRO — ганц төв Supabase + license_key тусгаарлалт
+const _s = (() => { try { return JSON.parse(localStorage.getItem('pro_session_v1') || 'null'); } catch(e) { return null; } })();
+if (!_s || !_s.code) { location.href = 'index.html'; }
+window.SUPABASE_URL = "https://dehxrmupnbilwlxsovpi.supabase.co";
+window.SUPABASE_KEY = "sb_publishable_VRNBeM9nqwFlrDhT2-wD3w_Gp3O85uy";
+window.TEACHER_NAME = _s.teacher;
+window.TEACHER_SCHOOL = _s.school;
+window.LICENSE_KEY = _s.code;
+const LICENSE_KEY = window.LICENSE_KEY;
+const _rawSb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
+const sb = new Proxy(_rawSb, {
+  get(t, p) {
+    if (p === 'from') return function(table) {
+      const q = t.from(table);
+      const _i = q.insert.bind(q), _u = q.upsert.bind(q), _s = q.select.bind(q), _up = q.update.bind(q), _d = q.delete.bind(q);
+      q.insert = function(d, o){const tag=x=>({...x,license_key:LICENSE_KEY});return _i(Array.isArray(d)?d.map(tag):tag(d),o);};
+      q.upsert = function(d, o){const tag=x=>({...x,license_key:LICENSE_KEY});return _u(Array.isArray(d)?d.map(tag):tag(d),o);};
+      q.select = function(...a){return _s(...a).eq('license_key', LICENSE_KEY);};
+      q.update = function(d){return _up(d).eq('license_key', LICENSE_KEY);};
+      q.delete = function(){return _d().eq('license_key', LICENSE_KEY);};
+      return q;
+    };
+    return t[p];
+  }
+});
+document.getElementById('lbName').textContent = window.TEACHER_NAME || '—';
+document.getElementById('lbSchool').textContent = window.TEACHER_SCHOOL || '';
+
+let ENTRIES = [];
+let CURRENT = null;
+
+async function loadEntries() {
+  const { data, error } = await sb.from('activities').select('*').eq('group_id','journal').order('date', {ascending:false});
+  if (error) { console.error(error); return; }
+  ENTRIES = data || [];
+  renderList();
+}
+
+function renderList() {
+  const list = document.getElementById('entryList');
+  if (!ENTRIES.length) {
+    list.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:20px;font-size:.85em">Одоохондоо тэмдэглэл байхгүй</div>';
+    return;
+  }
+  list.innerHTML = ENTRIES.map(e => {
+    const d = new Date(e.date || e.created_at);
+    const dstr = d.toLocaleDateString('mn-MN', {month:'short', day:'numeric', weekday:'short'});
+    const c = e.content || {};
+    const preview = typeof c === 'object' ? (c.observation || c.reflection || '').substring(0,50) : String(c).substring(0,50);
+    return `<div class="entry-item ${CURRENT?.id===e.id?'active':''}" onclick="openEntry(${e.id})">
+      <div class="date">${dstr}</div>
+      <div class="title">${e.theme || 'Тэмдэглэл'}</div>
+      <div class="preview">${preview}${preview.length>=50?'...':''}</div>
+    </div>`;
+  }).join('');
+}
+
+function newEntry() {
+  CURRENT = null;
+  const today = new Date().toISOString().substring(0,10);
+  document.getElementById('mainArea').innerHTML = editorHTML({date:today, theme:'', content:{}});
+  document.querySelectorAll('.entry-item').forEach(e => e.classList.remove('active'));
+}
+
+function openEntry(id) {
+  const e = ENTRIES.find(x => x.id === id);
+  if (!e) return;
+  CURRENT = e;
+  const c = typeof e.content === 'object' ? e.content : {};
+  document.getElementById('mainArea').innerHTML = editorHTML({date:e.date, theme:e.theme, content:c});
+  renderList();
+}
+
+function editorHTML(e) {
+  const c = e.content || {};
+  return `
+    <div class="form-row grid-2">
+      <div>
+        <label>📅 Огноо</label>
+        <input type="date" id="entryDate" value="${e.date || new Date().toISOString().substring(0,10)}">
+      </div>
+      <div>
+        <label>🎯 Гарчиг / Сэдэв</label>
+        <input type="text" id="entryTheme" value="${(e.theme||'').replace(/"/g,'&quot;')}" placeholder="Жишээ: Дуу заасан хичээл">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label>😊 Өнөөдрийн сэтгэл санаа</label>
+      <div class="mood" id="moodPicker">
+        ${['😊 Гайхалтай','🙂 Сайн','😐 Дундаж','😞 Ядарсан','🤔 Бодолхийлсэн'].map((m,i) =>
+          `<button type="button" class="mood-btn ${c.mood===m?'active':''}" onclick="pickMood(this,'${m}')">${m}</button>`
+        ).join('')}
+      </div>
+      <input type="hidden" id="entryMood" value="${c.mood||''}">
+    </div>
+
+    <div class="section-t">👁 Ажиглалт</div>
+    <div class="form-row">
+      <label>Өнөөдрийн хичээл дээр юу ажиглагдав?</label>
+      <textarea id="entryObs" placeholder="Хүүхдүүд ямар байсан, ямар үйл ажиллагаа хийсэн, юу зорьсон...">${(c.observation||'').replace(/</g,'&lt;')}</textarea>
+    </div>
+
+    <div class="section-t">💭 Эргэцүүлэл</div>
+    <div class="form-row grid-2">
+      <div>
+        <label>✨ Юу сайн болов?</label>
+        <textarea id="entryGood" placeholder="Хүүхэд дуундаа шимтэж...">${(c.good||'').replace(/</g,'&lt;')}</textarea>
+      </div>
+      <div>
+        <label>🎯 Юуг өөрчлөх вэ?</label>
+        <textarea id="entryImprove" placeholder="Дараагийн удаа...">${(c.improve||'').replace(/</g,'&lt;')}</textarea>
+      </div>
+    </div>
+
+    <div class="section-t">📝 Дэлгэрэнгүй эргэцүүлэл</div>
+    <div class="form-row">
+      <textarea id="entryReflection" style="min-height:140px" placeholder="Юу мэдэрсэн бэ? Хэрхэн ерөнхий үнэлж байна? Мэргэжилдээ ямар шинэ зүйл олсон бэ?...">${(c.reflection||'').replace(/</g,'&lt;')}</textarea>
+    </div>
+
+    <div class="form-row">
+      <label>🎯 Дараагийн алхам</label>
+      <textarea id="entryNext" placeholder="Маргаашийн хичээлдээ юуг өөрчлөх, юуг сорих...">${(c.next||'').replace(/</g,'&lt;')}</textarea>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-save" onclick="saveEntry()">💾 Хадгалах</button>
+      <button class="btn btn-print" onclick="printEntry()">🖨 Хэвлэх</button>
+      ${CURRENT ? '<button class="btn btn-del" onclick="deleteEntry()">🗑 Устгах</button>' : ''}
+    </div>
+  `;
+}
+
+function pickMood(btn, mood) {
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('entryMood').value = mood;
+}
+
+async function saveEntry() {
+  const content = {
+    mood: document.getElementById('entryMood').value,
+    observation: document.getElementById('entryObs').value,
+    good: document.getElementById('entryGood').value,
+    improve: document.getElementById('entryImprove').value,
+    reflection: document.getElementById('entryReflection').value,
+    next: document.getElementById('entryNext').value
+  };
+  const entry = {
+    group_id: 'journal',
+    date: document.getElementById('entryDate').value,
+    theme: document.getElementById('entryTheme').value || 'Тэмдэглэл',
+    content: content
+  };
+  if (CURRENT) {
+    await sb.from('activities').update(entry).eq('id', CURRENT.id);
+  } else {
+    const { data } = await sb.from('activities').insert(entry).select().single();
+    if (data) CURRENT = data;
+  }
+  await loadEntries();
+  alert('✅ Хадгалагдлаа');
+}
+
+async function deleteEntry() {
+  if (!CURRENT) return;
+  if (!confirm('Энэ тэмдэглэлийг устгах уу?')) return;
+  await sb.from('activities').delete().eq('id', CURRENT.id);
+  CURRENT = null;
+  await loadEntries();
+  document.getElementById('mainArea').innerHTML = '<div class="empty-main"><div class="em-ic">📖</div><p>Тэмдэглэлээ сонгоно уу</p></div>';
+}
+
+function printEntry() {
+  window.print();
+}
+
+loadEntries();
+</script>
+</body></html>

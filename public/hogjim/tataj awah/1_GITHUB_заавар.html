@@ -1,0 +1,149 @@
+<meta charset="UTF-8">
+<title>Хөгжим Өлзий — Багшид зориулсан заавар v3.0</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, sans-serif; background: #fff; color: #1e293b; padding: 24px; line-height: 1.6; max-width: 800px; margin: 0 auto; }
+  .cover { background: linear-gradient(135deg, #be185d, #7c3aed); color: white; padding: 40px 32px; border-radius: 20px; text-align: center; margin-bottom: 32px; }
+  .cover h1 { font-size: 32px; margin-bottom: 8px; }
+  .cover .sub { opacity: 0.9; font-size: 16px; margin-bottom: 16px; }
+  .cover .badge { display: inline-block; background: rgba(255,255,255,0.25); padding: 8px 16px; border-radius: 999px; font-weight: 600; }
+  h2 { color: #be185d; font-size: 22px; margin: 32px 0 12px; padding-bottom: 8px; border-bottom: 2px solid #fce7f3; }
+  h3 { color: #7c3aed; font-size: 18px; margin: 20px 0 8px; }
+  ol, ul { margin: 8px 0 12px 24px; }
+  li { margin: 6px 0; }
+  code { background: #f3f4f6; padding: 2px 8px; border-radius: 6px; font-family: Consolas, monospace; color: #be185d; font-weight: 600; font-size: 14px; }
+  .step { background: #fdf4ff; border-left: 4px solid #be185d; padding: 16px 20px; border-radius: 8px; margin: 12px 0; }
+  .warn { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 8px; margin: 12px 0; }
+  .success { background: #d1fae5; border-left: 4px solid #10b981; padding: 12px 16px; border-radius: 8px; margin: 12px 0; }
+  .contact { background: linear-gradient(135deg, #fce7f3, #ddd6fe); padding: 24px; border-radius: 16px; margin-top: 32px; text-align: center; }
+  .print { position: fixed; top: 20px; right: 20px; background: #be185d; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+  @media print { .print { display: none; } body { padding: 0; } }
+</style>
+
+<button class="print" onclick="window.print()">🖨️ PDF болгож татах</button>
+
+<div class="cover">
+  <h1>🎵 ХӨГЖИМ ӨЛЗИЙ СИСТЕМ</h1>
+  <div class="sub">Цэцэрлэгийн хөгжмийн багшийн менежментийн систем</div>
+  <div class="badge">Багшид зориулсан суурилуулах заавар — v3.0 (2026)</div>
+</div>
+
+<h2>📌 Танилцуулга</h2>
+<p>Энэхүү систем нь <b>10 минутын дотор</b> танай өөрийн серверт суурилуулагдана. Танд <b>2 үнэгүй бүртгэл</b> шаардлагатай:</p>
+<ul>
+  <li><b>GitHub</b> — системийн файлыг байршуулна</li>
+  <li>(Supabase бүртгэл шаардлагагүй — Өлзийбаяр багшийн серверт хамтран холбогдоно)</li>
+</ul>
+
+<h2>🔷 АЛХАМ 1: GitHub бүртгэл үүсгэх (2 мин)</h2>
+<div class="step">
+  <ol>
+    <li>Хөтөчид оч: <code>github.com/signup</code></li>
+    <li>Имэйл хаяг оруулах</li>
+    <li>Нууц үг оруулах (санаж авах)</li>
+    <li>Username сонгох (жишээ: <code>bagsh-name</code>)</li>
+    <li>Имэйл-т ирсэн код баталгаажуулах</li>
+    <li><b>Free</b> төлбөрт сонго</li>
+  </ol>
+</div>
+
+<h2>🔷 АЛХАМ 2: Шинэ репозиторий үүсгэх (1 мин)</h2>
+<div class="step">
+  <ol>
+    <li>GitHub-т нэвтэрсний дараа баруун дээд <b>+ → New repository</b> дар</li>
+    <li>Repository name: <code>hugjim-bagsh</code> (эсвэл ямар ч нэр)</li>
+    <li><b>Public</b> сонгосон эсэхийг шалга</li>
+    <li>Доор <b>"Create repository"</b> ногоон товч дар</li>
+  </ol>
+</div>
+
+<h2>🔷 АЛХАМ 3: Систем файлуудыг upload хийх (3 мин)</h2>
+<div class="step">
+  <ol>
+    <li>Өлзийбаяр багшаас ирүүлсэн <b>ZIP файлыг</b> компьютерт задла (Extract)</li>
+    <li>GitHub репод хэсэгт <b>"uploading an existing file"</b> линк дар</li>
+    <li>Задалсан фолдер дотрох <b>БҮХ файлыг</b> сонгож (Ctrl+A) чирж хая:
+      <ul>
+        <li>index.html</li>
+        <li>plan.html</li>
+        <li>monthly.html</li>
+        <li>certificate.html</li>
+        <li>plan-data.js</li>
+        <li>болон бусад</li>
+      </ul>
+    </li>
+    <li>Доор ногоон <b>"Commit changes"</b> дар</li>
+  </ol>
+</div>
+<div class="warn">
+  ⚠️ <b>config.js файлыг үүсгээгүй</b> — үүнийг Өлзийбаяр багш танд тусад нь илгээнэ!
+</div>
+
+<h2>🔷 АЛХАМ 4: config.js файлыг upload хийх (1 мин)</h2>
+<div class="step">
+  <ol>
+    <li>Өлзийбаяр багшаас Messenger-аар ирсэн <code>config.js</code> файлыг татах</li>
+    <li>GitHub репод буц</li>
+    <li><b>"Add file ▾"</b> → <b>"Upload files"</b> дар</li>
+    <li><code>config.js</code>-ыг чирж хая</li>
+    <li>Ногоон <b>"Commit changes"</b> дар</li>
+  </ol>
+</div>
+
+<h2>🔷 АЛХАМ 5: GitHub Pages идэвхжүүлэх (1 мин)</h2>
+<div class="step">
+  <ol>
+    <li>Дээд талд <b>"Settings"</b> товч дар</li>
+    <li>Зүүн талын жагсаалтаас <b>"Pages"</b> сонго</li>
+    <li><b>Branch</b> хэсэгт <b>main</b> сонго</li>
+    <li><b>Save</b> дар</li>
+    <li>2-5 минут хүлээ</li>
+  </ol>
+</div>
+
+<h2>🔷 АЛХАМ 6: Систем нээх (2 мин)</h2>
+<div class="step">
+  <p>Танай линк:</p>
+  <p><code>https://ТАНАЙ-USERNAME.github.io/hugjim-bagsh/</code></p>
+  <ul>
+    <li>Жишээ: <code>https://ulziitsetseg602-bot.github.io/hugjim-ulziitsetseg/</code></li>
+    <li>Нэвтрэх нууц үг: <code>Suwdaa1113</code></li>
+    <li>Дотор орсны дараа <b>Тохиргоо → Нууц үг солих</b> хэсгээс өөрчилнө</li>
+  </ul>
+</div>
+
+<h2>📱 Утсанд суулгах (заавал биш)</h2>
+<div class="step">
+  <ol>
+    <li>Утасны Chrome-оор системийн линк нээ</li>
+    <li>Баруун дээд <b>⋮ (3 цэг)</b> дар</li>
+    <li><b>"Add to Home screen"</b> сонго</li>
+    <li>Home screen дээр апп шиг товч гарна ✅</li>
+  </ol>
+</div>
+
+<h2>❓ Түгээмэл асуултууд</h2>
+<h3>Систем нээгдэхгүй байвал?</h3>
+<ul>
+  <li>GitHub Pages идэвхжсэн эсэхийг шалга (Алхам 5)</li>
+  <li>5 минут хүлээгээд <b>Ctrl+F5</b> дар</li>
+  <li>config.js файл upload хийгдсэн эсэхийг шалга</li>
+</ul>
+<h3>Data аюулгүй юу?</h3>
+<ul>
+  <li>Танай мэдээлэл Supabase (Postgres) дээр хадгалагдана</li>
+  <li>Зөвхөн танай config.js мэдэх хүн л нэвтэрнэ</li>
+  <li>Өдөр бүр автомат нөөцлөнө</li>
+</ul>
+<h3>Мөнгө төлөх шаардлагатай юу?</h3>
+<div class="success">
+  ❌ Үгүй! GitHub Pages болон Supabase бүгд <b>үнэгүй</b> ажиллана. Танай төлбөр зөвхөн систем худалдан авахад төлсөн нэг удаагийн үнэ.
+</div>
+
+<div class="contact">
+  <h2 style="border:none;margin:0 0 12px;">📞 Тусламж</h2>
+  <p><b>Г.Өлзийбаяр багш</b></p>
+  <p>📱 <b>8887-4686</b></p>
+  <p>📧 <b>ulziibagshsistem01@gmail.com</b></p>
+  <p style="margin-top:12px;font-size:14px;opacity:0.8;">Асуудал гарвал зөвхөн 1 удаа залгаад бүгдийг шийднэ ✅</p>
+</div>

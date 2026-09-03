@@ -1,0 +1,216 @@
+<meta charset="UTF-8">
+<title>🔬 Судалгааны асуулт — Хөгжим Өлзий</title>
+<script src="config.js" onerror="0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, sans-serif; background: linear-gradient(135deg,#f0f9ff,#faf5ff); padding: 20px; min-height: 100vh; color: #1e293b; }
+  .container { max-width: 700px; margin: 0 auto; }
+  .header { background: linear-gradient(135deg,#7c3aed,#be185d); color: white; padding: 24px; border-radius: 16px; margin-bottom: 20px; text-align: center; }
+  .header h1 { font-size: 22px; margin-bottom: 4px; }
+  .header p { opacity: 0.9; font-size: 14px; }
+  .consent { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 8px; margin-bottom: 16px; }
+  .consent label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; }
+  .question { background: white; padding: 20px; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .question h3 { color: #7c3aed; margin-bottom: 12px; font-size: 16px; }
+  .req { color: #dc2626; }
+  input[type=text], textarea, select { width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px; font-family: inherit; }
+  textarea { min-height: 80px; resize: vertical; }
+  .choices label { display: block; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 8px; margin: 6px 0; cursor: pointer; }
+  .choices label:hover { border-color: #7c3aed; background: #faf5ff; }
+  .choices input { margin-right: 8px; }
+  .rating { display: flex; gap: 6px; }
+  .rating button { flex: 1; padding: 10px; border: 2px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-size: 20px; }
+  .rating button.selected { background: linear-gradient(135deg,#7c3aed,#be185d); color: white; border-color: transparent; }
+  .yesno { display: flex; gap: 12px; }
+  .yesno button { flex: 1; padding: 12px; border: 2px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-weight: 700; }
+  .yesno button.selected { background: linear-gradient(135deg,#7c3aed,#be185d); color: white; border-color: transparent; }
+  .submit { width: 100%; padding: 16px; background: linear-gradient(135deg,#be185d,#7c3aed); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 16px; }
+  .submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .done { background: #d1fae5; padding: 16px; border-radius: 8px; text-align: center; color: #065f46; font-weight: 700; }
+  .back { display: inline-block; padding: 8px 16px; background: white; border-radius: 8px; text-decoration: none; color: #7c3aed; font-weight: 600; margin-bottom: 12px; }
+  .empty { background: white; padding: 40px; text-align: center; border-radius: 12px; color: #64748b; }
+</style>
+
+<div class="container">
+  <a href="index.html" class="back">← Буцах</a>
+
+  <div class="header">
+    <h1>🔬 Судалгааны асуулт</h1>
+    <p>Танай хариулт хөгжмийн боловсролын судалгаанд ашиглагдана</p>
+  </div>
+
+  <div class="consent">
+    <label>
+      <input type="checkbox" id="consent"
+             onchange="localStorage.setItem('research_consent', this.checked); toggleConsent();">
+      <span>Би судалгаанд оролцоно (миний хариулт болон анонимжуулсан статистик илгээгдэнэ)</span>
+    </label>
+  </div>
+
+  <div id="content"></div>
+</div>
+
+<script>
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_KEY = window.SUPABASE_KEY || "";
+
+// ⚠️ Судалгааны төв Supabase — өөрчилнө үү
+const RESEARCH_URL = "https://hpjunyxgkdbtblbunane.supabase.co";
+const RESEARCH_KEY = "sb_publishable_MOu_mM88W7ML-CD6TVztag_fFm8ydMe"; // ⚠️ Supabase-с хуулж энд буулга
+
+let sb = null;
+let teacherHash = null;
+let answers = {};
+
+async function init() {
+  document.getElementById('consent').checked = localStorage.getItem('research_consent') === 'true';
+
+  if (!RESEARCH_URL.includes('research-supabase')) {
+    sb = supabase.createClient(RESEARCH_URL, RESEARCH_KEY);
+    teacherHash = await hashString('teacher:' + (window.TEACHER_NAME || 'unknown'));
+  }
+
+  toggleConsent();
+}
+
+async function toggleConsent() {
+  const consent = document.getElementById('consent').checked;
+  if (!consent) {
+    document.getElementById('content').innerHTML = `
+      <div class="empty">
+        📝 Судалгаанд оролцох бол дээрх сонголтыг идэвхжүүлнэ үү
+      </div>
+    `;
+    return;
+  }
+  if (!sb) {
+    document.getElementById('content').innerHTML = `
+      <div class="empty">
+        ⚠️ Судалгааны сервер тохируулагдаагүй байна
+      </div>
+    `;
+    return;
+  }
+  loadQuestions();
+}
+
+async function loadQuestions() {
+  const { data: questions } = await sb
+    .from('research_questions')
+    .select('*')
+    .eq('active', true)
+    .order('order_num');
+
+  if (!questions || questions.length === 0) {
+    document.getElementById('content').innerHTML = `
+      <div class="empty">📭 Идэвхтэй асуулт байхгүй</div>
+    `;
+    return;
+  }
+
+  // Багшийн өмнөх хариулт ачаалах
+  const { data: existing } = await sb
+    .from('research_answers')
+    .select('*')
+    .eq('teacher_hash', teacherHash);
+
+  existing?.forEach(a => {
+    answers[a.question_id] = a.answer_text || a.answer_choice || a.answer_rating || a.answer_bool;
+  });
+
+  document.getElementById('content').innerHTML = questions.map(q => renderQuestion(q)).join('') +
+    `<button class="submit" onclick="saveAnswers()">💾 Хариултаа хадгалах</button>`;
+}
+
+function renderQuestion(q) {
+  const answered = answers[q.id];
+  const req = q.required ? '<span class="req"> *</span>' : '';
+  let input = '';
+
+  if (q.question_type === 'text') {
+    input = `<textarea id="q_${q.id}" placeholder="Хариултаа бичнэ үү...">${answered || ''}</textarea>`;
+  } else if (q.question_type === 'choice') {
+    input = `<div class="choices">` + (q.choices || []).map(c => `
+      <label>
+        <input type="radio" name="q_${q.id}" value="${c}" ${answered === c ? 'checked' : ''}
+               onchange="answers['${q.id}']=this.value">
+        ${c}
+      </label>
+    `).join('') + `</div>`;
+  } else if (q.question_type === 'rating') {
+    input = `<div class="rating">` + [1,2,3,4,5].map(n => `
+      <button class="${answered == n ? 'selected' : ''}"
+              onclick="selectRating('${q.id}', ${n})">${'⭐'.repeat(n)}</button>
+    `).join('') + `</div>`;
+  } else if (q.question_type === 'yesno') {
+    input = `<div class="yesno">
+      <button class="${answered === true ? 'selected' : ''}" onclick="selectBool('${q.id}', true)">✅ Тийм</button>
+      <button class="${answered === false ? 'selected' : ''}" onclick="selectBool('${q.id}', false)">❌ Үгүй</button>
+    </div>`;
+  }
+
+  return `
+    <div class="question">
+      <h3>${q.question_text}${req}</h3>
+      ${input}
+    </div>
+  `;
+}
+
+function selectRating(qid, n) {
+  answers[qid] = n;
+  loadQuestions();
+}
+
+function selectBool(qid, val) {
+  answers[qid] = val;
+  loadQuestions();
+}
+
+async function saveAnswers() {
+  // Text талбарын утгыг цуглуул
+  document.querySelectorAll('textarea[id^=q_], input[type=text][id^=q_]').forEach(el => {
+    const qid = el.id.replace('q_', '');
+    if (el.value.trim()) answers[qid] = el.value.trim();
+  });
+
+  const rows = Object.entries(answers).map(([qid, val]) => ({
+    question_id: qid,
+    teacher_hash: teacherHash,
+    answer_text: typeof val === 'string' && val.length > 30 ? val : null,
+    answer_choice: typeof val === 'string' && val.length <= 30 ? val : null,
+    answer_rating: typeof val === 'number' ? val : null,
+    answer_bool: typeof val === 'boolean' ? val : null,
+    answered_at: new Date().toISOString()
+  }));
+
+  const { error } = await sb.from('research_answers').upsert(rows, {
+    onConflict: 'question_id,teacher_hash'
+  });
+
+  if (error) {
+    alert('Алдаа: ' + error.message);
+    return;
+  }
+
+  document.getElementById('content').innerHTML = `
+    <div class="done">
+      ✅ Хариултууд амжилттай хадгалагдлаа!<br>
+      Танд баярлалаа 🙏
+    </div>
+    <button class="submit" onclick="location.reload()">Дахин үзэх</button>
+  `;
+}
+
+async function hashString(str) {
+  const buffer = new TextEncoder().encode(str);
+  const hash = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 32);
+}
+
+init();
+</script>

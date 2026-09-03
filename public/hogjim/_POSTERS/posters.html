@@ -1,0 +1,358 @@
+<meta charset="UTF-8">
+<title>Хөгжим Өлзий — Сурталчилгааны постер</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, sans-serif; background: #f3f4f6; padding: 40px 20px; }
+  .instructions { max-width: 900px; margin: 0 auto 40px; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+  .instructions h1 { color: #7c3aed; margin-bottom: 12px; }
+  .instructions p { color: #64748b; margin-bottom: 8px; line-height: 1.6; }
+  .instructions code { background: #f3f4f6; padding: 4px 10px; border-radius: 6px; color: #be185d; font-weight: 700; }
+  .poster-container { display: flex; flex-direction: column; align-items: center; gap: 40px; }
+  .download-btn {
+    display: block;
+    background: linear-gradient(135deg,#be185d,#7c3aed);
+    color: white;
+    padding: 14px 32px;
+    border: none;
+    border-radius: 100px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin: 10px auto 20px;
+    box-shadow: 0 6px 20px rgba(190,24,93,0.3);
+  }
+  .download-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(190,24,93,0.4); }
+  .poster {
+    width: 1080px;
+    height: 1350px;
+    border-radius: 24px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  @media print {
+    body { background: white; padding: 0; }
+    .instructions { display: none; }
+    .poster { break-after: page; box-shadow: none; }
+  }
+
+  /* ========== POSTER 1: TITLE/BRANDING ========== */
+  .p1 {
+    background: linear-gradient(135deg, #fce7f3 0%, #ddd6fe 50%, #bfdbfe 100%);
+    padding: 80px 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .p1-top { text-align: center; }
+  .p1-emoji-row { font-size: 100px; margin-bottom: 20px; letter-spacing: 20px; }
+  .p1-title {
+    font-size: 92px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #be185d, #7c3aed);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    margin-bottom: 24px;
+    letter-spacing: -2px;
+  }
+  .p1-sub { font-size: 32px; color: #64748b; font-weight: 500; margin-bottom: 40px; }
+  .p1-features { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 40px; }
+  .p1-feat {
+    background: white;
+    border-radius: 20px;
+    padding: 32px 24px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  }
+  .p1-feat-icon { font-size: 60px; margin-bottom: 12px; }
+  .p1-feat-title { font-size: 22px; font-weight: 800; color: #1e293b; margin-bottom: 6px; }
+  .p1-feat-desc { font-size: 16px; color: #64748b; line-height: 1.4; }
+  .p1-bottom { text-align: center; }
+  .p1-cta {
+    display: inline-block;
+    background: linear-gradient(135deg, #be185d, #7c3aed);
+    color: white;
+    padding: 24px 60px;
+    border-radius: 100px;
+    font-size: 32px;
+    font-weight: 800;
+    box-shadow: 0 12px 32px rgba(190, 24, 93, 0.4);
+    margin-bottom: 16px;
+  }
+  .p1-tag { font-size: 20px; color: #7c3aed; font-weight: 700; letter-spacing: 2px; }
+
+  /* ========== POSTER 2: STATS/BENEFITS ========== */
+  .p2 {
+    background: linear-gradient(135deg, #7c3aed 0%, #be185d 100%);
+    padding: 80px 60px;
+    display: flex;
+    flex-direction: column;
+    color: white;
+  }
+  .p2-header { text-align: center; margin-bottom: 60px; }
+  .p2-eyebrow { display: inline-block; background: rgba(255,255,255,0.25); padding: 12px 32px; border-radius: 100px; font-size: 20px; font-weight: 700; margin-bottom: 20px; letter-spacing: 1px; }
+  .p2-title { font-size: 84px; font-weight: 900; line-height: 1.05; margin-bottom: 16px; }
+  .p2-sub { font-size: 28px; opacity: 0.95; font-weight: 500; }
+  .p2-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 50px; }
+  .p2-stat {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 24px;
+    padding: 36px 24px;
+    text-align: center;
+  }
+  .p2-stat-num { font-size: 84px; font-weight: 900; line-height: 1; margin-bottom: 8px; }
+  .p2-stat-lbl { font-size: 22px; opacity: 0.95; font-weight: 600; }
+  .p2-list { background: rgba(255,255,255,0.12); border-radius: 24px; padding: 40px; margin-bottom: 40px; }
+  .p2-list-item { display: flex; align-items: center; gap: 20px; padding: 14px 0; font-size: 26px; font-weight: 600; border-bottom: 2px solid rgba(255,255,255,0.15); }
+  .p2-list-item:last-child { border: none; }
+  .p2-check { width: 44px; height: 44px; background: white; color: #7c3aed; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 26px; flex-shrink: 0; }
+  .p2-footer { text-align: center; }
+  .p2-cta-box {
+    background: white;
+    color: #be185d;
+    padding: 32px;
+    border-radius: 20px;
+    font-size: 40px;
+    font-weight: 900;
+  }
+  .p2-cta-sub { font-size: 22px; color: #7c3aed; font-weight: 600; margin-top: 8px; }
+
+  /* ========== POSTER 3: PROBLEM/SOLUTION ========== */
+  .p3 {
+    background: #fef3c7;
+    padding: 80px 60px;
+    display: flex;
+    flex-direction: column;
+  }
+  .p3-quote {
+    text-align: center;
+    margin-bottom: 50px;
+  }
+  .p3-quote-mark { font-size: 120px; color: #f59e0b; line-height: 0.5; margin-bottom: 20px; font-family: Georgia, serif; }
+  .p3-quote-text {
+    font-size: 48px;
+    font-weight: 800;
+    color: #78350f;
+    line-height: 1.2;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .p3-arrow { text-align: center; font-size: 100px; margin: 30px 0; }
+  .p3-solution {
+    background: linear-gradient(135deg, #be185d, #7c3aed);
+    border-radius: 32px;
+    padding: 60px 40px;
+    color: white;
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .p3-sol-title { font-size: 72px; font-weight: 900; margin-bottom: 24px; letter-spacing: -1px; }
+  .p3-sol-sub { font-size: 30px; opacity: 0.95; margin-bottom: 40px; font-weight: 500; }
+  .p3-icons { display: flex; justify-content: space-around; margin-bottom: 40px; }
+  .p3-icon-item { text-align: center; }
+  .p3-icon-emo { font-size: 80px; margin-bottom: 8px; }
+  .p3-icon-lbl { font-size: 20px; font-weight: 700; }
+  .p3-price {
+    background: white;
+    color: #be185d;
+    padding: 24px 40px;
+    border-radius: 100px;
+    display: inline-block;
+    font-size: 36px;
+    font-weight: 900;
+  }
+</style>
+
+<div class="instructions">
+  <h1>🎨 3 Постер бэлэн</h1>
+  <p><b>Хэрхэн ашиглах:</b></p>
+  <p>1. Постер тус бүр дээр баруун товч → <code>Save image as...</code> (эсвэл screenshot ав)</p>
+  <p>2. Facebook Page-т пост үүсгэхдээ зургаа оруул</p>
+  <p>3. Пост бичих загваруудыг доод талд өгсөн</p>
+  <p style="margin-top:16px"><b>💡 Screenshot хамгийн хялбар:</b> <code>Windows + Shift + S</code> → постер сонго → зураг татагдана</p>
+</div>
+
+<div class="poster-container">
+
+  <!-- POSTER 1: BRANDING -->
+  <div class="poster p1">
+    <div class="p1-top">
+      <div class="p1-emoji-row">🎵 🎶 🎼</div>
+      <div class="p1-title">ХӨГЖИМ<br>ӨЛЗИЙ</div>
+      <div class="p1-sub">Цэцэрлэгийн хөгжмийн багшийн<br>цахим менежментийн систем</div>
+    </div>
+    <div class="p1-features">
+      <div class="p1-feat">
+        <div class="p1-feat-icon">📚</div>
+        <div class="p1-feat-title">Бэлэн төлөвлөгөө</div>
+        <div class="p1-feat-desc">Жилийн бүх хөтөлбөр<br>засварлах боломжтой</div>
+      </div>
+      <div class="p1-feat">
+        <div class="p1-feat-icon">✅</div>
+        <div class="p1-feat-title">Цахим батлах</div>
+        <div class="p1-feat-desc">Арга зүйч онлайн<br>цаас хэмнэнэ</div>
+      </div>
+      <div class="p1-feat">
+        <div class="p1-feat-icon">🎼</div>
+        <div class="p1-feat-title">Дууны сан</div>
+        <div class="p1-feat-desc">100+ дуу, хөгжим</div>
+      </div>
+      <div class="p1-feat">
+        <div class="p1-feat-icon">🏆</div>
+        <div class="p1-feat-title">Гэрчилгээ</div>
+        <div class="p1-feat-desc">Автомат үүсгэгч</div>
+      </div>
+    </div>
+    <div class="p1-bottom">
+      <div class="p1-cta">🚀 30 минутад суулгана</div>
+      <div class="p1-tag">СӨБ · ХӨГЖМИЙН БАГШ · 2026</div>
+    </div>
+  </div>
+
+  <!-- POSTER 2: STATS -->
+  <div class="poster p2">
+    <div class="p2-header">
+      <div class="p2-eyebrow">✨ ШИНЭ ҮЕИЙН СИСТЕМ</div>
+      <div class="p2-title">Ажлаа<br>хөнгөвчил</div>
+      <div class="p2-sub">Хөгжмийн багшийн бүх ажил нэг дор</div>
+    </div>
+
+    <div class="p2-stats">
+      <div class="p2-stat">
+        <div class="p2-stat-num">20+</div>
+        <div class="p2-stat-lbl">Модуль</div>
+      </div>
+      <div class="p2-stat">
+        <div class="p2-stat-num">100+</div>
+        <div class="p2-stat-lbl">Дуу, хөгжим</div>
+      </div>
+      <div class="p2-stat">
+        <div class="p2-stat-num">32</div>
+        <div class="p2-stat-lbl">Хөгжмийн зэмсэг</div>
+      </div>
+      <div class="p2-stat">
+        <div class="p2-stat-num">24/7</div>
+        <div class="p2-stat-lbl">Хаанаас ч ажиллана</div>
+      </div>
+    </div>
+
+    <div class="p2-list">
+      <div class="p2-list-item"><span class="p2-check">✓</span> Жилийн хөтөлбөр бэлэн, засварлана</div>
+      <div class="p2-list-item"><span class="p2-check">✓</span> Арга зүйч цахимаар батална</div>
+      <div class="p2-list-item"><span class="p2-check">✓</span> Хүүхдийн портфолио</div>
+      <div class="p2-list-item"><span class="p2-check">✓</span> Эцэг эх нэвтэрч харна</div>
+      <div class="p2-list-item"><span class="p2-check">✓</span> Утас, компьютер бүгд</div>
+    </div>
+
+    <div class="p2-footer">
+      <div class="p2-cta-box">
+        Нэг удаа төлж<br>үүрд ашигла
+        <div class="p2-cta-sub">Сарын төлбөргүй</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POSTER 3: PROBLEM/SOLUTION -->
+  <div class="poster p3">
+    <div class="p3-quote">
+      <div class="p3-quote-mark">"</div>
+      <div class="p3-quote-text">
+        Хөтөлбөр, үнэлгээ, батлуулах —<br>
+        <span style="color:#dc2626">цаас, дэвтэрт, гараар бичих</span>
+      </div>
+    </div>
+
+    <div class="p3-arrow">⬇️</div>
+
+    <div class="p3-solution">
+      <div class="p3-sol-title">Одоо нэг<br>апп-д</div>
+      <div class="p3-sol-sub">📚 Бэлэн жилийн хөтөлбөр<br>✅ Арга зүйч цахимаар батална</div>
+
+      <div class="p3-icons">
+        <div class="p3-icon-item">
+          <div class="p3-icon-emo">📱</div>
+          <div class="p3-icon-lbl">Утас</div>
+        </div>
+        <div class="p3-icon-item">
+          <div class="p3-icon-emo">💻</div>
+          <div class="p3-icon-lbl">Компьютер</div>
+        </div>
+        <div class="p3-icon-item">
+          <div class="p3-icon-emo">📲</div>
+          <div class="p3-icon-lbl">Планшет</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="p3-price">🎁 Эхний захиалагчдад хямдрал</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="instructions" style="margin-top:40px">
+  <h1>📝 Пост бичих загвар</h1>
+
+  <h3 style="color:#be185d;margin-top:20px;margin-bottom:8px">Постер 1-т:</h3>
+  <div style="background:#f9fafb;padding:16px;border-radius:8px;white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.6">🎵 ХӨГЖИМ ӨЛЗИЙ СИСТЕМ 🎵
+
+Цэцэрлэгийн хөгжмийн багш нарт зориулсан цогц цахим менежментийн систем.
+
+✅ Жилийн хөтөлбөр бэлэн (засварлана)
+✅ Арга зүйч цахимаар батална (цаас хэмнэнэ)
+✅ Хүүхдийн үнэлгээ
+✅ Дууны сан 100+
+✅ Гэрчилгээ автомат
+
+💡 30 минутад өөрийн серверт суулгана.
+🌐 Утас, компьютер бүгд ажиллана.
+
+Дэлгэрэнгүй мэдээллийг Messenger-ээр авах боломжтой.
+
+#хөгжмийн_багш #цэцэрлэг #СӨБ #цахим_систем</div>
+
+  <h3 style="color:#be185d;margin-top:20px;margin-bottom:8px">Постер 2-т:</h3>
+  <div style="background:#f9fafb;padding:16px;border-radius:8px;white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.6">✨ Багшийн ажлыг хөнгөвчлөх шинэ систем
+
+📚 Жилийн хөтөлбөр төлөвлөгөө БЭЛЭН
+✏️ Багш өөрөө засварлаж, шинэчилнэ
+✅ Арга зүйч цахимаар батална — цаас хэмнэнэ
+🎼 100+ дуу, 32 хөгжмийн зэмсэг
+📱 Утас, компьютер бүгд
+
+🎯 Нэг удаа авбал сарын төлбөр төлөхгүй
+🔒 Data аюулгүй, зөвхөн та л хардаг
+
+Мессежээр холбогдож үзүүлж танилцуулъя 👇
+
+#багш #цэцэрлэг #хөгжим</div>
+
+  <h3 style="color:#be185d;margin-top:20px;margin-bottom:8px">Постер 3-т:</h3>
+  <div style="background:#f9fafb;padding:16px;border-radius:8px;white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.6">📖 Цаас, дэвтрийн эриний төгсгөл
+
+Хөгжмийн багш нарын мэдэж байгаагаар:
+❌ Жилийн хөтөлбөрийг эхнээс нь бичих
+❌ Батлуулахаар А4-т хэвлэх, гарын үсэг
+❌ Хүүхдийн үнэлгээг цаасан дээр
+❌ Гэрчилгээг гараар үүсгэх
+
+Одоо бүгд НЭГ систем-д 🎯
+
+📚 Жилийн хөтөлбөр төлөвлөгөө БЭЛЭН
+✏️ Багш өөрөө засварлана
+✅ Арга зүйч цахимаар батална (цаас 0)
+👨‍👩‍👧 Эцэг эх шууд харна
+⚡ 30 минутад суулгана
+
+Мессежээр асуултаа тавь 💬
+
+#цахимжуулалт #боловсрол</div>
+</div>

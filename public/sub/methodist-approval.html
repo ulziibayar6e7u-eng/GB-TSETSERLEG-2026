@@ -1,0 +1,413 @@
+<meta charset="UTF-8">
+<title>👔 Арга зүйч — Батламж</title>
+<script src="config.js" onerror="0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1e293b; padding: 14px; }
+  .header { background: linear-gradient(135deg,#7c3aed,#be185d); color: white; padding: 14px 20px; border-radius: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .header h1 { font-size: 18px; margin: 0; }
+  .header p { opacity: .9; font-size: 12px; margin-top: 3px; }
+  .back { background: white; color: #7c3aed; padding: 6px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; }
+  .name-bar { background: white; padding: 12px 16px; border-radius: 10px; margin-bottom: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; box-shadow: 0 2px 6px rgba(0,0,0,.04); }
+  .name-bar label { font-weight: 600; font-size: 13px; }
+  .name-bar input { flex: 1; min-width: 180px; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px; }
+  .name-bar input:focus { outline: none; border-color: #7c3aed; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tabs button { padding: 8px 16px; background: white; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; }
+  .tabs button.active { background: linear-gradient(135deg,#be185d,#7c3aed); color: white; border-color: transparent; }
+  .layout { display: grid; grid-template-columns: 340px 1fr; gap: 12px; min-height: 60vh; }
+  .list-panel { background: white; border-radius: 10px; padding: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.04); max-height: 78vh; overflow-y: auto; }
+  .list-panel h3 { color: #7c3aed; font-size: 13px; padding: 4px 6px 8px; border-bottom: 2px solid #f3f4f6; margin-bottom: 8px; }
+  .item { padding: 10px 12px; border-radius: 8px; margin-bottom: 6px; cursor: pointer; border: 2px solid transparent; }
+  .item:hover { background: #faf5ff; }
+  .item.active { background: #faf5ff; border-color: #7c3aed; }
+  .item .title { font-weight: 700; font-size: 13px; color: #1e293b; margin-bottom: 3px; }
+  .item .meta { font-size: 11px; color: #64748b; }
+  .item.approved { opacity: 0.55; }
+  .item .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-top: 4px; }
+  .item .badge.submitted { background: #dbeafe; color: #1e40af; }
+  .item .badge.approved  { background: #d1fae5; color: #065f46; }
+  .empty { text-align: center; padding: 30px 10px; color: #94a3b8; font-size: 13px; }
+  .preview-panel { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 6px rgba(0,0,0,.04); }
+  .preview-panel .plan-title { text-align: center; padding-bottom: 12px; border-bottom: 2px solid #f3f4f6; margin-bottom: 14px; }
+  .preview-panel .plan-title h2 { color: #7c3aed; margin: 4px 0; font-size: 17px; }
+  .preview-panel .plan-title .theme { font-size: 14px; color: #64748b; }
+  table.week { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 14px; }
+  table.week th, table.week td { border: 1px solid #e5e7eb; padding: 6px; text-align: left; vertical-align: top; }
+  table.week thead th { background: linear-gradient(135deg,#fce7f3,#ddd6fe); color: #7c3aed; text-align: center; }
+  table.week tbody th { background: #f8fafc; font-weight: 700; font-size: 10px; }
+  .approval-form { background: linear-gradient(135deg,#fef3c7,#fef9c3); border-radius: 10px; padding: 16px 18px; }
+  .approval-form h3 { color: #78350f; font-size: 14px; margin-bottom: 10px; }
+  .rating-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .rating-btn { flex: 1; min-width: 140px; padding: 12px; border: 3px solid #e5e7eb; background: white; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; transition: all .15s; text-align: center; }
+  .rating-btn:hover { transform: translateY(-1px); }
+  .rating-btn.selected.excellent { border-color: #d97706; background: #fef3c7; }
+  .rating-btn.selected.good      { border-color: #059669; background: #d1fae5; }
+  .rating-btn.selected.revise    { border-color: #dc2626; background: #fee2e2; }
+  .rating-btn .icon { font-size: 22px; display: block; margin-bottom: 4px; }
+  .rating-btn small { display: block; font-weight: 400; font-size: 11px; opacity: 0.75; margin-top: 2px; }
+  .tags-title { font-size: 12px; color: #78350f; margin: 10px 0 6px; font-weight: 600; }
+  .tag-btn { display: inline-block; padding: 5px 12px; background: white; border: 1px solid #fbbf24; border-radius: 20px; font-size: 12px; color: #78350f; cursor: pointer; margin: 2px; transition: all .1s; }
+  .tag-btn:hover { background: #fef3c7; }
+  .tag-btn.selected { background: #f59e0b; color: white; border-color: #f59e0b; }
+  .comments-field { width: 100%; margin-top: 10px; padding: 8px 12px; border: 2px solid #fde68a; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px; }
+  .btn-row { display: flex; gap: 8px; margin-top: 14px; }
+  .btn { flex: 1; padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 13px; }
+  .btn-approve { background: linear-gradient(135deg,#10b981,#059669); color: white; }
+  .btn-approve:hover { background: linear-gradient(135deg,#059669,#047857); }
+  .msg { padding: 10px 14px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; }
+  .msg.success { background: #d1fae5; color: #065f46; }
+  .msg.error   { background: #fee2e2; color: #991b1b; }
+  .msg.info    { background: #dbeafe; color: #1e40af; }
+  /* Тамга — same as weekly-plan */
+  .stamp-wrap { display: flex; justify-content: flex-end; padding: 8px 0; }
+  .stamp { display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+           width: 140px; height: 140px; border-radius: 50%; transform: rotate(-6deg);
+           font-family: "Georgia", serif; text-align: center; padding: 10px; box-shadow: 0 3px 8px rgba(0,0,0,.12); }
+  .stamp .rating-icon { font-size: 20px; }
+  .stamp .group-icon  { font-size: 34px; line-height: 1; margin: 2px 0; }
+  .stamp .name  { font-weight: 700; font-size: 10px; }
+  .stamp .date  { font-size: 9px; opacity: 0.75; }
+  .stamp .arc   { font-size: 8px; font-weight: 700; letter-spacing: 1px; }
+  .stamp.excellent { border: 4px double #d97706; background: #fef3c7; color: #78350f; }
+  .stamp.good      { border: 4px double #059669; background: #d1fae5; color: #065f46; }
+  .stamp.revise    { border: 4px double #dc2626; background: #fee2e2; color: #7f1d1d; }
+  @media (max-width:900px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="header">
+  <div>
+    <h1>👔 Арга зүйч · Батламжийн ширээ</h1>
+    <p>Багш нарын илгээсэн 7 хоногийн төлөвлөгөөнүүд · Батлах, санал өгөх</p>
+  </div>
+  <a href="index.html" class="back">← Нүүр</a>
+</div>
+
+<div class="name-bar">
+  <label>👔 Таны нэр (арга зүйч):</label>
+  <input id="methodistName" placeholder="жишээ: С.Саранчимэг" oninput="saveName()">
+  <span id="nameStatus" style="font-size:12px;color:#94a3b8"></span>
+</div>
+
+<div class="tabs" id="tabs"></div>
+
+<div id="msg"></div>
+
+<div class="layout">
+  <div class="list-panel">
+    <h3>📋 Батлуулахаар илгээсэн (<span id="cnt">0</span>)</h3>
+    <div id="list"></div>
+  </div>
+  <div class="preview-panel" id="preview">
+    <div class="empty">← Зүүн талаас төлөвлөгөө сонгоно уу</div>
+  </div>
+</div>
+
+<script>
+// ═══════ SUPABASE ═══════
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_KEY = window.SUPABASE_KEY || "";
+let sb = null;
+if (SUPABASE_URL && SUPABASE_KEY && window.supabase) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const GROUP_META = [
+  {id:"all",      name:"📋 Бүгд"},
+  {id:"baga",     name:"👶 Бага",         nickname:"НАРХАН",    icon:"👶"},
+  {id:"dund",     name:"🧒 Дунд",         nickname:"БАГАЧУУД",  icon:"🧒"},
+  {id:"ahlah",    name:"🐣 Ахлах",        nickname:"ДЭГДЭЭХИЙ", icon:"🐣"},
+  {id:"beltgel",  name:"🐰 Бэлтгэл",      nickname:"БҮЖИНХЭН",  icon:"🐰"},
+  {id:"huvilbart",name:"🎨 Хувилбарт",    nickname:"ХУВИЛБАРТ", icon:"🎨"},
+  {id:"hogjim",   name:"🎵 Хөгжим",       nickname:"ХӨГЖИМ",    icon:"🎵"}
+];
+const DAYS = ["Даваа","Мягмар","Лхагва","Пүрэв","Баасан"];
+const TIME_SLOTS = [
+  { name:"Өглөөний хүлээн авалт", dur:"30 мин" },
+  { name:"Өглөөний дасгал",       dur:"20 мин" },
+  { name:"Тойргын цаг",           dur:"15 мин" },
+  { name:"Чиглүүлэгтэй тоглоом",  dur:"30 мин" },
+  { name:"Зугаалгын цаг",         dur:"30 мин" },
+  { name:"Номын цаг",             dur:"15 мин" },
+  { name:"Төвийн цаг",            dur:"40 мин" },
+  { name:"Хөгжөөн баясгах ажил",  dur:"30 мин" }
+];
+
+// Түгээмэл санал шүүмжийн шаблон
+const PRESET_TAGS = {
+  positive: [
+    "✓ Сайн зохион байгуулсан",
+    "✓ СҮД уялдаа сайн",
+    "✓ Хэрэглэгдэхүүн зөв сонгосон",
+    "✓ Тухайн насанд тохирсон",
+    "✓ Бүтээлч санаа сайн",
+    "✓ Өдрийн хуваарь бүтэн"
+  ],
+  suggestion: [
+    "⚠ Илүү тодорхой зорилготой болгох",
+    "⚠ СҮД-ийг илүү уялдуулах",
+    "⚠ Хэрэглэгдэхүүн тодруулах",
+    "⚠ Ялгаатай хэрэгцээт хүүхдэд анхаарах",
+    "⚠ Эргэцүүлэл нэмэх",
+    "⚠ Аргачлал дэлгэрүүлэх"
+  ]
+};
+
+let items = [];
+let activeGroup = 'all';
+let activeItem = null;
+let selectedRating = null;
+let selectedTags = new Set();
+
+function renderTabs() {
+  document.getElementById('tabs').innerHTML = GROUP_META.map(g =>
+    `<button class="${g.id===activeGroup?'active':''}" onclick="switchTab('${g.id}')">${g.name}</button>`
+  ).join('');
+}
+
+function switchTab(g) {
+  activeGroup = g;
+  renderTabs();
+  renderList();
+}
+
+function saveName() {
+  const v = document.getElementById('methodistName').value;
+  try { localStorage.setItem('methodist_name', v); } catch(e) {}
+  document.getElementById('nameStatus').textContent = v ? '✓ Хадгалагдсан' : '';
+}
+
+async function load() {
+  if (!sb) { showMsg('error', '⚠️ Supabase холбогдоогүй. config.js-ийг шалгана уу.'); return; }
+  try {
+    const { data, error } = await sb.from('plans').select('*').eq('tab','weekly');
+    if (error) throw error;
+    items = (data || []).map(row => {
+      let c = {}; try { c = JSON.parse(row.content || '{}'); } catch(e) {}
+      return {
+        ...row,
+        parsedContent: c,
+        submitted_at: c.submitted_at,
+        submitted_by: c.submitted_by,
+        approval: c.approval
+      };
+    });
+    // Илгээсэн эсвэл баталсан эрэмбэлж жагсаана
+    renderList();
+  } catch(e) { showMsg('error', 'Ачаалахад алдаа: ' + e.message); }
+}
+
+function renderList() {
+  const listEl = document.getElementById('list');
+  let filtered = items;
+  if (activeGroup !== 'all') filtered = items.filter(i => i.group_id === activeGroup);
+  // Зөвхөн илгээсэн (submitted_at байгаа) — батлагдсан ч харуулна
+  filtered = filtered.filter(i => i.submitted_at || i.approved_at);
+  // Эрэмбэлэх: илгээсэн боловч батлаагүй — эхлээд
+  filtered.sort((a,b) => {
+    const aPending = !!a.submitted_at && !a.approved_at;
+    const bPending = !!b.submitted_at && !b.approved_at;
+    if (aPending !== bPending) return aPending ? -1 : 1;
+    return new Date(b.submitted_at || 0) - new Date(a.submitted_at || 0);
+  });
+
+  document.getElementById('cnt').textContent = filtered.filter(i => !i.approved_at).length;
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<div class="empty">Илгээсэн төлөвлөгөө байхгүй байна</div>';
+    return;
+  }
+  listEl.innerHTML = filtered.map((it, i) => {
+    const grp = GROUP_META.find(g => g.id === it.group_id);
+    const isApproved = !!it.approved_at;
+    const badge = isApproved
+      ? `<span class="badge approved">✅ ${it.approval?.rating === 'excellent' ? 'Онц сайн' : it.approval?.rating === 'revise' ? 'Санал өгсөн' : 'Батлагдсан'}</span>`
+      : `<span class="badge submitted">📤 Хүлээгдэж буй</span>`;
+    return `
+      <div class="item ${isApproved?'approved':''} ${String(activeItem)===String(it.id)?'active':''}" onclick="selectItem('${it.id}')">
+        <div class="title">${grp?.icon||''} ${it.title || (grp?.name + ' · ' + it.period)}</div>
+        <div class="meta">${grp?.name || it.group_id} · ${it.period}-р 7хоног · ${it.submitted_by || 'багш'}</div>
+        <div class="meta">📤 ${it.submitted_at ? new Date(it.submitted_at).toLocaleDateString('mn-MN') : '—'}</div>
+        ${badge}
+      </div>`;
+  }).join('');
+}
+
+function selectItem(id) {
+  const isSameItem = String(activeItem) === String(id);
+  activeItem = id;
+  renderList();
+  const it = items.find(i => String(i.id) === String(id));
+  if (!it) return;
+  const c = it.parsedContent || {};
+  const grp = GROUP_META.find(g => g.id === it.group_id);
+
+  // Хүснэгт бүтээх
+  const cells = c.cells || {};
+  let table = `<table class="week"><thead><tr><th style="min-width:100px">Хугацаа / Өдөр</th>`;
+  DAYS.forEach(d => table += `<th>${d}</th>`);
+  table += '</tr></thead><tbody>';
+  TIME_SLOTS.forEach((slot, si) => {
+    table += `<tr><th><span style="color:#7c3aed;font-size:10px;display:block">${slot.dur}</span>${slot.name}</th>`;
+    DAYS.forEach((_, di) => {
+      const val = (cells[si] && cells[si][di]) || '';
+      table += `<td>${escape(val)}</td>`;
+    });
+    table += '</tr>';
+  });
+  table += '</tbody></table>';
+
+  const isApproved = !!it.approved_at;
+  const ap = it.approval || {};
+  // Зөвхөн ӨӨР item сонгоход rating/tag reset хийнэ (setRating-ээс дуудагдвал одоогийн сонголтыг хадгалах)
+  if (!isSameItem) {
+    selectedRating = ap.rating || null;
+    selectedTags = new Set(ap.tags || []);
+  }
+
+  document.getElementById('preview').innerHTML = `
+    <div class="plan-title">
+      <h2>${grp?.icon || ''} ${grp?.nickname || grp?.name || ''} · ${it.period}-р 7 хоног</h2>
+      <div class="theme">${escape(c.theme || it.title || '')}</div>
+      <div style="margin-top:6px;font-size:12px;color:#64748b">
+        📤 Илгээсэн: <b>${it.submitted_by || 'багш'}</b> · ${it.submitted_at ? new Date(it.submitted_at).toLocaleString('mn-MN') : ''}
+      </div>
+    </div>
+    ${table}
+    ${isApproved ? renderApprovedInfo(it) : renderApprovalForm(it)}
+  `;
+}
+
+function renderApprovedInfo(it) {
+  const ap = it.approval || {};
+  const grp = GROUP_META.find(g => g.id === it.group_id);
+  const cls = ap.rating === 'excellent' ? 'excellent' : ap.rating === 'revise' ? 'revise' : 'good';
+  const arc = ap.rating === 'excellent' ? 'ЗАГВАР БОЛОХУЙЦ' : ap.rating === 'revise' ? 'САНАЛ ӨГСӨН' : 'БАТЛАГДСАН';
+  const icon = ap.rating === 'excellent' ? '🌟' : ap.rating === 'revise' ? '📝' : '✅';
+  const tagsHtml = (ap.tags || []).map(t => `<span class="tag-btn selected" style="cursor:default">${t}</span>`).join('');
+
+  return `
+    <div style="background:#f0fdf4;padding:14px 18px;border-radius:10px;border-left:4px solid #059669">
+      <h3 style="color:#065f46;font-size:14px;margin-bottom:10px">✅ Батлагдсан</h3>
+      <div class="stamp-wrap" style="justify-content:flex-start">
+        <div class="stamp ${cls}">
+          <div class="rating-icon">${icon}</div>
+          <div class="group-icon">${grp?.icon || '🎓'}</div>
+          <div class="name">АРГА ЗҮЙЧ<br>${it.approved_by || '—'}</div>
+          <div class="date">${new Date(it.approved_at).toLocaleDateString('mn-MN')}</div>
+          <div class="arc">${arc}</div>
+        </div>
+      </div>
+      ${tagsHtml ? `<div style="margin-top:10px">${tagsHtml}</div>` : ''}
+      ${ap.comments ? `<div style="margin-top:8px;padding:8px 12px;background:white;border-radius:6px;font-size:13px;color:#065f46;font-style:italic;line-height:1.5">« ${escape(ap.comments)} »</div>` : ''}
+      <button onclick="unapprove('${it.id}')" style="margin-top:10px;padding:6px 12px;background:none;color:#dc2626;border:1px solid #dc2626;border-radius:6px;cursor:pointer;font-size:12px">↩ Батламжийг цуцлах (шинээр үнэлэх)</button>
+    </div>`;
+}
+
+function renderApprovalForm(it) {
+  const positiveTags = PRESET_TAGS.positive.map(t =>
+    `<span class="tag-btn ${selectedTags.has(t)?'selected':''}" onclick="toggleTag(this,'${t}')">${t}</span>`
+  ).join('');
+  const suggestTags = PRESET_TAGS.suggestion.map(t =>
+    `<span class="tag-btn ${selectedTags.has(t)?'selected':''}" onclick="toggleTag(this,'${t}')">${t}</span>`
+  ).join('');
+
+  return `
+    <div class="approval-form">
+      <h3>👔 Батламж · Үнэлгээ</h3>
+      <div class="rating-row">
+        <button class="rating-btn ${selectedRating==='excellent'?'selected excellent':''}" onclick="setRating('excellent')">
+          <span class="icon">🌟</span> Онц сайн<small>Загвар болохуйц</small>
+        </button>
+        <button class="rating-btn ${selectedRating==='good'?'selected good':''}" onclick="setRating('good')">
+          <span class="icon">👍</span> Сайн<small>Батлагдсан</small>
+        </button>
+        <button class="rating-btn ${selectedRating==='revise'?'selected revise':''}" onclick="setRating('revise')">
+          <span class="icon">📝</span> Засварлах<small>Санал өгсөн</small>
+        </button>
+      </div>
+      <div class="tags-title">✅ Магтаал (олон сонгож болно):</div>
+      <div>${positiveTags}</div>
+      <div class="tags-title">💡 Санал / Зөвлөмж:</div>
+      <div>${suggestTags}</div>
+      <textarea class="comments-field" id="comments" placeholder="Нэмэлт санал, зөвлөмж бичих... (сонголт)"></textarea>
+      <div class="btn-row">
+        <button class="btn btn-approve" onclick="approve('${it.id}')">✅ Батламжийг илгээх</button>
+      </div>
+    </div>`;
+}
+
+function setRating(r) {
+  selectedRating = r;
+  const it = items.find(i => String(i.id) === String(activeItem));
+  if (it) selectItem(it.id);
+}
+
+function toggleTag(el, tag) {
+  if (selectedTags.has(tag)) selectedTags.delete(tag); else selectedTags.add(tag);
+  el.classList.toggle('selected');
+}
+
+async function approve(id) {
+  const methodistName = document.getElementById('methodistName').value.trim();
+  if (!methodistName) { showMsg('error', 'Эхлээд өөрийн нэрээ бичнэ үү'); document.getElementById('methodistName').focus(); return; }
+  if (!selectedRating) { showMsg('error', 'Үнэлгээгээ сонгоно уу (Онц сайн / Сайн / Засварлах)'); return; }
+  const comments = document.getElementById('comments').value.trim();
+  const tags = Array.from(selectedTags);
+
+  const it = items.find(i => String(i.id) === String(id));
+  if (!it) return;
+  const now = new Date().toISOString();
+  const content = it.parsedContent || {};
+  content.approval = {
+    rating: selectedRating,
+    comments,
+    tags,
+    approved_at: now,
+    approved_by: methodistName
+  };
+
+  try {
+    await sb.from('plans').update({
+      content: JSON.stringify(content),
+      approved_at: now,
+      approved_by: methodistName
+    }).eq('id', id);
+    showMsg('success', '✅ Батламж илгээгдлээ. Багш дараагийн орох үедээ тамгыг харах болно.');
+    selectedRating = null; selectedTags = new Set();
+    await load();
+    selectItem(id);
+  } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+}
+
+async function unapprove(id) {
+  if (!confirm('Батламжийг цуцлах уу? Багш дахин илгээх шаардлагатай болно.')) return;
+  const it = items.find(i => String(i.id) === String(id));
+  if (!it) return;
+  const content = it.parsedContent || {};
+  delete content.approval;
+  try {
+    await sb.from('plans').update({
+      content: JSON.stringify(content),
+      approved_at: null, approved_by: null
+    }).eq('id', id);
+    showMsg('info', '↩ Батламж цуцлагдлаа');
+    selectedRating = null; selectedTags = new Set();
+    await load();
+    selectItem(id);
+  } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+}
+
+function escape(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showMsg(type, text) {
+  const el = document.getElementById('msg');
+  el.innerHTML = `<div class="msg ${type}">${text}</div>`;
+  setTimeout(() => el.innerHTML = '', 5000);
+}
+
+// Эхлэл
+try { document.getElementById('methodistName').value = localStorage.getItem('methodist_name') || ''; saveName(); } catch(e) {}
+renderTabs();
+load();
+</script>

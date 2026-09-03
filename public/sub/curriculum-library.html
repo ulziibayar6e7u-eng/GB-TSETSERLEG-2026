@@ -1,0 +1,218 @@
+<meta charset="UTF-8">
+<title>Хөтөлбөрийн сан — СӨБ Багш Өлзий</title>
+<script src="config.js" onerror="0"></script>
+<script src="outcomes-data.js" onerror="0"></script>
+<script src="materials-data.js" onerror="0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1e293b; padding: 14px; }
+  .header { background: linear-gradient(135deg,#7c3aed,#be185d); color: white; padding: 16px 20px; border-radius: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .header h1 { font-size: 20px; margin: 0; }
+  .back { background: white; color: #7c3aed; padding: 6px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; }
+  .subject-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .subject-tabs button { padding: 10px 18px; background: white; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; }
+  .subject-tabs button.active { background: linear-gradient(135deg,#be185d,#7c3aed); color: white; border-color: transparent; }
+  .content-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 900px) { .content-wrap { grid-template-columns: 1fr; } }
+  .panel { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .panel h2 { color: #7c3aed; font-size: 16px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #f3f4f6; }
+  .group-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .group-badges button { padding: 6px 12px; border-radius: 8px; border: 2px solid #e5e7eb; background: white; cursor: pointer; font-size: 12px; font-weight: 600; }
+  .group-badges button.active { background: #ede9fe; color: #7c3aed; border-color: #7c3aed; }
+  .outcome-item { background: #f0fdf4; border-left: 3px solid #10b981; padding: 10px 14px; border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
+  .outcome-item b { color: #065f46; }
+  .material-item { background: #fef3c7; border-left: 3px solid #f59e0b; padding: 8px 12px; border-radius: 6px; margin-bottom: 5px; font-size: 12px; color: #78350f; }
+  .search { width: 100%; padding: 10px 14px; border: 2px solid #e5e7eb; border-radius: 10px; margin-bottom: 12px; font-size: 14px; }
+  .search:focus { outline: none; border-color: #7c3aed; }
+</style>
+
+<div class="header">
+  <div><h1>📚 Хөтөлбөрийн сан</h1></div>
+  <a href="javascript:history.length>1?history.back():location.href='index.html'" class="back">← Буцах</a>
+</div>
+
+<div class="subject-tabs" id="subjectTabs"></div>
+
+<input type="text" class="search" id="search" placeholder="🔍 Хайх (СҮД код эсвэл текст)" oninput="render()">
+
+<div class="content-wrap">
+  <div class="panel">
+    <h2>🎯 Суралцахуйн үр дүн</h2>
+    <div class="group-badges" id="groupBadges"></div>
+    <div id="outcomes"></div>
+  </div>
+  <div class="panel">
+    <h2>🎒 Санал болгох хэрэглэгдэхүүн
+      <button onclick="openAddMat()" style="float:right;padding:6px 12px;background:linear-gradient(135deg,#be185d,#7c3aed);color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700">➕ Нэмэх</button>
+    </h2>
+    <div id="materials"></div>
+    <div id="userMaterials" style="margin-top:14px"></div>
+  </div>
+</div>
+
+<div id="addMatModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;padding:20px;align-items:center;justify-content:center">
+  <div style="background:white;padding:22px;border-radius:12px;max-width:460px;width:100%;margin:auto">
+    <h3 style="color:#7c3aed;margin-bottom:12px">➕ Шинэ хэрэглэгдэхүүн нэмэх</h3>
+    <label style="display:block;margin-top:10px;font-weight:600;font-size:13px">Гарчиг:</label>
+    <input id="matTitle" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:6px" placeholder="Жишээ нь: 'Цэцэг' зурган карт">
+    <label style="display:block;margin-top:10px;font-weight:600;font-size:13px">Тайлбар:</label>
+    <textarea id="matDesc" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:6px;min-height:50px" placeholder="Хэрхэн ашиглах, ямар үйл ажиллагаа..."></textarea>
+    <label style="display:block;margin-top:10px;font-weight:600;font-size:13px">📎 Файл (зураг/PDF/аудио):</label>
+    <input id="matFile" type="file" accept="image/*,audio/*,video/*,.pdf" style="width:100%;padding:6px;border:2px solid #e5e7eb;border-radius:6px">
+    <label style="display:block;margin-top:10px;font-weight:600;font-size:13px">🎬 YouTube линк (сонголт):</label>
+    <input id="matUrl" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:6px" placeholder="https://youtu.be/...">
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button onclick="closeAddMat()" style="flex:1;padding:10px;background:#e5e7eb;border:none;border-radius:8px;cursor:pointer">Болих</button>
+      <button onclick="saveMaterial()" style="flex:2;padding:10px;background:linear-gradient(135deg,#be185d,#7c3aed);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700">💾 Хадгалах</button>
+    </div>
+    <div id="matMsg" style="margin-top:10px;font-size:13px"></div>
+  </div>
+</div>
+
+<script>
+const SUBJECTS = [
+  {id:"hel_yaria", name:"🗣️ Хэл яриа"},
+  {id:"matematik", name:"🔢 Математик"},
+  {id:"bno", name:"🌍 БНО"},
+  {id:"niigem", name:"🤝 Нийгэмшихүй"},
+  {id:"urlag", name:"🎨 Урлаг, зураг"},
+  {id:"hodolgoon", name:"🤸 Хөдөлгөөн"},
+  {id:"aa_uhaan", name:"🚦 Аюулгүй ухаан"}
+];
+const GROUPS = [
+  {id:"baga", name:"🧸 Бага (2-3)"},
+  {id:"dund", name:"🧒 Дунд (3-4)"},
+  {id:"ahlah", name:"👦 Ахлах (4-5)"},
+  {id:"beltgel", name:"🎒 Бэлтгэл (5-6)"}
+];
+
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_KEY = window.SUPABASE_KEY || "";
+let sb = null;
+if (SUPABASE_URL && SUPABASE_KEY && window.supabase) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentSubject = "hel_yaria";
+let currentGroup = "baga";
+let userMaterials = [];
+
+function openAddMat() {
+  document.getElementById('matTitle').value = '';
+  document.getElementById('matDesc').value = '';
+  document.getElementById('matFile').value = '';
+  document.getElementById('matUrl').value = '';
+  document.getElementById('matMsg').innerHTML = '';
+  document.getElementById('addMatModal').style.display = 'flex';
+}
+function closeAddMat() { document.getElementById('addMatModal').style.display = 'none'; }
+
+async function saveMaterial() {
+  if (!sb) { document.getElementById('matMsg').innerHTML = '<span style="color:#dc2626">⚠️ Supabase холбогдоогүй</span>'; return; }
+  const title = document.getElementById('matTitle').value.trim();
+  if (!title) { document.getElementById('matMsg').innerHTML = '<span style="color:#dc2626">Гарчиг оруулна уу</span>'; return; }
+  const desc = document.getElementById('matDesc').value.trim();
+  const url = document.getElementById('matUrl').value.trim();
+  const file = document.getElementById('matFile').files[0];
+  let fileUrl = '';
+  try {
+    if (file) {
+      document.getElementById('matMsg').innerHTML = '⏳ Файл байршуулж байна...';
+      const ext = file.name.split('.').pop();
+      const path = `materials/${currentSubject}_${Date.now()}.${ext}`;
+      const { error: upErr } = await sb.storage.from('media').upload(path, file);
+      if (upErr && !upErr.message.includes('already exists')) throw upErr;
+      const { data: pub } = sb.storage.from('media').getPublicUrl(path);
+      fileUrl = pub.publicUrl;
+    }
+    await sb.from('song_library').insert({
+      kind: 'material_' + currentSubject,
+      title, author: desc, url: url || fileUrl, notes: currentSubject
+    });
+    document.getElementById('matMsg').innerHTML = '<span style="color:#065f46">✅ Хадгалагдлаа</span>';
+    setTimeout(() => { closeAddMat(); loadUserMaterials(); }, 800);
+  } catch(e) {
+    document.getElementById('matMsg').innerHTML = '<span style="color:#dc2626">Алдаа: ' + e.message + '</span>';
+  }
+}
+
+async function loadUserMaterials() {
+  if (!sb) return;
+  try {
+    const { data } = await sb.from('song_library')
+      .select('*').eq('kind', 'material_' + currentSubject).order('created_at', {ascending: false});
+    userMaterials = data || [];
+    renderUserMaterials();
+  } catch(e) { console.warn(e); }
+}
+
+function renderUserMaterials() {
+  if (!userMaterials.length) { document.getElementById('userMaterials').innerHTML = ''; return; }
+  document.getElementById('userMaterials').innerHTML = `
+    <h3 style="font-size:14px;color:#7c3aed;margin:16px 0 8px;border-top:1px solid #e5e7eb;padding-top:12px">✨ Багшийн нэмсэн</h3>
+    ${userMaterials.map(m => `
+      <div class="material-item" style="background:#e0e7ff;border-left-color:#7c3aed;color:#1e3a8a">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+          <div style="flex:1">
+            <b>${escapeHTML(m.title)}</b>
+            ${m.author ? '<br><span style="font-size:11px">'+escapeHTML(m.author)+'</span>' : ''}
+            ${m.url ? '<br><a href="'+escapeHTML(m.url)+'" target="_blank" style="color:#7c3aed;font-size:11px">🔗 Нээх</a>' : ''}
+          </div>
+          <button onclick="delMat('${m.id}')" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:16px">🗑️</button>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+function escapeHTML(s) { return String(s==null?'':s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+async function delMat(id) {
+  if (!confirm('Устгах уу?')) return;
+  await sb.from('song_library').delete().eq('id', id);
+  loadUserMaterials();
+}
+
+function init() {
+  document.getElementById('subjectTabs').innerHTML = SUBJECTS.map(s =>
+    `<button class="${s.id===currentSubject?'active':''}" onclick="setSubject('${s.id}')">${s.name}</button>`
+  ).join('');
+  document.getElementById('groupBadges').innerHTML = GROUPS.map(g =>
+    `<button class="${g.id===currentGroup?'active':''}" onclick="setGroup('${g.id}')">${g.name}</button>`
+  ).join('');
+  render();
+}
+
+function setSubject(s) { currentSubject = s; init(); loadUserMaterials(); }
+function setGroup(g) { currentGroup = g; init(); }
+
+function render() {
+  const search = document.getElementById('search').value.toLowerCase().trim();
+
+  // Суралцахуйн үр дүн
+  const outcomes = ((window.OUTCOMES_REAL || {})[currentGroup] || {})[currentSubject] || [];
+  const filtered = search
+    ? outcomes.filter(o => o.code.toLowerCase().includes(search) || (o.text||'').toLowerCase().includes(search))
+    : outcomes;
+  document.getElementById('outcomes').innerHTML = filtered.length === 0
+    ? '<div style="color:#94a3b8;padding:20px;text-align:center">Мэдээлэл байхгүй</div>'
+    : filtered.map(o => `
+        <div class="outcome-item">
+          <b>${o.code}</b> — ${o.text || '—'}
+        </div>
+      `).join('');
+
+  // Хэрэглэгдэхүүн
+  const materials = (window.MATERIALS || {})[currentSubject] || [];
+  const filteredMats = search
+    ? materials.filter(m => m.toLowerCase().includes(search))
+    : materials;
+  document.getElementById('materials').innerHTML = filteredMats.length === 0
+    ? '<div style="color:#94a3b8;padding:20px;text-align:center">Мэдээлэл байхгүй</div>'
+    : filteredMats.map((m, i) => `
+        <div class="material-item">${i+1}. ${m}</div>
+      `).join('');
+}
+
+init();
+loadUserMaterials();
+</script>

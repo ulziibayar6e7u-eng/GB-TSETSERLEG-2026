@@ -1,0 +1,150 @@
+<meta charset="UTF-8">
+<title>Багш — Supabase үүсгэх заавар</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, sans-serif; background: #fff; color: #1e293b; padding: 24px; line-height: 1.6; max-width: 780px; margin: 0 auto; }
+  .cover { background: linear-gradient(135deg, #be185d, #7c3aed); color: white; padding: 32px; border-radius: 20px; text-align: center; margin-bottom: 24px; }
+  .cover h1 { font-size: 26px; margin-bottom: 8px; }
+  .cover .sub { opacity: 0.9; }
+  .cover .badge { display: inline-block; background: rgba(255,255,255,0.25); padding: 6px 14px; border-radius: 999px; font-weight: 600; margin-top: 12px; font-size: 14px; }
+  h2 { color: #be185d; font-size: 20px; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #fce7f3; }
+  h3 { color: #7c3aed; font-size: 17px; margin: 18px 0 8px; }
+  ol { margin: 8px 0 12px 24px; }
+  li { margin: 6px 0; }
+  code { background: #f3f4f6; padding: 2px 8px; border-radius: 6px; font-family: Consolas, monospace; color: #be185d; font-weight: 600; font-size: 13px; }
+  .step { background: #fdf4ff; border-left: 4px solid #be185d; padding: 14px 18px; border-radius: 8px; margin: 10px 0; }
+  .warn { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 14px; border-radius: 8px; margin: 10px 0; }
+  .success { background: #d1fae5; border-left: 4px solid #10b981; padding: 12px 14px; border-radius: 8px; margin: 10px 0; }
+  .print { position: fixed; top: 16px; right: 16px; background: #be185d; color: white; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+  .highlight { background: #fef3c7; padding: 2px 6px; border-radius: 4px; }
+  @media print { .print { display: none; } body { padding: 0; } }
+</style>
+
+<button class="print" onclick="window.print()">🖨️ PDF болгож татах</button>
+
+<div class="cover">
+  <h1>🗄️ Багшийн Supabase үүсгэх заавар</h1>
+  <div class="sub">Өөрийн хувийн мэдээллийн сан 10 минутад</div>
+  <div class="badge">v1.0 · 2026</div>
+</div>
+
+<h2>📌 Юуны тулд шаардлагатай вэ?</h2>
+<p>Танай өөрийн <b>Supabase</b> нь дараах зүйлсийг хадгална:</p>
+<ul>
+  <li>👶 Хүүхдийн нэр, зураг, үнэлгээ</li>
+  <li>📝 Хичээлийн төлөвлөгөө</li>
+  <li>🎵 Дуу, хөгжимт хөдөлгөөн</li>
+  <li>📊 Ирц, шалгуур бүх зүйл</li>
+</ul>
+<div class="success">
+  ✅ <b>Зөвхөн та л харна.</b> Өөр багш нар танай мэдээллийг харахгүй.
+</div>
+
+<h2>🔷 АЛХАМ 1: Supabase бүртгэл (3 мин)</h2>
+<div class="step">
+  <ol>
+    <li>Хөтчид оч: <code>supabase.com</code></li>
+    <li>Баруун дээд <b>"Start your project"</b> ногоон товч дар</li>
+    <li>Google Gmail-ээр нэвтэр (эсвэл шинэ бүртгэл)</li>
+    <li>Хэрэв GitHub-аар нэвтрэх санал болгосон бол сонго — амархан</li>
+  </ol>
+</div>
+
+<h2>🔷 АЛХАМ 2: Шинэ Project үүсгэх (2 мин)</h2>
+<div class="step">
+  <ol>
+    <li>Dashboard дээр <b>"New project"</b> ногоон товч дар</li>
+    <li>Talбарууд бөглөх:
+      <ul>
+        <li><b>Name:</b> <code>hugjim-bagsh</code> (эсвэл өөрийн нэр)</li>
+        <li><b>Database Password:</b> хүчтэй нууц үг үүсгэх → <span class="highlight">заавал хадгал!</span></li>
+        <li><b>Region:</b> <code>Southeast Asia (Singapore)</code></li>
+      </ul>
+    </li>
+    <li>Ногоон <b>"Create new project"</b> дар</li>
+    <li>⏳ 2 минут хүлээ (Setting up project...)</li>
+    <li>Dashboard гарч ирэхэд Status: <b>Healthy</b> харагдана ✅</li>
+  </ol>
+</div>
+
+<h2>🔷 АЛХАМ 3: URL болон API Key авах (1 мин)</h2>
+<div class="step">
+  <ol>
+    <li>Зүүн доод <b>⚙️ Settings</b> товч дар</li>
+    <li>Зүүн талын жагсаалтаас <b>"API"</b> сонго</li>
+    <li>Дараах 2 зүйлийг хуулж авна:
+      <ul>
+        <li><b>Project URL:</b> <code>https://xxxxx.supabase.co</code></li>
+        <li><b>anon / publishable key:</b> <code>sb_publishable_...</code></li>
+      </ul>
+    </li>
+    <li>Хоёуланг Notepad-т буулгаж хадгал</li>
+  </ol>
+</div>
+<div class="warn">
+  ⚠️ <b>service_role</b> key бол илгээх ХЭРЭГГҮЙ! Зөвхөн <b>publishable</b>-ыг ашиглана.
+</div>
+
+<h2>🔷 АЛХАМ 4: Мэдээллийн сангийн бүтэц үүсгэх (3 мин)</h2>
+<div class="step">
+  <ol>
+    <li>Өлзийбаяр багшаас ирсэн <code>setup.sql</code> файлыг Notepad-аар нээ</li>
+    <li>Notepad-т <code>Ctrl+A</code> → <code>Ctrl+C</code> (бүгдийг хуулах)</li>
+    <li>Supabase-т буц → зүүн талд <b>SQL Editor</b> товч дар</li>
+    <li><b>"+ New query"</b> дар</li>
+    <li>Кодны цонхонд <code>Ctrl+V</code> буулгах</li>
+    <li>Баруун доор <b>RUN</b> ногоон товч дар (эсвэл <code>Ctrl+Enter</code>)</li>
+    <li>"Success. No rows returned" гарна ✅</li>
+  </ol>
+</div>
+
+<h2>🔷 АЛХАМ 5: URL, Key-ээ Өлзийбаяр багшид илгээх (1 мин)</h2>
+<div class="step">
+  <p>Facebook Messenger дээр дараах маягтаар илгээ:</p>
+  <div style="background:#f3f4f6;padding:16px;border-radius:8px;margin-top:12px;font-family:monospace;font-size:13px">
+    Багшаа Supabase бэлэн боллоо<br><br>
+    URL: https://xxxxx.supabase.co<br>
+    KEY: sb_publishable_xxxxxxxxxxxx
+  </div>
+  <p style="margin-top:12px">Өлзийбаяр багш танд <code>config.js</code> файлыг илгээнэ.</p>
+</div>
+
+<h2>🔷 АЛХАМ 6: config.js-ыг GitHub-т upload</h2>
+<div class="step">
+  <ol>
+    <li>Өлзийбаяраас ирсэн <code>config.js</code>-ыг татаж авна</li>
+    <li>GitHub репод оч: <code>github.com/танай-нэр/hugjim-...</code></li>
+    <li>Хэрэв хуучин <code>config.js</code> байвал устга (🗑️)</li>
+    <li><b>Add file ▾</b> → <b>Upload files</b> дар</li>
+    <li>Шинэ <code>config.js</code>-ыг чирж хая</li>
+    <li>Ногоон <b>Commit changes</b> дар</li>
+  </ol>
+</div>
+
+<h2>✅ АЛХАМ 7: Систем нээх</h2>
+<div class="step">
+  <p>Хөтчид оч:</p>
+  <code>https://ТАНАЙ-USERNAME.github.io/hugjim-.../</code>
+  <p>Нэвтрэх нууц үг: <code>Suwdaa1113</code></p>
+</div>
+
+<div class="success">
+  🎉 <b>Систем бэлэн!</b> Одоо танай өөрийн хувийн мэдээллийн сан ажиллаж эхэллээ.
+</div>
+
+<h2>❓ Түгээмэл асуулт</h2>
+<h3>Мөнгө төлөх шаардлагатай юу?</h3>
+<p>Үгүй! Supabase Free plan-д: 500MB database, 1GB файл, 50,000 хэрэглэгч/сар. Танд үүнээс их шаардлагагүй.</p>
+
+<h3>Мэдээлэл алдагдах вий?</h3>
+<p>Supabase өдөр бүр автомат нөөцлөнө. Мөн та өөрөө систем дотор "Нөөцлөх" товч ашиглан локал компьютерт хадгалж болно.</p>
+
+<h3>Хэрэв Password мартвал?</h3>
+<p>Supabase-т нэвтэрч, Settings → Database-т ороод нууц үгээ шинээр үүсгэж болно.</p>
+
+<div style="background:linear-gradient(135deg,#fce7f3,#ddd6fe);padding:24px;border-radius:16px;margin-top:32px;text-align:center">
+  <h2 style="border:none;margin:0 0 12px">📞 Тусламж</h2>
+  <p><b>Г.Өлзийбаяр багш</b></p>
+  <p>📱 <b>8887-4686</b></p>
+  <p>📧 <b>ulziibagshsistem01@gmail.com</b></p>
+</div>

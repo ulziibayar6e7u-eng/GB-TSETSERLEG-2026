@@ -1,0 +1,1166 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📌 Үүрэг даалгавар</title>
+<script src="config.js" onerror="0"></script>
+<script src="staff-data.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1e293b; padding: 14px; }
+  header { background: linear-gradient(135deg,#7c3aed,#be185d); color: #fff; padding: 16px 22px; border-radius: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  header h1 { font-size: 20px; }
+  header p { opacity: .9; font-size: 12px; margin-top: 3px; }
+  .back { background: #fff; color: #7c3aed; padding: 6px 14px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 13px; }
+  .user-bar { background: #fff; padding: 12px 16px; border-radius: 10px; margin-bottom: 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; box-shadow: 0 2px 6px rgba(0,0,0,.05); }
+  .user-bar label { font-weight: 700; font-size: 13px; color: #7c3aed; }
+  .user-bar select, .user-bar input { padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 13px; }
+  .user-bar select:focus, .user-bar input:focus { outline: none; border-color: #7c3aed; }
+  .user-bar .info { color: #64748b; font-size: 12px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tabs button { padding: 9px 18px; background: #fff; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; position: relative; }
+  .tabs button.active { background: linear-gradient(135deg,#be185d,#7c3aed); color: #fff; border-color: transparent; }
+  .tabs button .cnt { display: inline-block; margin-left: 6px; padding: 1px 8px; background: #ef4444; color: #fff; border-radius: 10px; font-size: 11px; }
+  .layout { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .task-item { background: #fff; border-radius: 12px; padding: 14px 18px; box-shadow: 0 2px 8px rgba(0,0,0,.05); border-left: 4px solid #cbd5e1; transition: all .2s; cursor: pointer; }
+  .task-item:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,.1); }
+  .task-item.high     { border-left-color: #ef4444; background: linear-gradient(135deg,#fef2f2,#fff); }
+  .task-item.normal   { border-left-color: #3b82f6; }
+  .task-item.low      { border-left-color: #94a3b8; }
+  .task-item.done     { border-left-color: #10b981; background: linear-gradient(135deg,#f0fdf4,#fff); opacity: 0.7; }
+  .task-item .head { display: flex; justify-content: space-between; align-items: start; gap: 10px; margin-bottom: 6px; }
+  .task-item h3 { font-size: 15px; color: #1e293b; }
+  .task-item .meta { display: flex; gap: 10px; font-size: 11px; color: #64748b; flex-wrap: wrap; margin-top: 4px; }
+  .task-item .meta b { color: #7c3aed; }
+  .task-item .desc { color: #334155; font-size: 13px; margin-top: 8px; line-height: 1.5; padding: 8px 12px; background: #f8fafc; border-radius: 8px; white-space: pre-wrap; }
+  .task-item .badges { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; align-items: center; }
+  .prio { padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .prio.high   { background: #fee2e2; color: #991b1b; }
+  .prio.normal { background: #dbeafe; color: #1e40af; }
+  .prio.low    { background: #f3f4f6; color: #6b7280; }
+  .status-badge { padding: 3px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  .status-pending    { background: #fef3c7; color: #92400e; }
+  .status-inprogress { background: #dbeafe; color: #1e40af; }
+  .status-done       { background: #d1fae5; color: #065f46; }
+  .task-item .actions { display: flex; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f3f4f6; flex-wrap: wrap; }
+  .task-item .actions button { padding: 6px 12px; border-radius: 6px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; font-weight: 600; font-size: 12px; }
+  .task-item .actions button:hover { background: #f8fafc; }
+  .task-item .actions .go { background: #3b82f6; color: #fff; border-color: transparent; }
+  .task-item .actions .go:hover { background: #2563eb; }
+  .task-item .actions .done-btn { background: #10b981; color: #fff; border-color: transparent; }
+  .task-item .actions .done-btn:hover { background: #059669; }
+  .task-item .actions .del { color: #dc2626; border-color: #dc2626; }
+  .task-item .actions .del:hover { background: #fee2e2; }
+  .task-item .responses { margin-top: 10px; padding: 8px 12px; background: #fffbeb; border-radius: 8px; border-left: 3px solid #f59e0b; }
+  .task-item .responses .resp { padding: 4px 0; font-size: 12px; color: #78350f; border-bottom: 1px solid #fef3c7; }
+  .task-item .responses .resp:last-child { border-bottom: none; }
+  .task-item .responses .resp b { color: #92400e; }
+  .empty { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; background: #fff; border-radius: 10px; }
+  .create-btn { padding: 10px 20px; background: linear-gradient(135deg,#10b981,#059669); color: #fff; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px; }
+  .create-btn:hover { background: linear-gradient(135deg,#059669,#047857); }
+
+  /* Toast мэдэгдэл */
+  #msg { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; min-width: 320px; max-width: 90vw; pointer-events: none; }
+  #msg .msg { pointer-events: auto; padding: 14px 20px; border-radius: 10px; margin: 4px 0; font-size: 14px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.2); text-align: center; }
+  .msg.success { background: #10b981; color: #fff; }
+  .msg.error   { background: #ef4444; color: #fff; }
+  .msg.info    { background: #3b82f6; color: #fff; }
+
+  /* Модал */
+  .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; align-items: flex-start; justify-content: center; padding: 24px; overflow-y: auto; }
+  .modal.open { display: flex; }
+  .modal-box { background: #fff; border-radius: 14px; max-width: 600px; width: 100%; padding: 0; box-shadow: 0 20px 60px rgba(0,0,0,.3); overflow: hidden; }
+  .modal-head { background: linear-gradient(135deg,#7c3aed,#be185d); color: #fff; padding: 16px 22px; display: flex; justify-content: space-between; align-items: center; }
+  .modal-head h2 { font-size: 17px; }
+  .modal-head .x { background: none; border: none; color: #fff; font-size: 26px; cursor: pointer; opacity: .85; }
+  .modal-body { padding: 20px 24px; }
+  .modal-body label { display: block; margin: 8px 0 4px; font-weight: 700; font-size: 13px; color: #374151; }
+  .modal-body input, .modal-body select, .modal-body textarea { width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 13px; font-family: inherit; }
+  .modal-body input:focus, .modal-body select:focus, .modal-body textarea:focus { outline: none; border-color: #7c3aed; }
+  .modal-body textarea { resize: vertical; min-height: 80px; }
+  .recipient-picker { background: #faf5ff; padding: 10px 14px; border-radius: 8px; max-height: 260px; overflow-y: auto; }
+  .recipient-picker label { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-weight: 400; font-size: 12px; cursor: pointer; margin: 0; }
+  .recipient-picker input[type=checkbox] { width: auto; margin: 0; }
+  .recipient-picker .dept-title { font-size: 11px; color: #7c3aed; font-weight: 700; margin-top: 8px; margin-bottom: 4px; padding: 0 4px; }
+  .btn-row { display: flex; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 2px solid #f3f4f6; }
+  .btn-row button { flex: 1; padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px; }
+  .btn-row .cancel { background: #f3f4f6; color: #374151; }
+  .btn-row .save { background: linear-gradient(135deg,#7c3aed,#be185d); color: #fff; }
+</style>
+
+<header>
+  <div>
+    <h1>📌 Үүрэг даалгаврын систем</h1>
+    <p id="hDesc">Эрхлэгч/арга зүйч даалгавар өгнө · Ажилтан хүлээн авч гүйцэтгэнэ</p>
+  </div>
+  <a href="index.html" class="back">← Нүүр</a>
+</header>
+
+<div class="user-bar">
+  <label>👤 Таны нэр:</label>
+  <select id="whoAmI" onchange="onUserChange()">
+    <option value="">— Сонгоно уу —</option>
+  </select>
+  <span class="info" id="userInfo"></span>
+  <div style="margin-left:auto">
+    <button class="create-btn" id="createBtn" onclick="openCreateTask()" style="display:none">➕ Даалгавар өгөх</button>
+  </div>
+</div>
+
+<div class="tabs" id="tabs" style="display:none">
+  <button class="active" onclick="switchTab(this,'my')">📥 Миний хүлээн авсан <span class="cnt" id="cntMy">0</span></button>
+  <button onclick="switchTab(this,'sent')">📤 Миний өгсөн <span class="cnt" id="cntSent">0</span></button>
+  <button onclick="switchTab(this,'wg')">🎯 Миний ажлын хэсэг <span class="cnt" id="cntWg">0</span></button>
+  <button onclick="switchTab(this,'all')">📋 Бүгд <span class="cnt" id="cntAll">0</span></button>
+  <button onclick="switchTab(this,'report')">📊 Тайлан</button>
+</div>
+
+<div id="msg"></div>
+
+<div class="layout" id="tasksList"></div>
+
+<!-- Даалгавар өгөх модал -->
+<div class="modal" id="createModal" onclick="if(event.target===this)closeCreateTask()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>➕ Шинэ даалгавар өгөх</h2>
+      <button class="x" onclick="closeCreateTask()">×</button>
+    </div>
+    <div class="modal-body">
+      <label>👤 Кимд өгөх? <span style="font-weight:400;color:#7c3aed;font-size:12px">— (нэг эсвэл олон хүн сонгож болно)</span></label>
+      <div style="display:flex;gap:6px;margin-bottom:4px">
+        <button type="button" onclick="pickAll(true)" style="padding:5px 10px;background:#e9d5ff;color:#7c3aed;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">✓ Бүгдийг сонгох</button>
+        <button type="button" onclick="pickAll(false)" style="padding:5px 10px;background:#f3f4f6;color:#374151;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">✕ Цуцлах</button>
+        <button type="button" onclick="pickDept('teaching')" style="padding:5px 10px;background:#faf5ff;color:#7c3aed;border:1px solid #ddd6fe;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">📚 Заах нэгдэл</button>
+        <button type="button" onclick="pickDept('admin')" style="padding:5px 10px;background:#ecfeff;color:#0891b2;border:1px solid #a5f3fc;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">🏢 Захиргаа</button>
+        <span style="margin-left:auto;font-size:12px;color:#64748b">Сонгосон: <b id="pickedCnt" style="color:#7c3aed">0</b></span>
+      </div>
+      <div class="recipient-picker" id="recipientPicker"></div>
+
+      <label>📌 Даалгаврын гарчиг:</label>
+      <input id="tTitle" placeholder="жишээ: 9-р сарын тайлангаа өгөх">
+
+      <label>📝 Дэлгэрэнгүй тайлбар:</label>
+      <textarea id="tDesc" placeholder="Даалгаврыг тайлбарлана уу..."></textarea>
+
+      <label>⚡ Ач холбогдол:</label>
+      <select id="tPriority">
+        <option value="normal">🔵 Энгийн</option>
+        <option value="high">🔴 Яаралтай</option>
+        <option value="low">⚪ Бага ач холбогдолтой</option>
+      </select>
+
+      <label>📅 Хугацаа (сонголт):</label>
+      <input type="date" id="tDue">
+
+      <label>🔗 Хавсаргах линкүүд (мөр бүрд нэг):</label>
+      <textarea id="tLinks" placeholder="Facebook, YouTube, Google Drive, зураг, бичлэгийн URL..." style="min-height:60px"></textarea>
+
+      <label>📎 Файл хавсаргах (зураг, бичлэг):</label>
+      <input type="file" id="tFiles" accept="image/*,video/*,application/pdf" multiple style="padding:8px;border:2px dashed #cbd5e1;border-radius:8px;background:#f8fafc">
+
+      <div class="btn-row">
+        <button class="cancel" onclick="closeCreateTask()">Болих</button>
+        <button class="save" onclick="createTask()">📤 Даалгавар илгээх</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════ SUPABASE ═══════
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_KEY = window.SUPABASE_KEY || "";
+let sb = null;
+if (SUPABASE_URL && SUPABASE_KEY && window.supabase) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ═══════ ГЛОБАЛ ТӨЛӨВ ═══════
+let currentUserId = null;   // Одоогийн нэвтэрсэн ажилтны staff_id
+let currentUser = null;
+let allTasks = [];
+let activeTab = 'my';
+let editingTaskId = null;   // Засварлаж буй даалгаврын id (null бол шинээр үүсгэнэ)
+
+// Даалгавар өгөх эрхтэй role-ууд
+const ADMIN_ROLES = ['director', 'methodist'];
+
+// ═══════ ЭХЛЭЛ ═══════
+function init() {
+  // Ажилтны жагсаалт dropdown-т байрлуулах
+  const sel = document.getElementById('whoAmI');
+  sel.innerHTML = '<option value="">— Сонгоно уу —</option>' +
+    window.STAFF_LIST.map(s => {
+      const r = window.getRoleInfo(s.role);
+      return `<option value="${s.id}">${r.icon} ${escape(s.name)} (${escape(r.name)})</option>`;
+    }).join('');
+
+  // Хамгийн сүүлд сонгосон хэрэглэгчийг сануулах
+  try {
+    const saved = localStorage.getItem('task_user_id');
+    if (saved) { sel.value = saved; onUserChange(); }
+  } catch(e) {}
+
+  // URL-с ?tab=report ирвэл шууд тайлангийн таб руу
+  try {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam && ['my','sent','all','report'].includes(tabParam)) {
+      activeTab = tabParam;
+    }
+  } catch(e) {}
+
+  loadTasks();
+}
+
+function onUserChange() {
+  const sel = document.getElementById('whoAmI');
+  currentUserId = sel.value;
+  currentUser = window.STAFF_LIST.find(s => s.id === currentUserId);
+  try { localStorage.setItem('task_user_id', currentUserId); } catch(e) {}
+
+  if (!currentUser) {
+    document.getElementById('userInfo').textContent = '';
+    document.getElementById('createBtn').style.display = 'none';
+    document.getElementById('tabs').style.display = 'none';
+    document.getElementById('tasksList').innerHTML = '<div class="empty">👆 Дээрээс өөрийн нэрээ сонгоно уу</div>';
+    return;
+  }
+  const role = window.getRoleInfo(currentUser.role);
+  document.getElementById('userInfo').textContent = `${role.icon} ${role.name}`;
+  // Даалгавар өгөх товч бүгдэд харагдана
+  document.getElementById('createBtn').style.display = '';
+  document.getElementById('tabs').style.display = 'flex';
+  render();
+}
+
+// ═══════ ДААЛГАВАР ТАТАХ ═══════
+let allWgActivities = [];
+
+async function loadTasks() {
+  if (!sb) return;
+  try {
+    const { data, error } = await sb.from('methodist_notes').select('*');
+    if (error) throw error;
+    // TASK:${taskId}:${status} format
+    allTasks = (data || []).filter(r => r.title && r.title.startsWith('TASK:')).map(r => {
+      let payload = {}; try { payload = JSON.parse(r.text || '{}'); } catch(e) {}
+      const parts = (r.title || '').split(':');
+      return {
+        id: r.id,
+        taskId: parts[1] || '',
+        status: parts[2] || 'pending',
+        title: payload.title || '',
+        description: payload.description || '',
+        priority: payload.priority || 'normal',
+        due_date: payload.due_date || '',
+        recipients: payload.recipients || [],
+        responses: payload.responses || [],
+        attachments: payload.attachments || [],
+        assigned_by_name: r.from_name || '',
+        assigned_by_role: r.from_role || '',
+        assigned_by_id: payload.assigned_by_id || '',
+        created_at: r.created_at
+      };
+    });
+    // Ажлын хэсгийн үйл ажиллагаа: WGA:${wgId}
+    allWgActivities = (data || []).filter(r => r.title && r.title.startsWith('WGA:')).map(r => {
+      let payload = {}; try { payload = JSON.parse(r.text || '{}'); } catch(e) {}
+      const parts = (r.title || '').split(':');
+      return {
+        id: r.id, wg_id: parts[1],
+        activity_title: payload.title || '',
+        description: payload.description || '',
+        activity_date: payload.date || '',
+        participants: payload.participants || [],
+        photo_url: payload.photo_url || '',
+        created_by: r.from_name || '',
+        created_at: r.created_at
+      };
+    });
+    render();
+  } catch(e) { console.warn(e); showMsg('error', 'Ачаалахад алдаа: ' + (e.message||'')); }
+}
+
+// ═══════ RENDER ═══════
+function switchTab(btn, tab) {
+  activeTab = tab;
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function render() {
+  if (!currentUser) return;
+
+  const my   = allTasks.filter(t => (t.recipients || []).includes(currentUserId));
+  const sent = allTasks.filter(t => t.assigned_by_id === currentUserId);
+
+  document.getElementById('cntMy').textContent   = my.filter(t => t.status !== 'done').length;
+  document.getElementById('cntSent').textContent = sent.filter(t => t.status !== 'done').length;
+  document.getElementById('cntAll').textContent  = allTasks.filter(t => t.status !== 'done').length;
+
+  // Ажлын хэсгийн тоо (тухайн хэрэглэгч гишүүн эсвэл ахлагч)
+  const myWgs = (window.WORK_GROUPS || []).filter(g =>
+    g.leader_id === currentUserId || (g.member_ids || []).includes(currentUserId)
+  );
+  document.getElementById('cntWg').textContent = myWgs.length;
+
+  // Тусгай табууд
+  if (activeTab === 'report') { renderReport(); return; }
+  if (activeTab === 'wg')     { renderMyWorkGroups(myWgs); return; }
+
+  let list = activeTab === 'my' ? my : activeTab === 'sent' ? sent : allTasks;
+  // Ач холбогдол + огноогоор эрэмбэлэх
+  const prioRank = { high: 0, normal: 1, low: 2 };
+  const statusRank = { pending: 0, inprogress: 1, done: 2 };
+  list.sort((a,b) => {
+    if (statusRank[a.status] !== statusRank[b.status]) return statusRank[a.status] - statusRank[b.status];
+    if (prioRank[a.priority] !== prioRank[b.priority]) return prioRank[a.priority] - prioRank[b.priority];
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+
+  if (!list.length) {
+    document.getElementById('tasksList').innerHTML = `<div class="empty">
+      ${activeTab === 'my' ? '📥 Одоогоор танд өгөгдсөн даалгавар алга' : activeTab === 'sent' ? '📤 Та даалгавар өгөөгүй байна' : '📋 Даалгавар байхгүй байна'}
+    </div>`;
+    return;
+  }
+
+  document.getElementById('tasksList').innerHTML = list.map(t => renderTask(t)).join('');
+}
+
+function renderTask(t) {
+  const isForMe = (t.recipients || []).includes(currentUserId);
+  const isMine  = t.assigned_by_id === currentUserId;
+  const recipNames = (t.recipients || []).map(rid => {
+    const s = window.getStaffById(rid);
+    return s ? escape(s.name) : rid;
+  }).join(', ');
+  const prioLabel = { high: '🔴 Яаралтай', normal: '🔵 Энгийн', low: '⚪ Бага' }[t.priority] || t.priority;
+  const statusLabel = { pending: '⏳ Хүлээж буй', inprogress: '🔄 Хийж байна', done: '✅ Гүйцэтгэсэн' }[t.status] || t.status;
+
+  const overdue = t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done';
+
+  // Хариултууд/тайлангууд харуулах
+  const respsHtml = t.responses.length ? `
+    <div class="responses">
+      <div style="font-weight:700;color:#78350f;font-size:12px;margin-bottom:6px">📋 Биелэлтийн тайлан (${t.responses.length}):</div>
+      ${t.responses.map((r, ri) => {
+        const links = (r.links && r.links.length) ? r.links : (r.photo_url ? [r.photo_url] : []);
+        const reviewBadge = r.review ? {
+          approved: '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">✅ Батлагдсан ' + (r.review.rating||0) + '%</span>',
+          returned: '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">↩️ Буцаагдсан</span>',
+        }[r.review.status] || '' : '';
+        return `
+        <div class="resp" style="padding:10px;border-bottom:1px solid #fef3c7;background:#fffbeb;border-radius:8px;margin-bottom:6px">
+          <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;margin-bottom:3px">
+            <div><b>${escape(r.from)}</b> <span style="color:#94a3b8;font-size:10px">${new Date(r.at).toLocaleDateString('mn-MN')} ${new Date(r.at).toLocaleTimeString('mn-MN',{hour:'2-digit',minute:'2-digit'})}</span> ${reviewBadge}</div>
+            <div style="display:flex;gap:4px">
+              <button onclick="event.stopPropagation();openResponseModal('${t.id}',${ri})" style="background:#3b82f6;border:none;color:#fff;cursor:pointer;font-size:11px;padding:3px 10px;border-radius:6px;font-weight:600" title="Дэлгэрэнгүй">🔍 Томоор</button>
+              ${r.from === currentUser?.name ? `<button onclick="deleteResponse('${t.id}',${ri})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:12px" title="Устгах">✕</button>` : ''}
+            </div>
+          </div>
+          <div style="white-space:pre-wrap;cursor:pointer" onclick="openResponseModal('${t.id}',${ri})">${escape((r.text || '').slice(0,200))}${(r.text||'').length>200?'...':''}</div>
+          ${links.length ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${links.map(url => {
+            const info = detectLinkType(url);
+            return `<a href="${escape(url)}" target="_blank" style="display:inline-block;padding:4px 10px;background:#eff6ff;color:#1e40af;border-radius:6px;text-decoration:none;font-size:11px;font-weight:600">${info.icon} ${info.label} →</a>`;
+          }).join('')}</div>` : ''}
+          ${r.review?.note ? `<div style="margin-top:8px;padding:6px 10px;background:#fff;border-left:3px solid #cbd5e1;border-radius:4px;font-size:12px"><b style="color:#475569">Үнэлгээ:</b> ${escape(r.review.note)}</div>` : ''}
+          ${(isMine || (currentUser && ADMIN_ROLES.includes(currentUser.role))) ? `
+            <div style="margin-top:10px;padding:8px;background:#eff6ff;border-radius:8px">
+              <div style="font-weight:700;color:#1e40af;font-size:12px;margin-bottom:6px">📊 Үнэлгээ ${r.review ? '<span style="color:#64748b;font-weight:500">(засах)</span>' : 'өгөх'}</div>
+              <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+                <label style="font-size:11px;color:#475569">Хувь:</label>
+                <input type="range" id="rate_${t.id}_${ri}" min="0" max="100" step="10" value="${r.review?.rating ?? 80}" oninput="document.getElementById('ratev_${t.id}_${ri}').textContent=this.value+'%'" style="flex:1">
+                <span id="ratev_${t.id}_${ri}" style="font-weight:700;color:#1e40af;min-width:40px">${r.review?.rating ?? 80}%</span>
+              </div>
+              <input id="rnote_${t.id}_${ri}" value="${escape(r.review?.note || '')}" placeholder="Тэмдэглэл (сонголт)..." style="width:100%;padding:6px 10px;border:1px solid #bfdbfe;border-radius:6px;font-size:12px;margin-bottom:6px">
+              <div style="display:flex;gap:6px">
+                <button onclick="event.stopPropagation();reviewResponse('${t.id}',${ri},'approved')" style="flex:1;padding:6px;background:#10b981;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px">✅ Батлах</button>
+                <button onclick="event.stopPropagation();reviewResponse('${t.id}',${ri},'returned')" style="flex:1;padding:6px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px">↩️ Буцаах</button>
+                ${r.review ? `<button onclick="event.stopPropagation();clearReview('${t.id}',${ri})" style="padding:6px 10px;background:#64748b;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px">🔄 Дахин үнэлүүлэх</button>` : ''}
+              </div>
+            </div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  // Инлайн биелэлт тайлагнах форм (зөвхөн хүлээн авагчид)
+  let reportForm = '';
+  if (isForMe) {
+    reportForm = `
+      <div style="margin-top:10px;padding:12px 14px;background:#f0fdf4;border-radius:10px;border-left:4px solid #10b981">
+        <div style="font-weight:700;color:#065f46;font-size:13px;margin-bottom:8px">📝 Биелэлт тайлагнах</div>
+        <textarea id="rpt_${t.id}" placeholder="Хийсэн ажил, үр дүн, санал шаардлагаа энд бичнэ үү..." style="width:100%;padding:8px 12px;border:2px solid #86efac;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px;margin-bottom:6px"></textarea>
+        <textarea id="rptLinks_${t.id}" placeholder="🔗 Линк (мөр бүрд нэг): Facebook, YouTube, Google Drive, зураг, бичлэг..." style="width:100%;padding:7px 12px;border:2px solid #86efac;border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;min-height:50px;margin-bottom:6px"></textarea>
+        <input type="file" id="rptFile_${t.id}" accept="image/*,video/*" multiple style="width:100%;padding:6px;border:2px dashed #86efac;border-radius:6px;font-size:12px;margin-bottom:8px;background:#fff">
+        <div style="font-size:11px;color:#065f46;margin-bottom:8px">💡 Файлыг Supabase Storage-т байршуулна (хэрэв тохируулагдсан бол). Эсвэл линкээр оруулна уу.</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="event.stopPropagation();sendReport('${t.id}')" style="flex:1;min-width:140px;padding:9px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">💾 Тайлан илгээх</button>
+        </div>
+      </div>`;
+  }
+
+  // Үйлдэлийн товч
+  let actions = '';
+  if (isForMe && t.status !== 'done') {
+    if (t.status === 'pending') {
+      actions += `<button class="go" onclick="event.stopPropagation();changeStatus('${t.id}','inprogress')">🔄 Хийж эхлэх</button>`;
+    }
+    actions += `<button class="done-btn" onclick="event.stopPropagation();changeStatus('${t.id}','done')">✅ Гүйцэтгэсэн</button>`;
+  }
+  // Засах/устгах — ЗӨВХӨН үүсгэсэн хүн, эрхлэгч, арга зүйчид
+  if (isMine || (currentUser && ADMIN_ROLES.includes(currentUser.role))) {
+    actions += `<button onclick="event.stopPropagation();openEditTask('${t.id}')" style="background:#f59e0b;color:#fff;border-color:transparent">✏️ Засах</button>`;
+    actions += `<button class="del" onclick="event.stopPropagation();deleteTask('${t.id}')">🗑️ Устгах</button>`;
+  }
+
+  return `
+    <div class="task-item ${t.priority} ${t.status === 'done' ? 'done' : ''}">
+      <div class="head">
+        <h3>${escape(t.title)}</h3>
+        <div class="badges">
+          <span class="prio ${t.priority}">${prioLabel}</span>
+          <span class="status-badge status-${t.status}">${statusLabel}</span>
+        </div>
+      </div>
+      <div class="meta">
+        <span>👤 <b>${escape(t.assigned_by_name)}</b>${t.assigned_by_role?` (${escape(t.assigned_by_role)})`:''}</span>
+        <span>→ <b>${recipNames}</b></span>
+        <span>📅 Өгсөн: ${new Date(t.created_at).toLocaleDateString('mn-MN')}</span>
+        ${t.due_date ? `<span ${overdue?'style="color:#dc2626;font-weight:700"':''}>⏰ Дуусах: ${t.due_date}${overdue?' (Хугацаа хэтэрсэн!)':''}</span>` : ''}
+      </div>
+      ${t.description ? `<div class="desc">${escape(t.description)}</div>` : ''}
+      ${(t.attachments && t.attachments.length) ? `
+        <div style="margin:8px 0;display:flex;flex-wrap:wrap;gap:4px">
+          <span style="font-size:11px;color:#64748b;font-weight:600;align-self:center;margin-right:4px">📎 Хавсралт:</span>
+          ${t.attachments.map(url => {
+            const info = detectLinkType(url);
+            return `<a href="${escape(url)}" target="_blank" style="display:inline-block;padding:4px 10px;background:#fef3c7;color:#78350f;border-radius:6px;text-decoration:none;font-size:11px;font-weight:600">${info.icon} ${info.label} →</a>`;
+          }).join('')}
+        </div>` : ''}
+      ${respsHtml}
+      ${reportForm}
+      ${actions ? `<div class="actions">${actions}</div>` : ''}
+    </div>`;
+}
+
+// Биелэлт тайлагнах
+async function sendReport(rowId) {
+  const textEl = document.getElementById(`rpt_${rowId}`);
+  const linksEl = document.getElementById(`rptLinks_${rowId}`);
+  const fileEl = document.getElementById(`rptFile_${rowId}`);
+  const text = textEl ? textEl.value.trim() : '';
+  const linkLines = linksEl ? linksEl.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean) : [];
+  const files = fileEl && fileEl.files ? Array.from(fileEl.files) : [];
+  if (!text && linkLines.length === 0 && files.length === 0) { showMsg('error', 'Тайлан бичих, линк эсвэл файл оруулна уу'); return; }
+
+  // Файлыг Supabase Storage-т байршуулах (bucket: task-uploads)
+  const uploadedLinks = [];
+  for (const f of files) {
+    try {
+      const path = `${rowId}/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+      const { error: upErr } = await sb.storage.from('task-uploads').upload(path, f, { upsert: false });
+      if (upErr) { showMsg('error', 'Файл байршуулах алдаа: ' + upErr.message); continue; }
+      const { data: pub } = sb.storage.from('task-uploads').getPublicUrl(path);
+      if (pub?.publicUrl) uploadedLinks.push(pub.publicUrl);
+    } catch(e) { console.warn('upload failed', e); }
+  }
+
+  const allLinks = [...linkLines, ...uploadedLinks];
+  const primary = allLinks[0] || '';
+
+  const t = allTasks.find(x => String(x.id) === String(rowId));
+  if (!t) return;
+  const payload = {
+    title: t.title, description: t.description, priority: t.priority, due_date: t.due_date,
+    recipients: t.recipients, assigned_by_id: t.assigned_by_id,
+    responses: [...(t.responses || []), {
+      from: currentUser.name,
+      text,
+      photo_url: primary,
+      links: allLinks,
+      at: new Date().toISOString()
+    }]
+  };
+  try {
+    const { error } = await sb.from('methodist_notes').update({ text: JSON.stringify(payload) }).eq('id', rowId).select();
+    if (error) { showMsg('error', 'Алдаа: ' + (error.message || JSON.stringify(error))); return; }
+    showMsg('success', '✅ Биелэлт тайлагнагдлаа. Даалгавар өгсөн хүнд харагдана.');
+    await loadTasks();
+  } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+}
+
+// Response-г томоор харах modal
+function openResponseModal(taskId, respIdx) {
+  const t = allTasks.find(x => String(x.id) === String(taskId));
+  if (!t || !t.responses[respIdx]) return;
+  const r = t.responses[respIdx];
+  const links = (r.links && r.links.length) ? r.links : (r.photo_url ? [r.photo_url] : []);
+
+  const linksHtml = links.map(url => {
+    const info = detectLinkType(url);
+    const u = url.toLowerCase();
+    const isImg = u.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/);
+    const isVid = u.match(/\.(mp4|webm|mov)(\?|$)/);
+    if (isImg) return `<div style="margin:10px 0"><img src="${escape(url)}" style="max-width:100%;max-height:400px;border-radius:8px;border:1px solid #e2e8f0" onerror="this.style.display='none'"></div><a href="${escape(url)}" target="_blank" style="color:#3b82f6;font-size:12px">${info.icon} Шинэ tab-т нээх →</a>`;
+    if (isVid) return `<div style="margin:10px 0"><video src="${escape(url)}" controls style="max-width:100%;max-height:400px;border-radius:8px"></video></div>`;
+    return `<div style="margin:6px 0"><a href="${escape(url)}" target="_blank" style="display:inline-block;padding:10px 16px;background:#eff6ff;color:#1e40af;border-radius:8px;text-decoration:none;font-weight:600">${info.icon} ${info.label} нээх →</a></div>`;
+  }).join('');
+
+  const html = `
+    <div id="respModal" onclick="if(event.target===this)closeResponseModal()" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div style="background:#fff;border-radius:16px;max-width:800px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;position:relative">
+        <button onclick="closeResponseModal()" style="position:absolute;top:12px;right:12px;background:#f1f5f9;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700">✕</button>
+        <div style="margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #e2e8f0">
+          <div style="font-size:18px;font-weight:700;color:#0f172a">${escape(t.title)}</div>
+          <div style="color:#64748b;font-size:13px;margin-top:4px">📝 Биелэлтийн тайлан #${respIdx+1}</div>
+        </div>
+        <div style="margin-bottom:12px">
+          <b style="color:#0f172a">${escape(r.from)}</b>
+          <span style="color:#94a3b8;font-size:12px;margin-left:8px">${new Date(r.at).toLocaleString('mn-MN')}</span>
+        </div>
+        <div style="white-space:pre-wrap;font-size:15px;line-height:1.7;color:#1e293b;background:#f8fafc;padding:14px;border-radius:10px;border-left:4px solid #10b981">${escape(r.text || '(тайлбар байхгүй)')}</div>
+        ${links.length ? `<div style="margin-top:16px"><div style="font-weight:700;color:#475569;font-size:13px;margin-bottom:8px">🔗 Хавсарсан материал (${links.length})</div>${linksHtml}</div>` : ''}
+        ${r.review ? `<div style="margin-top:16px;padding:12px;background:${r.review.status==='approved'?'#f0fdf4':'#fef2f2'};border-radius:10px;border-left:4px solid ${r.review.status==='approved'?'#10b981':'#ef4444'}">
+          <div style="font-weight:700;color:${r.review.status==='approved'?'#166534':'#991b1b'};margin-bottom:4px">${r.review.status==='approved'?'✅ Батлагдсан · '+(r.review.rating||0)+'%':'↩️ Буцаагдсан'}</div>
+          ${r.review.by ? `<div style="font-size:12px;color:#64748b">Үнэлсэн: ${escape(r.review.by)} · ${new Date(r.review.at).toLocaleString('mn-MN')}</div>` : ''}
+          ${r.review.note ? `<div style="margin-top:6px;font-size:13px;color:#1e293b">${escape(r.review.note)}</div>` : ''}
+        </div>` : ''}
+      </div>
+    </div>`;
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  document.body.appendChild(div.firstElementChild);
+}
+
+function closeResponseModal() {
+  const m = document.getElementById('respModal');
+  if (m) m.remove();
+}
+
+// Тайланг үнэлэх (approve/return + rating + note)
+async function reviewResponse(taskId, respIdx, status) {
+  const t = allTasks.find(x => String(x.id) === String(taskId));
+  if (!t) return;
+  const rateEl = document.getElementById(`rate_${taskId}_${respIdx}`);
+  const noteEl = document.getElementById(`rnote_${taskId}_${respIdx}`);
+  const rating = status === 'approved' ? parseInt(rateEl?.value || '80') : 0;
+  const note = noteEl?.value.trim() || '';
+  if (status === 'returned' && !note) {
+    showMsg('error', 'Буцаах шалтгаанаа бичнэ үү');
+    return;
+  }
+  const responses = [...(t.responses || [])];
+  responses[respIdx] = {
+    ...responses[respIdx],
+    review: { status, rating, note, by: currentUser?.name || '', at: new Date().toISOString() }
+  };
+  // Даалгаврын үндсэн төлөв: батлагдсан бол done болгоно, батлагдсан хувийг хадгална
+  const payload = {
+    title: t.title, description: t.description, priority: t.priority, due_date: t.due_date,
+    recipients: t.recipients, assigned_by_id: t.assigned_by_id, responses,
+    approval_status: status,
+    approval_rating: status === 'approved' ? rating : null,
+    approved_by: currentUser?.name || '',
+    approved_at: new Date().toISOString(),
+  };
+  // Батлагдсан бол task-ы төлөвийг done, буцаагдсан бол inprogress болгоно
+  const newStatus = status === 'approved' ? 'done' : 'inprogress';
+  const newTitle = `TASK:${t.taskId}:${newStatus}`;
+  const updateFields = { text: JSON.stringify(payload), title: newTitle };
+  try {
+    const { error } = await sb.from('methodist_notes').update(updateFields).eq('id', taskId).select();
+    if (error) { showMsg('error', 'Алдаа: ' + error.message); return; }
+    showMsg('success', status === 'approved' ? `✅ Батлагдлаа (${rating}%). Даалгавар "Гүйцэтгэсэн" төлөвт шилжлээ.` : '↩️ Буцаагдлаа. Дахин хийлгэнэ.');
+    await loadTasks();
+  } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+}
+
+// Үнэлгээг цуцлах — тайланг дахин хянах горимд оруулна
+async function clearReview(taskId, respIdx) {
+  if (!confirm('Үнэлгээг цуцлах уу? Даалгавар "Хийж байна" төлөв рүү буцна.')) return;
+  const t = allTasks.find(x => String(x.id) === String(taskId));
+  if (!t) return;
+  const responses = [...(t.responses || [])];
+  const { review, ...rest } = responses[respIdx];
+  responses[respIdx] = rest;
+  const payload = {
+    title: t.title, description: t.description, priority: t.priority, due_date: t.due_date,
+    recipients: t.recipients, assigned_by_id: t.assigned_by_id, responses
+  };
+  const newTitle = `TASK:${t.taskId}:inprogress`;
+  try {
+    const { error } = await sb.from('methodist_notes').update({ text: JSON.stringify(payload), title: newTitle }).eq('id', taskId).select();
+    if (error) { showMsg('error', 'Алдаа: ' + error.message); return; }
+    showMsg('info', '🔄 Үнэлгээ цуцлагдлаа');
+    await loadTasks();
+  } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+}
+
+function detectLinkType(url) {
+  const u = (url || '').toLowerCase();
+  if (u.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/)) return { icon: '📷', label: 'Зураг' };
+  if (u.match(/\.(mp4|webm|mov|avi|mkv)(\?|$)/)) return { icon: '🎬', label: 'Бичлэг' };
+  if (u.includes('facebook.com') || u.includes('fb.watch')) return { icon: '📘', label: 'Facebook' };
+  if (u.includes('youtube.com') || u.includes('youtu.be')) return { icon: '▶️', label: 'YouTube' };
+  if (u.includes('drive.google.com')) return { icon: '📁', label: 'Google Drive' };
+  if (u.includes('instagram.com')) return { icon: '📸', label: 'Instagram' };
+  if (u.includes('tiktok.com')) return { icon: '🎵', label: 'TikTok' };
+  return { icon: '🔗', label: 'Линк' };
+}
+
+async function deleteResponse(rowId, respIdx) {
+  if (!confirm('Тайланг устгах уу?')) return;
+  const t = allTasks.find(x => String(x.id) === String(rowId));
+  if (!t) return;
+  const newResponses = [...(t.responses || [])];
+  newResponses.splice(respIdx, 1);
+  const payload = {
+    title: t.title, description: t.description, priority: t.priority, due_date: t.due_date,
+    recipients: t.recipients, assigned_by_id: t.assigned_by_id, responses: newResponses
+  };
+  try {
+    const { error } = await sb.from('methodist_notes').update({ text: JSON.stringify(payload) }).eq('id', rowId).select();
+    if (error) { showMsg('error', 'Алдаа: ' + error.message); return; }
+    showMsg('info', '🗑️ Устгагдлаа');
+    await loadTasks();
+  } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+}
+
+// ═══════ МИНИЙ АЖЛЫН ХЭСЭГ (Work Groups) ═══════
+let expandedWgId = null;   // Аль ажлын хэсэг нээгдсэн байна
+let editingActId = null;   // Аль үйл ажиллагаа засварлаж байна
+
+function renderMyWorkGroups(myWgs) {
+  const container = document.getElementById('tasksList');
+  if (!myWgs.length) {
+    container.innerHTML = `<div class="empty">
+      🎯 Та одоогоор ямар нэг ажлын хэсгийн гишүүн биш байна.<br>
+      <span style="color:#94a3b8;font-size:12px">Эрхлэгч танд ажлын хэсэг оноох ёстой.</span>
+    </div>`;
+    return;
+  }
+  container.innerHTML = myWgs.map(g => {
+    const isLeader = g.leader_id === currentUserId;
+    const acts = allWgActivities.filter(a => a.wg_id === g.id).sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+    const members = (g.member_ids || []).map(id => window.getStaffById(id)).filter(Boolean);
+    const leader = window.getStaffById(g.leader_id);
+    const isExpanded = expandedWgId === g.id;
+
+    return `
+      <div class="task-item" style="border-left-color:#f59e0b;background:linear-gradient(135deg,#fffbeb,#fff)">
+        <div class="head">
+          <h3>${g.icon || '🎯'} ${escape(g.name)}</h3>
+          <div class="badges">
+            ${isLeader ? '<span class="prio high" style="background:#fef3c7;color:#78350f">👑 АХЛАГЧ</span>' : '<span class="prio normal" style="background:#e0e7ff;color:#3730a3">👥 ГИШҮҮН</span>'}
+            <span class="status-badge status-pending" style="background:#f0fdf4;color:#065f46">${acts.length} үйл ажиллагаа</span>
+          </div>
+        </div>
+        <div class="meta">
+          <span>👑 Ахлагч: <b>${leader ? escape(leader.name) : '—'}</b></span>
+          <span>👥 Гишүүд: <b>${members.length}</b></span>
+        </div>
+        ${g.description ? `<div class="desc" style="background:#fef9c3">${escape(g.description)}</div>` : ''}
+
+        <div class="actions">
+          <button class="go" onclick="toggleWgExpand('${g.id}')">${isExpanded ? '📖 Хаах' : '📖 Дэлгэрэнгүй харах / Ажил тайлагнах'}</button>
+        </div>
+
+        ${isExpanded ? `
+          <div style="margin-top:14px;padding-top:14px;border-top:2px dashed #fbbf24">
+            <!-- Add form -->
+            <div style="background:#f0fdf4;padding:14px;border-radius:10px;margin-bottom:14px;border-left:4px solid #10b981">
+              <h4 style="color:#065f46;font-size:14px;margin-bottom:10px">${editingActId ? '✏️ Үйл ажиллагаа засах' : '➕ Хийсэн ажлаа тайлагнах'}</h4>
+              ${renderActivityForm(g)}
+            </div>
+            <!-- Activities list -->
+            <h4 style="color:#78350f;font-size:13px;margin-bottom:8px">📋 Гүйцэтгэсэн үйл ажиллагаа (${acts.length})</h4>
+            ${acts.length ? acts.map(a => renderActivityItem(a, g)).join('') : '<div style="color:#94a3b8;font-size:12px;font-style:italic;padding:20px;text-align:center;background:#fff;border-radius:8px">Одоогоор бүртгэгдээгүй байна</div>'}
+          </div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function renderActivityForm(g) {
+  const editing = editingActId ? allWgActivities.find(a => a.id == editingActId) : null;
+  const today = new Date().toISOString().slice(0,10);
+  const leader = window.getStaffById(g.leader_id);
+  const members = (g.member_ids || []).map(id => window.getStaffById(id)).filter(Boolean);
+  const allWgStaff = leader ? [leader, ...members.filter(m => m.id !== leader.id)] : members;
+  const selectedIds = editing ? editing.participants : [currentUserId]; // default өөрөө сонгогдсон
+
+  return `
+    <div style="display:grid;grid-template-columns:1fr 140px;gap:8px;margin-bottom:8px">
+      <input id="wgActTitle_${g.id}" placeholder="Юу хийсэн бэ? (жишээ: Хурал зохион байгуулав)" value="${escape(editing?.activity_title || '')}" style="padding:8px 12px;border:2px solid #86efac;border-radius:6px;font-size:13px">
+      <input id="wgActDate_${g.id}" type="date" value="${editing?.activity_date || today}" style="padding:8px 12px;border:2px solid #86efac;border-radius:6px;font-size:13px">
+    </div>
+    <textarea id="wgActDesc_${g.id}" placeholder="Дэлгэрэнгүй тайлбар — үр дүн, санал шаардлага..." style="width:100%;padding:8px 12px;border:2px solid #86efac;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;min-height:70px;margin-bottom:8px">${escape(editing?.description || '')}</textarea>
+
+    <label style="display:block;font-size:12px;color:#065f46;font-weight:600;margin-bottom:4px">📷 Зураг/бичлэгийн холбоос (сонголт):</label>
+    <input id="wgActPhoto_${g.id}" placeholder="https://... (Google Drive, Facebook г.м зурган линк)" value="${escape(editing?.photo_url || '')}" style="width:100%;padding:8px 12px;border:2px solid #86efac;border-radius:6px;font-size:13px;margin-bottom:8px">
+
+    <label style="display:block;font-size:12px;color:#065f46;font-weight:600;margin-bottom:4px">👥 Оролцсон гишүүд:</label>
+    <div style="background:#fff;padding:8px 12px;border-radius:6px;max-height:120px;overflow-y:auto;margin-bottom:10px">
+      ${allWgStaff.length ? allWgStaff.map(s => {
+        const r = window.getRoleInfo(s.role);
+        const ch = selectedIds.includes(s.id) ? 'checked' : '';
+        return `<label style="display:block;padding:3px 0;font-size:12px;cursor:pointer"><input type="checkbox" class="wgActP_${g.id}" value="${s.id}" ${ch} style="margin-right:6px"> ${r.icon} ${escape(s.name)}</label>`;
+      }).join('') : '<span style="color:#94a3b8;font-size:12px">Гишүүд байхгүй</span>'}
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button onclick="saveMyWgActivity('${g.id}')" style="flex:1;padding:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer">💾 ${editing ? 'Хадгалах' : 'Тайлагнах'}</button>
+      ${editing ? `<button onclick="cancelActEdit()" style="padding:10px 20px;background:#f3f4f6;color:#374151;border:none;border-radius:6px;font-weight:700;cursor:pointer">Болих</button>` : ''}
+    </div>
+    <div style="font-size:11px;color:#065f46;margin-top:6px;text-align:center;font-style:italic">💡 Тайлагнасны дараа эрхлэгчийн системд шууд харагдана</div>
+  `;
+}
+
+function renderActivityItem(a, g) {
+  const participants = (a.participants || []).map(pid => {
+    const s = window.getStaffById(pid);
+    return s ? escape(s.name) : '';
+  }).filter(Boolean).join(', ');
+  const isMine = a.created_by === currentUser?.name;
+
+  return `
+    <div style="background:#fff;padding:12px 16px;border-radius:10px;margin-bottom:8px;border-left:4px solid #10b981">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;margin-bottom:4px">
+        <h4 style="color:#065f46;font-size:14px">${escape(a.activity_title || 'Гарчиггүй')}</h4>
+        ${isMine ? `<div style="display:flex;gap:4px;flex-shrink:0">
+          <button onclick="startActEdit('${a.id}','${g.id}')" style="padding:4px 10px;background:#f59e0b;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600">✏️ Засах</button>
+          <button onclick="deleteMyWgActivity('${a.id}')" style="padding:4px 10px;background:#fff;color:#dc2626;border:1px solid #dc2626;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600">🗑️ Устгах</button>
+        </div>` : ''}
+      </div>
+      <div style="font-size:11px;color:#64748b;margin-bottom:6px">📅 <b>${a.activity_date || new Date(a.created_at).toLocaleDateString('mn-MN')}</b> · Бичсэн: <b>${escape(a.created_by || '—')}</b></div>
+      ${a.description ? `<div style="font-size:13px;color:#374151;background:#f8fafc;padding:8px 12px;border-radius:6px;line-height:1.5;white-space:pre-wrap;margin-bottom:6px">${escape(a.description)}</div>` : ''}
+      ${a.photo_url ? `<div style="margin-bottom:6px"><a href="${escape(a.photo_url)}" target="_blank" style="display:inline-block;padding:5px 12px;background:#eff6ff;color:#1e40af;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600">📷 Зураг/бичлэг харах →</a></div>` : ''}
+      ${participants ? `<div style="font-size:11px;color:#065f46">👥 Оролцогч: ${participants}</div>` : ''}
+    </div>`;
+}
+
+function toggleWgExpand(wgId) {
+  expandedWgId = expandedWgId === wgId ? null : wgId;
+  editingActId = null;
+  render();
+}
+
+function startActEdit(actId, wgId) {
+  editingActId = actId;
+  expandedWgId = wgId;
+  render();
+  setTimeout(() => document.getElementById(`wgActTitle_${wgId}`)?.focus(), 100);
+}
+
+function cancelActEdit() {
+  editingActId = null;
+  render();
+}
+
+async function saveMyWgActivity(wgId) {
+  const title = document.getElementById(`wgActTitle_${wgId}`).value.trim();
+  const date  = document.getElementById(`wgActDate_${wgId}`).value;
+  const desc  = document.getElementById(`wgActDesc_${wgId}`).value.trim();
+  const photo = document.getElementById(`wgActPhoto_${wgId}`).value.trim();
+  const participants = Array.from(document.querySelectorAll(`.wgActP_${wgId}:checked`)).map(cb => cb.value);
+
+  if (!title) { showMsg('error', 'Юу хийсэн вэ гэдэг гарчиг оруулна уу'); return; }
+  if (!sb) { showMsg('error', 'Supabase холбогдоогүй'); return; }
+
+  const payload = { title, description: desc, date, participants, photo_url: photo };
+  try {
+    if (editingActId) {
+      const { error } = await sb.from('methodist_notes').update({ text: JSON.stringify(payload) }).eq('id', editingActId).select();
+      if (error) { showMsg('error', 'Алдаа: ' + (error.message || JSON.stringify(error))); return; }
+      showMsg('success', '✅ Үйл ажиллагаа засварлагдлаа');
+    } else {
+      const { error } = await sb.from('methodist_notes').insert({
+        from_role: window.getRoleInfo(currentUser.role).name,
+        from_name: currentUser.name,
+        title: `WGA:${wgId}`,
+        text: JSON.stringify(payload)
+      }).select();
+      if (error) { showMsg('error', 'Алдаа: ' + (error.message || JSON.stringify(error))); return; }
+      showMsg('success', '✅ Тайлагнагдлаа. Эрхлэгчийн системд шууд харагдана.');
+    }
+    editingActId = null;
+    await loadTasks();
+  } catch(e) { console.error(e); showMsg('error', 'Алдаа: ' + (e.message || 'үл мэдэгдэх')); }
+}
+
+async function deleteMyWgActivity(id) {
+  if (!confirm('Үйл ажиллагааг устгах уу?')) return;
+  try {
+    const { error } = await sb.from('methodist_notes').delete().eq('id', id);
+    if (error) { showMsg('error', 'Алдаа: ' + error.message); return; }
+    showMsg('info', '🗑️ Устгагдлаа');
+    if (editingActId == id) editingActId = null;
+    await loadTasks();
+  } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+}
+
+// ═══════ ТАЙЛАН (renderReport) ═══════
+let reportPeriod = 'month';   // 'month' | 'quarter' | 'year' | 'all'
+let reportMonth = new Date().getMonth() + 1;
+let reportQuarter = Math.ceil((new Date().getMonth() + 1) / 3);
+
+function setReportPeriod(p) { reportPeriod = p; renderReport(); }
+function setReportMonth(m) { reportMonth = parseInt(m); renderReport(); }
+function setReportQuarter(q) { reportQuarter = parseInt(q); renderReport(); }
+
+function filterTasksByPeriod(tasks) {
+  const now = new Date();
+  const yearStart = new Date(now.getFullYear() - (now.getMonth() < 8 ? 1 : 0), 8, 1); // Хичээлийн жил 9-р сараас
+  return tasks.filter(t => {
+    const created = new Date(t.created_at);
+    if (reportPeriod === 'all') return true;
+    if (reportPeriod === 'year') return created >= yearStart;
+    if (reportPeriod === 'month') {
+      // Тухайн сарын даалгавар
+      const m = created.getMonth() + 1;
+      return m === reportMonth;
+    }
+    if (reportPeriod === 'quarter') {
+      const m = created.getMonth() + 1;
+      const q = Math.ceil(m / 3);
+      return q === reportQuarter;
+    }
+    return true;
+  });
+}
+
+function renderReport() {
+  const filteredTasks = filterTasksByPeriod(allTasks);
+
+  // Ажилтан бүрд статистик тооцох
+  const stats = window.STAFF_LIST.map(s => {
+    const assigned = filteredTasks.filter(t => (t.recipients || []).includes(s.id));
+    const done = assigned.filter(t => t.status === 'done').length;
+    const inprogress = assigned.filter(t => t.status === 'inprogress').length;
+    const pending = assigned.filter(t => t.status === 'pending').length;
+    const pct = assigned.length > 0 ? Math.round(done * 100 / assigned.length) : 0;
+    return { staff: s, role: window.getRoleInfo(s.role), assigned: assigned.length, done, inprogress, pending, pct };
+  });
+
+  // Даалгавар авсан ажилтнуудыг л харуулах (эсвэл бүгд)
+  const withTasks = stats.filter(x => x.assigned > 0).sort((a,b) => b.pct - a.pct);
+
+  const periodLabel = reportPeriod === 'month' ? `${reportMonth}-р сар`
+                    : reportPeriod === 'quarter' ? `${reportQuarter}-р улирал`
+                    : reportPeriod === 'year' ? 'Хичээлийн жил'
+                    : 'Бүх цаг';
+
+  // Ерөнхий үзүүлэлт
+  const totalAssigned = withTasks.reduce((s,x) => s + x.assigned, 0);
+  const totalDone = withTasks.reduce((s,x) => s + x.done, 0);
+  const overallPct = totalAssigned > 0 ? Math.round(totalDone * 100 / totalAssigned) : 0;
+
+  const html = `
+    <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 3px 10px rgba(0,0,0,.05);margin-bottom:14px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+        <b style="font-size:14px;color:#7c3aed">📊 Хугацаа:</b>
+        <button onclick="setReportPeriod('month')" style="padding:6px 12px;border-radius:6px;border:1px solid #e5e7eb;background:${reportPeriod==='month'?'#7c3aed':'#fff'};color:${reportPeriod==='month'?'#fff':'#374151'};cursor:pointer;font-weight:600;font-size:12px">Сарын</button>
+        <button onclick="setReportPeriod('quarter')" style="padding:6px 12px;border-radius:6px;border:1px solid #e5e7eb;background:${reportPeriod==='quarter'?'#7c3aed':'#fff'};color:${reportPeriod==='quarter'?'#fff':'#374151'};cursor:pointer;font-weight:600;font-size:12px">Улирлын</button>
+        <button onclick="setReportPeriod('year')" style="padding:6px 12px;border-radius:6px;border:1px solid #e5e7eb;background:${reportPeriod==='year'?'#7c3aed':'#fff'};color:${reportPeriod==='year'?'#fff':'#374151'};cursor:pointer;font-weight:600;font-size:12px">Жилийн эцэс</button>
+        <button onclick="setReportPeriod('all')" style="padding:6px 12px;border-radius:6px;border:1px solid #e5e7eb;background:${reportPeriod==='all'?'#7c3aed':'#fff'};color:${reportPeriod==='all'?'#fff':'#374151'};cursor:pointer;font-weight:600;font-size:12px">Бүх цаг</button>
+        ${reportPeriod === 'month' ? `<select onchange="setReportMonth(this.value)" style="padding:6px 10px;border-radius:6px;border:1px solid #e5e7eb;font-weight:600">
+          ${[9,10,11,12,1,2,3,4,5,6,7,8].map(m => `<option value="${m}" ${m===reportMonth?'selected':''}>${m}-р сар</option>`).join('')}
+        </select>` : ''}
+        ${reportPeriod === 'quarter' ? `<select onchange="setReportQuarter(this.value)" style="padding:6px 10px;border-radius:6px;border:1px solid #e5e7eb;font-weight:600">
+          ${[1,2,3,4].map(q => `<option value="${q}" ${q===reportQuarter?'selected':''}>${q}-р улирал</option>`).join('')}
+        </select>` : ''}
+        <span style="margin-left:auto;display:flex;gap:8px">
+          <button onclick="downloadTaskReport()" style="padding:8px 14px;background:#10b981;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer">📥 Word татах</button>
+          <button onclick="window.print()" style="padding:8px 14px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer">🖨️ Хэвлэх</button>
+        </span>
+      </div>
+
+      <!-- Ерөнхий үзүүлэлт -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px">
+        <div style="background:#faf5ff;padding:12px;border-radius:10px;text-align:center;border:2px solid #ddd6fe">
+          <div style="color:#7c3aed;font-size:22px;font-weight:800">${totalAssigned}</div>
+          <div style="color:#64748b;font-size:11px">Нийт даалгавар</div>
+        </div>
+        <div style="background:#f0fdf4;padding:12px;border-radius:10px;text-align:center;border:2px solid #86efac">
+          <div style="color:#059669;font-size:22px;font-weight:800">${totalDone}</div>
+          <div style="color:#64748b;font-size:11px">Гүйцэтгэсэн</div>
+        </div>
+        <div style="background:#fef3c7;padding:12px;border-radius:10px;text-align:center;border:2px solid #fde68a">
+          <div style="color:#d97706;font-size:22px;font-weight:800">${totalAssigned - totalDone}</div>
+          <div style="color:#64748b;font-size:11px">Хүлээгдэж буй</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#7c3aed,#be185d);color:#fff;padding:12px;border-radius:10px;text-align:center">
+          <div style="font-size:26px;font-weight:800">${overallPct}%</div>
+          <div style="font-size:11px;opacity:.9">${periodLabel}-ын гүйцэтгэл</div>
+        </div>
+      </div>
+
+      <!-- Ажилтан тус бүрийн жагсаалт -->
+      ${withTasks.length ? `
+        <h3 style="color:#7c3aed;font-size:14px;margin-bottom:10px">Ажилтан тус бүрийн үзүүлэлт (${withTasks.length} хүн)</h3>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${withTasks.map(x => {
+            const cls = x.pct >= 85 ? 'good' : x.pct >= 60 ? 'mid' : 'low';
+            const color = x.pct >= 85 ? '#10b981' : x.pct >= 60 ? '#f59e0b' : '#ef4444';
+            return `
+              <div style="background:#faf5ff;padding:12px 14px;border-radius:10px;border-left:4px solid ${color}">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px">
+                  <div style="font-weight:700;color:#1e293b;font-size:13px">${x.role.icon} ${escape(x.staff.name)} <span style="color:#94a3b8;font-weight:400;font-size:11px">· ${escape(x.role.name)}</span></div>
+                  <div style="font-weight:800;color:${color};font-size:16px">${x.pct}%</div>
+                </div>
+                <div style="height:10px;background:#f1f5f9;border-radius:5px;overflow:hidden;margin-bottom:6px">
+                  <div style="height:100%;width:${x.pct}%;background:linear-gradient(90deg,${color},${color}dd);border-radius:5px;transition:width .3s"></div>
+                </div>
+                <div style="display:flex;gap:14px;font-size:11px;color:#64748b">
+                  <span>📋 Нийт: <b>${x.assigned}</b></span>
+                  <span style="color:#059669">✅ Гүйцэтгэсэн: <b>${x.done}</b></span>
+                  <span style="color:#1e40af">🔄 Хийж байна: <b>${x.inprogress}</b></span>
+                  <span style="color:#92400e">⏳ Хүлээж буй: <b>${x.pending}</b></span>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>` : '<div class="empty">Тухайн хугацаанд даалгавар байхгүй байна</div>'}
+    </div>`;
+  document.getElementById('tasksList').innerHTML = html;
+}
+
+// Тайлан Word татах
+function downloadTaskReport() {
+  const filteredTasks = filterTasksByPeriod(allTasks);
+  const stats = window.STAFF_LIST.map(s => {
+    const assigned = filteredTasks.filter(t => (t.recipients || []).includes(s.id));
+    const done = assigned.filter(t => t.status === 'done').length;
+    const pct = assigned.length > 0 ? Math.round(done * 100 / assigned.length) : 0;
+    return { staff: s, role: window.getRoleInfo(s.role), assigned: assigned.length, done, pct };
+  }).filter(x => x.assigned > 0).sort((a,b) => b.pct - a.pct);
+
+  const periodLabel = reportPeriod === 'month' ? `${reportMonth}-р сар`
+                    : reportPeriod === 'quarter' ? `${reportQuarter}-р улирал`
+                    : reportPeriod === 'year' ? 'Хичээлийн жил'
+                    : 'Бүх цаг';
+
+  const totalAssigned = stats.reduce((s,x) => s + x.assigned, 0);
+  const totalDone = stats.reduce((s,x) => s + x.done, 0);
+  const overallPct = totalAssigned > 0 ? Math.round(totalDone * 100 / totalAssigned) : 0;
+
+  const rows = stats.map((x, i) => `<tr>
+    <td style="text-align:center">${i+1}</td>
+    <td>${x.role.icon} ${escape(x.staff.name)}</td>
+    <td>${escape(x.role.name)}</td>
+    <td style="text-align:center">${x.assigned}</td>
+    <td style="text-align:center;color:#059669"><b>${x.done}</b></td>
+    <td style="text-align:center;color:#d97706">${x.assigned - x.done}</td>
+    <td style="text-align:center;background:${x.pct >= 85 ? '#d1fae5' : x.pct >= 60 ? '#fef3c7' : '#fee2e2'}"><b>${x.pct}%</b></td>
+  </tr>`).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Даалгаврын тайлан</title>
+    <style>body{font-family:Arial;font-size:11pt;padding:16px}h1{color:#7c3aed;text-align:center}h2{color:#7c3aed}table{border-collapse:collapse;width:100%;margin:10px 0;font-size:10pt}th,td{border:1px solid #999;padding:6px 8px;text-align:left}th{background:#ede9fe;color:#5b21b6;text-align:center}</style>
+  </head><body>
+    <h1>📌 ${escape(window.KINDERGARTEN?.name || 'Цэцэрлэг')}</h1>
+    <p style="text-align:center;color:#666">Үүрэг даалгаврын гүйцэтгэлийн тайлан · ${periodLabel} · ${new Date().toLocaleDateString('mn-MN')}</p>
+
+    <h2>Ерөнхий үзүүлэлт</h2>
+    <table>
+      <tr><th>Нийт даалгавар</th><th>Гүйцэтгэсэн</th><th>Хүлээгдэж буй</th><th>Гүйцэтгэлийн хувь</th></tr>
+      <tr>
+        <td style="text-align:center;font-size:14pt"><b>${totalAssigned}</b></td>
+        <td style="text-align:center;font-size:14pt;color:#059669"><b>${totalDone}</b></td>
+        <td style="text-align:center;font-size:14pt;color:#d97706"><b>${totalAssigned - totalDone}</b></td>
+        <td style="text-align:center;font-size:18pt;background:${overallPct >= 85 ? '#d1fae5' : overallPct >= 60 ? '#fef3c7' : '#fee2e2'}"><b>${overallPct}%</b></td>
+      </tr>
+    </table>
+
+    <h2>Ажилтан тус бүрийн үзүүлэлт</h2>
+    ${stats.length ? `<table>
+      <thead><tr><th style="width:30px">#</th><th>Ажилтан</th><th>Албан тушаал</th><th style="width:70px">Нийт</th><th style="width:70px">Гүйцэтгэсэн</th><th style="width:70px">Хүлээгдэж буй</th><th style="width:70px">Хувь</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>` : '<p><i>Даалгавар байхгүй</i></p>'}
+
+    <p style="margin-top:30px;text-align:right">Батлав: <b>${escape(window.KINDERGARTEN?.director?.name || 'Эрхлэгч')}</b></p>
+    <p style="text-align:right;font-size:9pt;color:#666">.............................. (гарын үсэг)</p>
+  </body></html>`;
+
+  const blob = new Blob(['﻿', html], {type:'application/msword'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Даалгаврын_тайлан_${periodLabel.replace(/\s/g,'_')}.doc`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showMsg('success', '📥 Тайлан татагдлаа');
+}
+
+// ═══════ ДААЛГАВАР ҮҮСГЭХ / ЗАСАХ ═══════
+function openCreateTask() {
+  editingTaskId = null;
+  buildRecipientPicker([]);
+  document.getElementById('tTitle').value = '';
+  document.getElementById('tDesc').value = '';
+  document.getElementById('tPriority').value = 'normal';
+  document.getElementById('tDue').value = '';
+  document.querySelector('#createModal .modal-head h2').textContent = '➕ Шинэ даалгавар өгөх';
+  document.querySelector('#createModal .save').textContent = '📤 Даалгавар илгээх';
+  updatePickedCnt();
+  document.getElementById('createModal').classList.add('open');
+}
+
+function openEditTask(rowId) {
+  const t = allTasks.find(x => x.id == rowId);
+  if (!t) return;
+  editingTaskId = rowId;
+  buildRecipientPicker(t.recipients || []);
+  document.getElementById('tTitle').value = t.title || '';
+  document.getElementById('tDesc').value = t.description || '';
+  document.getElementById('tPriority').value = t.priority || 'normal';
+  document.getElementById('tDue').value = t.due_date || '';
+  document.querySelector('#createModal .modal-head h2').textContent = '✏️ Даалгавар засах';
+  document.querySelector('#createModal .save').textContent = '💾 Хадгалах';
+  updatePickedCnt();
+  document.getElementById('createModal').classList.add('open');
+}
+
+function buildRecipientPicker(preSelected) {
+  const teaching = window.getStaffByDept('teaching').filter(s => s.id !== currentUserId);
+  const admin = window.getStaffByDept('admin').filter(s => s.id !== currentUserId);
+  const chk = id => preSelected.includes(id) ? 'checked' : '';
+
+  document.getElementById('recipientPicker').innerHTML = `
+    <div class="dept-title">📚 Заах аргын нэгдэл</div>
+    ${teaching.map(s => `<label><input type="checkbox" value="${s.id}" ${chk(s.id)} onchange="updatePickedCnt()"> ${window.getRoleInfo(s.role).icon} ${escape(s.name)} <span style="color:#94a3b8">(${escape(window.getRoleInfo(s.role).name)})</span></label>`).join('')}
+    <div class="dept-title">🏢 Захиргаа, аж ахуй</div>
+    ${admin.map(s => `<label><input type="checkbox" value="${s.id}" ${chk(s.id)} onchange="updatePickedCnt()"> ${window.getRoleInfo(s.role).icon} ${escape(s.name)} <span style="color:#94a3b8">(${escape(window.getRoleInfo(s.role).name)})</span></label>`).join('')}
+  `;
+}
+
+function updatePickedCnt() {
+  const n = document.querySelectorAll('#recipientPicker input:checked').length;
+  const el = document.getElementById('pickedCnt');
+  if (el) el.textContent = n;
+}
+
+function pickAll(check) {
+  document.querySelectorAll('#recipientPicker input[type=checkbox]').forEach(cb => cb.checked = check);
+  updatePickedCnt();
+}
+
+function pickDept(dept) {
+  const staff = window.getStaffByDept(dept).map(s => s.id);
+  document.querySelectorAll('#recipientPicker input[type=checkbox]').forEach(cb => {
+    if (staff.includes(cb.value)) cb.checked = true;
+  });
+  updatePickedCnt();
+}
+
+function closeCreateTask() { document.getElementById('createModal').classList.remove('open'); }
+
+async function createTask() {
+  const recipients = Array.from(document.querySelectorAll('#recipientPicker input:checked')).map(cb => cb.value);
+  const title = document.getElementById('tTitle').value.trim();
+  const description = document.getElementById('tDesc').value.trim();
+  const priority = document.getElementById('tPriority').value;
+  const due_date = document.getElementById('tDue').value;
+  const linksRaw = document.getElementById('tLinks')?.value || '';
+  const fileEl = document.getElementById('tFiles');
+  const files = fileEl && fileEl.files ? Array.from(fileEl.files) : [];
+
+  if (!recipients.length) { showMsg('error', 'Наад зах нь 1 хүн сонгоно уу'); return; }
+  if (!title) { showMsg('error', 'Гарчиг бичнэ үү'); return; }
+  if (!sb) { showMsg('error', 'Supabase холбогдоогүй'); return; }
+
+  // Файл байршуулна
+  const uploadedLinks = [];
+  for (const f of files) {
+    try {
+      const path = `tasks/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+      const { error: upErr } = await sb.storage.from('task-uploads').upload(path, f, { upsert: false });
+      if (upErr) { showMsg('error', 'Файл байршуулах алдаа: ' + upErr.message); continue; }
+      const { data: pub } = sb.storage.from('task-uploads').getPublicUrl(path);
+      if (pub?.publicUrl) uploadedLinks.push(pub.publicUrl);
+    } catch(e) { console.warn('upload failed', e); }
+  }
+  const linkLines = linksRaw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const attachments = [...linkLines, ...uploadedLinks];
+
+  try {
+    if (editingTaskId) {
+      // ── ЗАСАХ ──
+      const t = allTasks.find(x => x.id == editingTaskId);
+      const payload = {
+        title, description, priority, due_date, recipients,
+        responses: t?.responses || [],
+        assigned_by_id: t?.assigned_by_id || currentUserId,
+        attachments: attachments.length ? attachments : (t?.attachments || [])
+      };
+      const { error } = await sb.from('methodist_notes').update({
+        text: JSON.stringify(payload)
+      }).eq('id', editingTaskId).select();
+      if (error) { showMsg('error', 'Supabase алдаа: ' + (error.message || JSON.stringify(error))); return; }
+      showMsg('success', `✅ Даалгавар засварлагдлаа`);
+    } else {
+      // ── ШИНЭ ──
+      const taskId = 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      const payload = { title, description, priority, due_date, recipients, responses: [], assigned_by_id: currentUserId, attachments };
+      const { error } = await sb.from('methodist_notes').insert({
+        from_role: window.getRoleInfo(currentUser.role).name,
+        from_name: currentUser.name,
+        title: `TASK:${taskId}:pending`,
+        text: JSON.stringify(payload)
+      }).select();
+      if (error) { showMsg('error', 'Supabase алдаа: ' + (error.message || JSON.stringify(error))); return; }
+      showMsg('success', `✅ Даалгавар ${recipients.length} хүнд илгээгдлээ`);
+    }
+    closeCreateTask();
+    await loadTasks();
+  } catch(e) { console.error(e); showMsg('error', 'Алдаа: ' + (e.message || 'үл мэдэгдэх')); }
+}
+
+// ═══════ СТАТУС / ХАРИУЛТ ═══════
+async function changeStatus(rowId, newStatus) {
+  const t = allTasks.find(x => x.id == rowId);
+  if (!t) return;
+  const newTitle = `TASK:${t.taskId}:${newStatus}`;
+  try {
+    const { error } = await sb.from('methodist_notes').update({ title: newTitle }).eq('id', rowId).select();
+    if (error) { showMsg('error', 'Алдаа: ' + error.message); return; }
+    showMsg('success', newStatus === 'done' ? '✅ Гүйцэтгэсэн гэж тэмдэглэлээ' : '🔄 Хийж эхэлсэн');
+    await loadTasks();
+  } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+}
+
+async function addResponse(rowId) {
+  const text = prompt('Тайлбар / санал / асуулт бичих:');
+  if (!text || !text.trim()) return;
+  const t = allTasks.find(x => x.id == rowId);
+  if (!t) return;
+  const payload = {
+    title: t.title, description: t.description, priority: t.priority, due_date: t.due_date,
+    recipients: t.recipients, assigned_by_id: t.assigned_by_id,
+    responses: [...(t.responses || []), { from: currentUser.name, text: text.trim(), at: new Date().toISOString() }]
+  };
+  try {
+    const { error } = await sb.from('methodist_notes').update({ text: JSON.stringify(payload) }).eq('id', rowId).select();
+    if (error) { showMsg('error', 'Алдаа: ' + error.message); return; }
+    showMsg('success', '💬 Тайлбар нэмэгдлээ');
+    await loadTasks();
+  } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+}
+
+async function deleteTask(rowId) {
+  if (!confirm('Даалгаврыг устгах уу?')) return;
+  try {
+    const { error } = await sb.from('methodist_notes').delete().eq('id', rowId);
+    if (error) { showMsg('error', 'Алдаа: ' + error.message); return; }
+    showMsg('info', '🗑️ Устгагдлаа');
+    await loadTasks();
+  } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+}
+
+// ═══════ HELPERS ═══════
+function escape(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showMsg(type, text) {
+  const el = document.getElementById('msg');
+  el.innerHTML = `<div class="msg ${type}">${text}</div>`;
+  setTimeout(() => el.innerHTML = '', 4000);
+}
+
+init();
+</script>

@@ -1,0 +1,401 @@
+<meta charset="UTF-8">
+<title>Ээлжит хичээл — СӨБ Багш Өлзий</title>
+<script src="config.js" onerror="0"></script>
+<script src="outcomes-data.js" onerror="0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1e293b; padding: 14px; }
+  .header { background: linear-gradient(135deg,#7c3aed,#be185d); color: white; padding: 14px 20px; border-radius: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .header h1 { font-size: 18px; margin: 0; }
+  .back { background: white; color: #7c3aed; padding: 6px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tabs button { padding: 8px 16px; background: white; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; }
+  .tabs button.active { background: linear-gradient(135deg,#be185d,#7c3aed); color: white; border-color: transparent; }
+  .toolbar { background: white; padding: 12px 16px; border-radius: 10px; margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+  .toolbar select { padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 13px; }
+  .toolbar button { padding: 8px 14px; border: 2px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; }
+  .toolbar button.primary { background: linear-gradient(135deg,#be185d,#7c3aed); color: white; border-color: transparent; }
+  .toolbar button.success { background: #10b981; color: white; border-color: transparent; }
+  .toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .status { padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 12px; }
+  .status.pending { background: #fef3c7; color: #92400e; }
+  .status.approved { background: #d1fae5; color: #065f46; }
+  .lesson-card { background: white; border-radius: 12px; padding: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 14px; border-left: 5px solid #7c3aed; }
+  .lesson-card h2 { color: #7c3aed; font-size: 17px; margin-bottom: 6px; }
+  .lesson-card .day { color: #64748b; font-size: 13px; margin-bottom: 12px; }
+  .lesson-card label { display: block; font-weight: 700; margin: 12px 0 4px; font-size: 13px; color: #334155; }
+  .lesson-card input, .lesson-card textarea { width: 100%; padding: 8px 10px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 13px; font-family: inherit; }
+  .lesson-card textarea { min-height: 60px; resize: vertical; }
+  .lesson-card .syd { background: #f0fdf4; border-left: 4px solid #10b981; padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; }
+  .lesson-card .syd b { color: #065f46; }
+  .activity-block { background: #faf5ff; border-radius: 8px; padding: 12px; margin: 10px 0; }
+  .activity-block h4 { color: #7c3aed; font-size: 13px; margin-bottom: 6px; }
+  .empty { background: #fef3c7; padding: 20px; border-radius: 8px; text-align: center; color: #92400e; margin-bottom: 12px; }
+  .msg { padding: 10px 14px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; }
+  .msg.info { background: #dbeafe; color: #1e40af; }
+  .msg.success { background: #d1fae5; color: #065f46; }
+  .msg.error { background: #fee2e2; color: #991b1b; }
+  .approve-line { text-align: right; font-size: 13px; color: #64748b; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 2px solid #f3f4f6; }
+</style>
+
+<div class="header">
+  <div><h1>🎯 Ээлжит хичээлийн төлөвлөгөө</h1></div>
+  <a href="javascript:history.length>1?history.back():location.href='index.html'" class="back">← Буцах</a>
+</div>
+
+<div class="tabs" id="groupTabs"></div>
+
+<div class="toolbar">
+  <label>📅 Сар:
+    <select id="monthSel" onchange="loadLessons()">
+      <option value="9">9-р</option><option value="10">10-р</option><option value="11">11-р</option><option value="12">12-р</option>
+      <option value="1">1-р</option><option value="2">2-р</option><option value="3">3-р</option><option value="4">4-р</option><option value="5">5-р</option>
+    </select>
+  </label>
+  <label>Долоо хоног:
+    <select id="weekSel" onchange="loadLessons()">
+      <option value="1">1-р</option><option value="2">2-р</option><option value="3">3-р</option><option value="4">4-р</option>
+    </select>
+  </label>
+  <button id="saveBtn" class="primary" onclick="save()" disabled>💾 Хадгалах</button>
+  <button onclick="downloadWord()">📥 Word татах</button>
+  <button onclick="window.print()">🖨️ Хэвлэх</button>
+  <span id="statusBadge" class="status pending">⏳ Батлаагүй</span>
+  <button id="approveBtn" class="success" onclick="approve()">✅ Арга зүйч батлах</button>
+</div>
+
+<div id="msg"></div>
+<div id="lessons"></div>
+
+<script>
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_KEY = window.SUPABASE_KEY || "";
+let sb = null;
+if (SUPABASE_URL && SUPABASE_KEY && window.supabase) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const GROUP_META = [
+  {id:"baga",   name:"🧸 Бага",   duration:15},
+  {id:"dund",   name:"🧒 Дунд",   duration:20},
+  {id:"ahlah",  name:"👦 Ахлах",  duration:25},
+  {id:"beltgel",name:"🎒 Бэлтгэл",duration:30}
+];
+const DAYS_ORDER = ["Даваа","Мягмар","Лхагва","Пүрэв","Баасан"];
+const TIME_SLOTS = [
+  "Өглөөний хүлээн авалт (30 мин)",
+  "Өглөөний дасгал (20 мин)",
+  "Тойргийн цаг (15 мин)",
+  "Чиглүүлэгтэй тоглоом (30 мин)",
+  "Зугаалгын цаг (30 мин)",
+  "Номын цаг (15 мин)",
+  "Төвийн цаг (40 мин)",
+  "Хөгжөөн баясах цаг (30 мин)"
+];
+
+// Жилийн матрицтай ижил СҮД жагсаалт (fallback)
+const OUTCOMES_BAGA_LOCAL = {
+  hel_yaria: [
+    {code:"ХЯ1.1а"},{code:"ХЯ1.1б"},{code:"ХЯ1.2а"},{code:"ХЯ1.2б"},{code:"ХЯ1.2в"},
+    {code:"ХЯ1.2г"},{code:"ХЯ1.2д"},{code:"ХЯ1.3а"},{code:"ХЯ1.3б"},{code:"ХЯ1.3в"}
+  ],
+  matematik: [{code:"МАТ1.1а"},{code:"МАТ1.1б"},{code:"МАТ1.2а"},{code:"МАТ1.2б"},{code:"МАТ1.3а"},{code:"МАТ1.3б"}],
+  bno: [{code:"БНО1.1а"},{code:"БНО1.1б"},{code:"БНО1.2а"},{code:"БНО1.2в"}],
+  niigem: [{code:"НСХ1.1а"},{code:"НСХ1.1б"},{code:"НСХ1.2а"},{code:"НСХ1.2б"}],
+  urlag: [{code:"УЗ1.1а"},{code:"УЗ1.1б"},{code:"УЗ1.2а"},{code:"УЗ1.3а"}],
+  hodolgoon: [{code:"ХЭМ1.1а"},{code:"ХЭМ1.1б"},{code:"ХЭМ1.2а"},{code:"ХЭМ1.2б"}],
+  aa_uhaan: [{code:"ААУ1.1а"},{code:"ААУ1.2а"}]
+};
+
+function getLocalOutcomes(group) {
+  // Жинхэнэ өгөгдөл (outcomes-data.js)-ыг эхэнд шалгах
+  if (window.OUTCOMES_REAL && window.OUTCOMES_REAL[group]) {
+    return window.OUTCOMES_REAL[group];
+  }
+  // Fallback: Бага-ын загвараар үүсгэх
+  const lvl = {baga:1, dund:2, ahlah:3, beltgel:4}[group];
+  const out = {};
+  Object.keys(OUTCOMES_BAGA_LOCAL).forEach(sid => {
+    out[sid] = OUTCOMES_BAGA_LOCAL[sid].map(o => ({
+      code: o.code.replace(/([А-ЯӨҮ]+)1\./, `$1${lvl}.`)
+    }));
+  });
+  return out;
+}
+
+function calcWeeklyNewSYDs(group, month, week) {
+  const outcomes = getLocalOutcomes(group);
+  const monthMap = [9,10,11,12,1,2,3,4,5];
+  const weekIdx = monthMap.indexOf(parseInt(month)) * 4 + (parseInt(week) - 1);
+  const result = [];
+  Object.entries(outcomes).forEach(([sid, list]) => {
+    if (!list.length) return;
+    // Ижил алгоритм — жилийн матрицтай ижил (эхний долоо хоногт эхний СҮД)
+    if (weekIdx < list.length) {
+      result.push({sid, code: list[weekIdx].code, isNew: true, partner: ''});
+    }
+  });
+  return result;
+}
+
+const urlParams = new URLSearchParams(location.search);
+let currentGroup = urlParams.get('group') || 'baga';
+let currentMonth = 9;
+let currentWeek = 1;
+let hasChanges = false;
+let currentApproval = null;
+let lessonData = {}; // {sydCode: {sydText, day, method, resources, newWords, act1, act2, act3, teacher}}
+
+function init() {
+  renderTabs();
+  document.getElementById('monthSel').value = currentMonth;
+  document.getElementById('weekSel').value = currentWeek;
+  loadLessons();
+}
+
+function renderTabs() {
+  document.getElementById('groupTabs').innerHTML = GROUP_META.map(g =>
+    `<button class="${g.id===currentGroup?'active':''}" onclick="switchGroup('${g.id}')">${g.name}</button>`
+  ).join('');
+}
+
+function switchGroup(g) {
+  if (hasChanges && !confirm('Хадгалаагүй өөрчлөлт байна. Үргэлжлүүлэх үү?')) return;
+  currentGroup = g;
+  hasChanges = false;
+  document.getElementById('saveBtn').disabled = true;
+  renderTabs();
+  loadLessons();
+}
+
+async function loadLessons() {
+  currentMonth = document.getElementById('monthSel').value;
+  currentWeek = document.getElementById('weekSel').value;
+  lessonData = {};
+  currentApproval = null;
+  const list = document.getElementById('lessons');
+  list.innerHTML = '<div class="empty">⏳ Уншиж байна...</div>';
+
+  // СҮД жагсаалт: үргэлж локалаар тооцоолно (7 судлагдахуун бүгд)
+  let sydList = calcWeeklyNewSYDs(currentGroup, currentMonth, currentWeek);
+  if (sydList.length === 0) {
+    list.innerHTML = `<div class="empty">📝 Энэ долоо хоногт СҮД байхгүй байна.</div>`;
+    return;
+  }
+
+  // Хадгалсан хичээлийн өгөгдлийг татах
+  const period = `${currentMonth}-${currentWeek}`;
+  if (sb) {
+    try {
+      const { data } = await sb.from('plans').select('*')
+        .eq('tab','lesson').eq('group_id', currentGroup).eq('period', period).limit(1);
+      if (data && data.length) {
+        const row = data[0];
+        lessonData = JSON.parse(row.content || '{}');
+        if (row.approved_at) currentApproval = {approved_at: row.approved_at, approved_by: row.approved_by};
+      }
+    } catch(e) { console.warn(e); }
+  }
+  updateStatus();
+
+  // Бүлгийн хичээлийн хугацаа
+  const gm = GROUP_META.find(g => g.id === currentGroup);
+  const totalDur = gm.duration;
+  const introMin = Math.round(totalDur * 0.2);
+  const mainMin = totalDur - introMin*2;
+  const endMin = introMin;
+
+  // СҮД тус бүрд хичээлийн карт үүсгэх (өдөр + хугацаа сонгох)
+  list.innerHTML = sydList.map((s, i) => {
+    const d = lessonData[s.code] || {};
+    const defaultDay = d.day || DAYS_ORDER[i % 5];
+    const defaultSlot = d.slot != null ? d.slot : (i % TIME_SLOTS.length);
+    return `
+      <div class="lesson-card">
+        <div class="approve-line" id="approveInfo${i}">БАТЛАВ: АРГА ЗҮЙЧ __________________</div>
+        <h2>${s.isNew?'🟢 Шинэ':'🔵 Давталт'} · ${s.code}</h2>
+
+        <div class="syd">
+          <b>Суралцахуйн үр дүн:</b> ${s.code}
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+          <div>
+            <label>📅 Өдөр:</label>
+            <select data-code="${s.code}" data-field="day" onchange="markChange(this)">
+              ${DAYS_ORDER.map(day => `<option value="${day}" ${day===defaultDay?'selected':''}>${day}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label>⏰ Хугацаа (өдрийн дэглэмээс):</label>
+            <select data-code="${s.code}" data-field="slot" onchange="markChange(this)">
+              ${TIME_SLOTS.map((slot,idx) => `<option value="${idx}" ${idx==defaultSlot?'selected':''}>${slot}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <label>🔗 Сургалтын чиглэлийн уялдаа:</label>
+        <input data-code="${s.code}" data-field="link" value="${escapeAttr(d.link || s.partner || '')}" oninput="markChange(this)" placeholder="Уялдах СҮД код (жишээ: НСХ1.1а)">
+
+        <label>🎒 Хэрэглэгдэхүүн:</label>
+        <input data-code="${s.code}" data-field="resources" value="${escapeAttr(d.resources || '')}" oninput="markChange(this)" placeholder="Тоглоом, зурган карт...">
+
+        <label>💬 Шинэ үг:</label>
+        <input data-code="${s.code}" data-field="newWords" value="${escapeAttr(d.newWords || '')}" oninput="markChange(this)" placeholder="Хүүхэдтэй танилцуулах шинэ үгс">
+
+        <div class="activity-block">
+          <h4>📖 Аргачлал / Үйл ажиллагаа (нийт ${totalDur} мин)</h4>
+          <label style="margin-top:0">Эхлэл (${introMin} мин):</label>
+          <textarea data-code="${s.code}" data-field="intro" oninput="markChange(this)" placeholder="Хүүхдийн анхаарлыг татах, сэдэвт оруулах...">${escapeHTML(d.intro || '')}</textarea>
+          <label>Гол хэсэг (${mainMin} мин):</label>
+          <textarea data-code="${s.code}" data-field="main" oninput="markChange(this)" placeholder="Шинэ мэдлэг олгох, дасгал ажил, тоглоом...">${escapeHTML(d.main || '')}</textarea>
+          <label>Төгсгөл (${endMin} мин):</label>
+          <textarea data-code="${s.code}" data-field="end" oninput="markChange(this)" placeholder="Дүгнэлт, батжуулах, магтан урамшуулах...">${escapeHTML(d.end || '')}</textarea>
+        </div>
+
+        <label>💭 Эргэцүүлэл (хичээлийн дараа):</label>
+        <textarea data-code="${s.code}" data-field="reflection" oninput="markChange(this)" placeholder="Хичээл яаж өрнөсөн, юуг сайжруулах...">${escapeHTML(d.reflection || '')}</textarea>
+      </div>
+    `;
+  }).join('');
+  updateApproveLines();
+  hasChanges = false;
+  document.getElementById('saveBtn').disabled = true;
+}
+
+function updateApproveLines() {
+  document.querySelectorAll('[id^=approveInfo]').forEach(el => {
+    if (currentApproval && currentApproval.approved_at) {
+      el.textContent = `БАТЛАВ: АРГА ЗҮЙЧ ${currentApproval.approved_by} · ${new Date(currentApproval.approved_at).toLocaleDateString('mn-MN')}`;
+    } else {
+      el.textContent = 'БАТЛАВ: АРГА ЗҮЙЧ __________________';
+    }
+  });
+}
+
+function markChange(el) {
+  const code = el.dataset.code, field = el.dataset.field;
+  if (!lessonData[code]) lessonData[code] = {};
+  lessonData[code][field] = el.value;
+  hasChanges = true;
+  document.getElementById('saveBtn').disabled = false;
+}
+
+function updateStatus() {
+  const badge = document.getElementById('statusBadge');
+  if (currentApproval && currentApproval.approved_at) {
+    badge.className = 'status approved';
+    badge.textContent = '✅ Батласан';
+    document.getElementById('approveBtn').style.display = 'none';
+  } else {
+    badge.className = 'status pending';
+    badge.textContent = '⏳ Батлаагүй';
+    document.getElementById('approveBtn').style.display = '';
+  }
+}
+
+async function save() {
+  if (!sb) { showMsg('error', 'Supabase холбогдоогүй'); return; }
+  const period = `${currentMonth}-${currentWeek}`;
+  const content = JSON.stringify(lessonData);
+  const title = `Ээлжит · ${currentGroup} · ${period}`;
+  try {
+    const { data: existing } = await sb.from('plans').select('id')
+      .eq('tab','lesson').eq('group_id',currentGroup).eq('period',period).limit(1);
+    if (existing && existing.length) {
+      await sb.from('plans').update({content, title}).eq('id', existing[0].id);
+    } else {
+      await sb.from('plans').insert({group_id: currentGroup, tab:'lesson', period, title, content});
+    }
+    hasChanges = false;
+    document.getElementById('saveBtn').disabled = true;
+    showMsg('success', '✅ Хадгалагдлаа');
+  } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+}
+
+async function approve() {
+  const name = prompt('Батлаж буй арга зүйчийн нэр:');
+  if (!name) return;
+  const now = new Date().toISOString();
+  const period = `${currentMonth}-${currentWeek}`;
+  if (sb) {
+    try {
+      const { data: existing } = await sb.from('plans').select('id')
+        .eq('tab','lesson').eq('group_id',currentGroup).eq('period',period).limit(1);
+      if (existing && existing.length) {
+        await sb.from('plans').update({approved_at: now, approved_by: name}).eq('id', existing[0].id);
+      } else {
+        await save();
+        await sb.from('plans').update({approved_at: now, approved_by: name})
+          .eq('tab','lesson').eq('group_id',currentGroup).eq('period',period);
+      }
+      currentApproval = {approved_at: now, approved_by: name};
+      updateStatus();
+      updateApproveLines();
+      showMsg('success', '✅ Батласан');
+    } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+  }
+}
+
+function showMsg(type, text) {
+  const el = document.getElementById('msg');
+  el.innerHTML = `<div class="msg ${type}">${text}</div>`;
+  setTimeout(() => el.innerHTML = '', 4000);
+}
+
+function escapeHTML(s) { return String(s==null?'':s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function escapeAttr(s) { return escapeHTML(s); }
+
+function downloadWord() {
+  const gm = GROUP_META.find(g => g.id === currentGroup);
+  const gname = gm.name;
+  const totalDur = gm.duration;
+  const introMin = Math.round(totalDur * 0.2);
+  const mainMin = totalDur - introMin*2;
+  const endMin = introMin;
+  const approveLine = currentApproval && currentApproval.approved_at
+    ? `БАТЛАВ: АРГА ЗҮЙЧ ${currentApproval.approved_by} · ${new Date(currentApproval.approved_at).toLocaleDateString('mn-MN')}`
+    : 'БАТЛАВ: АРГА ЗҮЙЧ __________________';
+
+  // Хичээлүүдийн HTML цэвэрхэн үүсгэх
+  let lessonsHTML = '';
+  Object.entries(lessonData).forEach(([code, d]) => {
+    const day = d.day || '';
+    const slot = d.slot != null ? TIME_SLOTS[d.slot] : '';
+    lessonsHTML += `
+      <div style="border:2px solid #7c3aed;padding:14px;margin-bottom:14px;page-break-inside:avoid">
+        <div style="text-align:right;font-size:10pt;color:#666;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:6px">${approveLine}</div>
+        <h3 style="color:#7c3aed;margin:0 0 8px">🎯 ${code}</h3>
+        <p><b>Суралцахуйн үр дүн:</b> ${escapeHTML(code)}</p>
+        <p><b>Өдөр:</b> ${escapeHTML(day)} гараг &nbsp;&nbsp; <b>Хугацаа:</b> ${escapeHTML(slot)}</p>
+        <p><b>Сургалтын чиглэлийн уялдаа:</b> ${escapeHTML(d.link || '')}</p>
+        <p><b>Хэрэглэгдэхүүн:</b> ${escapeHTML(d.resources || '')}</p>
+        <p><b>Шинэ үг:</b> ${escapeHTML(d.newWords || '')}</p>
+        <div style="background:#faf5ff;padding:10px;margin-top:10px">
+          <h4 style="color:#7c3aed">📖 Аргачлал (нийт ${totalDur} мин)</h4>
+          <p><b>Эхлэл (${introMin} мин):</b><br>${escapeHTML(d.intro || '').replace(/\n/g,'<br>')}</p>
+          <p><b>Гол хэсэг (${mainMin} мин):</b><br>${escapeHTML(d.main || '').replace(/\n/g,'<br>')}</p>
+          <p><b>Төгсгөл (${endMin} мин):</b><br>${escapeHTML(d.end || '').replace(/\n/g,'<br>')}</p>
+        </div>
+        <p style="margin-top:10px"><b>💭 Эргэцүүлэл:</b><br>${escapeHTML(d.reflection || '').replace(/\n/g,'<br>')}</p>
+      </div>`;
+  });
+
+  if (!lessonsHTML) lessonsHTML = '<p>Хичээлийн мэдээлэл байхгүй байна. Эхлээд бөглөж, хадгалаад дараа татна уу.</p>';
+
+  const doc = `<html xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>
+    body{font-family:'Times New Roman',serif;font-size:11pt;line-height:1.4}
+    h1{text-align:center}
+    p{margin:4px 0}
+  </style></head><body>
+    <h1>${gname} — ${currentMonth}-р сарын ${currentWeek}-р долоо хоногийн ээлжит хичээлүүд</h1>
+    ${lessonsHTML}
+  </body></html>`;
+  const blob = new Blob([doc], {type:'application/msword'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `lesson-${currentGroup}-${currentMonth}-${currentWeek}.doc`;
+  a.click();
+}
+
+init();
+</script>

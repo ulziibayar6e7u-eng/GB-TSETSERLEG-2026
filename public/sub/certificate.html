@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="mn"><head><meta charset="UTF-8">
+<title>Ололт амжилтын эзэд · Хөгжим Өлзий</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { box-sizing: border-box; margin:0; padding:0 }
+  body { font-family: "Segoe UI", "Times New Roman", serif; color:#1a1a1a; background:#f3f4f6; padding:20px; }
+  .toolbar { background:white; padding:14px 20px; border-radius:12px; margin-bottom:20px; display:flex;gap:10px;flex-wrap:wrap;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,0.06) }
+  .toolbar select, .toolbar input, .toolbar button { padding:8px 14px; border:1px solid #ddd; border-radius:8px; font-size:13px; font-family:inherit; }
+  .toolbar button { cursor:pointer; font-weight:600 }
+  .toolbar button.primary { background:#ec4899; color:white; border-color:#ec4899 }
+  .toolbar button.dl { background:#8b5cf6; color:white; border-color:#8b5cf6 }
+  .toolbar button.print { background:#111827; color:white; border-color:#111827 }
+  .toolbar label { display:flex;gap:6px;align-items:center;font-size:13px;color:#374151 }
+
+  .cert-wrap { max-width:1100px; margin:0 auto; }
+  .cert { width: 297mm; max-width: 100%; aspect-ratio: 297/210; background:white; margin: 0 auto; position:relative; overflow:hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.15); border-radius:8px }
+  .cert.gold { background: linear-gradient(135deg, #fef9c3, #fef3c7, #fde68a); }
+  .cert.silver { background: linear-gradient(135deg, #f1f5f9, #e2e8f0, #cbd5e1); }
+  .cert.bronze { background: linear-gradient(135deg, #fef3c7, #fde68a, #d97706); background: linear-gradient(135deg, #fef3c7, #fed7aa, #f97316); }
+  .cert-inner { position:absolute; inset:12mm; border:4px double #7c3aed; border-radius:8px; padding: 10mm; display:flex; flex-direction:column; align-items:center; text-align:center }
+  .cert.gold .cert-inner { border-color:#ca8a04 }
+  .cert.silver .cert-inner { border-color:#64748b }
+  .cert.bronze .cert-inner { border-color:#c2410c }
+  .cert-corner { position:absolute; width:60px; height:60px; opacity:0.5; font-size:44px }
+  .cert-corner.tl { top:6mm; left:6mm; }
+  .cert-corner.tr { top:6mm; right:6mm; }
+  .cert-corner.bl { bottom:6mm; left:6mm; }
+  .cert-corner.br { bottom:6mm; right:6mm; }
+
+  .cert-header { font-size: 22pt; letter-spacing:6px; margin-bottom:2mm; font-weight:800; background:linear-gradient(135deg,#be185d,#7c3aed,#0891b2); -webkit-background-clip:text; background-clip:text; color:transparent }
+  .cert-sub { font-size:11pt; color:#6b7280; margin-bottom:4mm; letter-spacing:2px }
+  .cert-cup { font-size: 80pt; line-height:1; margin: 2mm 0; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)) }
+  .cert-category { font-size:16pt; color:#374151; margin-bottom:3mm; font-weight:600; letter-spacing:1px }
+  .cert-name { font-size:32pt; font-weight:700; color:#111827; margin: 3mm 0 4mm; padding: 2mm 20mm; border-bottom:2px solid #ec4899; font-family: "Georgia", serif; }
+  .cert-award-text { font-size:12pt; color:#4b5563; margin-bottom:3mm }
+  .cert-reason { font-size:13pt; color:#374151; max-width: 220mm; line-height:1.5; margin-bottom:auto; padding: 4mm 6mm; background:rgba(255,255,255,0.75); border-radius:8px; backdrop-filter:blur(4px); font-style:italic }
+  .cert-footer { display:flex;justify-content:space-between;width:100%;margin-top:6mm;padding-top:4mm;border-top:1px dashed #6b7280;font-size:10pt;color:#4b5563 }
+  .cert-sig { text-align:center;min-width:60mm }
+  .cert-sig .line { border-top:1px solid #4b5563;padding-top:1mm;margin-top:6mm;font-size:10pt }
+
+  @media print {
+    body { padding:0; background:white; }
+    .toolbar, .no-print { display:none !important; }
+    .cert { box-shadow:none; margin:0; width:100%; height:100vh; border-radius:0 }
+    .cert-wrap { max-width:none }
+  }
+</style></head>
+<body>
+
+<div class="no-print" style="background:linear-gradient(135deg,#fef3c7,#fde68a);padding:14px 20px;border-radius:12px;margin-bottom:14px;border-left:5px solid #f59e0b">
+  <div style="font-size:14px;font-weight:700;color:#78350f;margin-bottom:6px">📌 Хадгалахын тулд 4 алхам:</div>
+  <div style="font-size:13px;color:#78350f;line-height:1.7">
+    <strong>1.</strong> Доод жагсаалтаас <strong>хүүхдээ сонгоно</strong> (гараар нэр оруулбал ололтод хадгалагдахгүй) →
+    <strong>2.</strong> Түвшин, төрөл, огноо сонго →
+    <strong>3.</strong> <strong>📝 Тайлбар засах</strong> — дууны нэр, ур чадвар бич →
+    <strong>4.</strong> Ногоон <strong>💾 Хадгалах</strong> товч дар
+  </div>
+</div>
+<div class="toolbar no-print">
+  <label style="background:#fef3c7;padding:6px 10px;border-radius:8px;border:2px solid #f59e0b"><strong>👦 Хүүхэд:</strong>
+    <select id="childSel" onchange="pickChild()" style="min-width:220px;font-weight:600">
+      <option value="">⚠️ Заавал сонгоно уу...</option>
+    </select>
+  </label>
+  <label>Гараар:
+    <input id="name" value="Б. Тулга" style="width:150px" oninput="updateCert()" title="Гараар оруулсан нэр зөвхөн хэвлэхэд харагдана">
+  </label>
+  <label>Түвшин:
+    <select id="level" onchange="updateCert()">
+      <option value="gold">🥇 Алтан цом</option>
+      <option value="silver">🥈 Мөнгөн цом</option>
+      <option value="bronze">🥉 Хүрэл цом</option>
+    </select>
+  </label>
+  <label>Төрөл:
+    <select id="category" onchange="updateCert()">
+      <option value="song">🎤 Сурсан дуу</option>
+      <option value="dance">💃 Хөгжимт хөдөлгөөн</option>
+      <option value="rhythm">🥁 Хэмнэл</option>
+      <option value="actor">🎭 Бяцхан жүжигчин</option>
+    </select>
+  </label>
+  <label>Огноо:
+    <input id="date" type="date" oninput="updateCert()">
+  </label>
+  <button class="primary" onclick="openReasonEditor()">📝 Тайлбар засах</button>
+</div>
+<div class="no-print" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;padding:12px 16px;background:white;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06)">
+  <button onclick="saveToChild()" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;padding:14px 24px;border-radius:10px;cursor:pointer;font-weight:700;font-size:15px;box-shadow:0 4px 12px rgba(16,185,129,0.3);animation:pulse 2s infinite">💾 Хүүхдийн ололтод хадгалах</button>
+  <span style="flex:1"></span>
+  <button class="print" onclick="window.print()" style="padding:12px 20px">🖨 Хэвлэх / PDF</button>
+  <button class="dl" onclick="downloadAsWord()" style="padding:12px 20px">📥 Word татах</button>
+</div>
+<style>@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}</style>
+
+<div class="cert-wrap">
+<div class="cert gold" id="cert">
+  <div class="cert-corner tl">🎵</div>
+  <div class="cert-corner tr">🎶</div>
+  <div class="cert-corner bl">🎼</div>
+  <div class="cert-corner br">🎤</div>
+  <div class="cert-inner">
+    <div class="cert-header">ОЛОЛТ АМЖИЛТЫН ЭЗЭД</div>
+    <div class="cert-sub">2026-2027 оны хичээлийн жил</div>
+    <div class="cert-cup" id="cupEl">🥇</div>
+    <div class="cert-category" id="catEl">🎤 СУРСАН ДУУ</div>
+    <div class="cert-award-text">Энэхүү гэрчилгээг</div>
+    <div class="cert-name" id="nameEl">Б. Тулга</div>
+    <div class="cert-award-text">-д гардуулан олгож байна</div>
+    <div class="cert-reason" id="reasonEl">Тайлбар оруулна уу... (дууны нэр, ур чадвар г.м)</div>
+    <div class="cert-footer">
+      <div class="cert-sig">
+        <div style="font-size:9pt;color:#6b7280">Огноо</div>
+        <div class="line" id="dateEl">2026 оны 05-р сарын 30</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:24pt;margin-bottom:1mm">✨</div>
+      </div>
+      <div class="cert-sig">
+        <div style="font-size:9pt;color:#6b7280">Хөгжмийн багш</div>
+        <div class="line">Г. Өлзийбаяр</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js" onerror="0"></script>
+<script>
+const sb = supabase.createClient(window.SUPABASE_URL || "https://dehxrmupnbilwlxsovpi.supabase.co", window.SUPABASE_KEY || "sb_publishable_VRNBeM9nqwFlrDhT2-wD3w_Gp3O85uy");
+let CHILDREN_LIST = [];
+async function loadChildren() {
+  const { data } = await sb.from('children').select('*').order('name');
+  CHILDREN_LIST = data || [];
+  const sel = document.getElementById("childSel");
+  const groups = {baga:'Бага',dund:'Дунд',ahlah:'Ахлах',beltgel:'Бэлтгэл',duguilan:'Дугуйлан'};
+  sel.innerHTML = '<option value="">— Гараар оруулна —</option>' +
+    CHILDREN_LIST.map(c => `<option value="${c.id}">${c.name} (${groups[c.group_id]||c.group_id})</option>`).join("");
+}
+function pickChild() {
+  const id = document.getElementById("childSel").value;
+  if (!id) return;
+  const c = CHILDREN_LIST.find(x => x.id === id);
+  if (c) { document.getElementById("name").value = c.name; updateCert(); }
+}
+async function saveToChild() {
+  const childId = document.getElementById("childSel").value;
+  if (!childId) { alert("Хүүхэд системээс сонгоно уу — гараар нэрлэсэн хүүхэд ололт хэсэгт хадгалагдахгүй."); return; }
+  const level = document.getElementById("level").value;
+  const cat = document.getElementById("category").value;
+  const catInfo = CATEGORIES[cat];
+  const cupNames = {gold:'🥇 Алтан цом', silver:'🥈 Мөнгөн цом', bronze:'🥉 Хүрэл цом'};
+  const title = `${cupNames[level]} · ${catInfo.name}`;
+  const description = document.getElementById("reasonEl").textContent;
+  const date = document.getElementById("date").value || new Date().toISOString().substring(0,10);
+  const icon = CUPS[level];
+
+  // Upload the certificate as a doc
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="UTF-8"><style>' +
+    document.querySelector("style").innerText + '@page{size:A4 landscape;margin:0}' +
+    '</style></head><body>' + document.getElementById("cert").outerHTML + '</body></html>';
+  const blob = new Blob(['﻿'+html], {type:'application/msword;charset=utf-8'});
+  const fname = `${Date.now()}-certificate.doc`;
+  const { error: upErr } = await sb.storage.from('media').upload(fname, blob);
+  if (upErr) { alert("Файл хадгалахад алдаа: "+upErr.message); return; }
+  const { data: {publicUrl} } = sb.storage.from('media').getPublicUrl(fname);
+
+  const { error } = await sb.from('achievements').insert({
+    child_id: childId,
+    title: title,
+    description: description,
+    icon: icon,
+    earned_at: date,
+    media: [{ type:'link', src: publicUrl, label: 'Гэрчилгээ (.doc)' }]
+  });
+  if (error) { alert("Алдаа: "+error.message); return; }
+  alert(`✅ Амжилттай! "${document.getElementById("name").value}"-ийн ололт хэсэгт нэмэгдлээ.\n\nСистемийн Хүүхдийн үнэлгээ → сонгосон хүүхэд → 🌟 Ололт, авьяас tab-т харна.`);
+}
+
+const CUPS = { gold:'🥇', silver:'🥈', bronze:'🥉' };
+const CATEGORIES = {
+  song: {icon:'🎤', name:'СУРСАН ДУУ', hint:'Энд сурсан дууны нэрийг бичнэ.\nЖишээ: "Туулай", "Найзуудаа зурлаа" г.м'},
+  dance: {icon:'💃', name:'ХӨГЖИМТ ХӨДӨЛГӨӨН', hint:'Энд хийсэн хөгжимт хөдөлгөөн, бүжгийн нэр.\nЖишээ: "Тойрон бүжиг", "Найзууд" г.м'},
+  rhythm: {icon:'🥁', name:'ХЭМНЭЛ', hint:'Энд эзэмшсэн хэмнэлийн ур чадварын тухай.\nЖишээ: "2/4, 3/4 хэмнэлийг зэмсгээр зөв тоглох" г.м'},
+  actor: {icon:'🎭', name:'БЯЦХАН ЖҮЖИГЧИН', hint:'Энд тоглосон дүрийн тухай.\nЖишээ: "Улаан Малгайт", "Бяцхан цэцэг" г.м'}
+};
+
+function updateCert() {
+  const name = document.getElementById("name").value || '.....';
+  const level = document.getElementById("level").value;
+  const cat = document.getElementById("category").value;
+  const d = document.getElementById("date").value;
+  const cert = document.getElementById("cert");
+  cert.className = 'cert ' + level;
+  document.getElementById("cupEl").textContent = CUPS[level];
+  document.getElementById("catEl").textContent = `${CATEGORIES[cat].icon} ${CATEGORIES[cat].name}`;
+  document.getElementById("nameEl").textContent = name;
+  if (d) {
+    const parts = d.split("-");
+    document.getElementById("dateEl").textContent = `${parts[0]} оны ${parseInt(parts[1])}-р сарын ${parseInt(parts[2])}`;
+  }
+}
+function openReasonEditor() {
+  const cat = document.getElementById("category").value;
+  const current = document.getElementById("reasonEl").textContent;
+  const isPlaceholder = current.includes('Тайлбар оруулна уу');
+  const modal = document.createElement("div");
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px";
+  modal.innerHTML = `
+    <div style="background:white;padding:24px;border-radius:12px;max-width:600px;width:100%" onclick="event.stopPropagation()">
+      <h3 style="margin-bottom:6px">📝 Гэрчилгээний тайлбар</h3>
+      <p style="font-size:12px;color:#6b7280;margin-bottom:14px;white-space:pre-line">${CATEGORIES[cat].hint}</p>
+      <textarea id="re" style="width:100%;min-height:150px;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px">${isPlaceholder?'':current.replace(/</g,'&lt;')}</textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button onclick="this.closest('div[style*=fixed]').remove()" style="padding:8px 16px;background:#f3f4f6;border:none;border-radius:6px;cursor:pointer">Болих</button>
+        <button onclick="document.getElementById('reasonEl').textContent=document.getElementById('re').value||'...';this.closest('div[style*=fixed]').remove()" style="padding:8px 16px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer">💾 Хадгалах</button>
+      </div>
+    </div>`;
+  modal.onclick = () => modal.remove();
+  document.body.appendChild(modal);
+}
+function downloadAsWord() {
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="UTF-8"><style>' +
+    document.querySelector("style").innerText + '@page{size:A4 landscape;margin:0}' +
+    '</style></head><body>' + document.getElementById("cert").outerHTML + '</body></html>';
+  const blob = new Blob(['﻿'+html], {type:'application/msword;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `гэрчилгээ_${document.getElementById("name").value||'хүүхэд'}.doc`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+const params = new URLSearchParams(location.search);
+if (params.get("name")) document.getElementById("name").value = params.get("name");
+document.getElementById("date").value = new Date().toISOString().substring(0,10);
+updateCert();
+loadChildren();
+</script>
+</body></html>

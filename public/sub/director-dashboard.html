@@ -1,0 +1,1637 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🏫 Эрхлэгчийн самбар</title>
+<script>
+  // Auth шалгалт — эрхлэгч биш бол login руу буцаах
+  if (sessionStorage.getItem("auth") !== "director") {
+    location.replace("index.html");
+  }
+</script>
+<script src="config.js" onerror="0"></script>
+<script src="staff-data.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root { --pri:#7c3aed; --pri2:#be185d; --bg:#f8fafc; --card:#fff; --br:#e5e7eb; --tx:#1e293b; --mu:#64748b; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--tx); padding: 16px; line-height: 1.5; }
+  header { background: linear-gradient(135deg, var(--pri), var(--pri2)); color: #fff; padding: 20px 28px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 14px rgba(124,58,237,.2); }
+  header h1 { font-size: 22px; margin-bottom: 4px; }
+  header p { opacity: .92; font-size: 13px; }
+  .header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .back { background: #fff; color: var(--pri); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 13px; }
+
+  /* Статистикийн самбар */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat { background: #fff; padding: 16px 20px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.05); text-align: center; }
+  .stat .n { color: var(--pri); font-size: 28px; font-weight: 800; }
+  .stat .l { color: var(--mu); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; margin-top: 3px; }
+  .stat .icon { font-size: 20px; margin-bottom: 4px; }
+
+  /* Хэлтэсийн 2 самбар */
+  .departments { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .dept { background: #fff; border-radius: 16px; padding: 18px 20px; box-shadow: 0 3px 10px rgba(0,0,0,.05); }
+  .dept-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 2px solid #f3f4f6; margin-bottom: 12px; }
+  .dept-head h2 { display: flex; align-items: center; gap: 10px; font-size: 17px; }
+  .dept-head .count { background: linear-gradient(135deg, var(--pri), var(--pri2)); color: #fff; padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+  .dept.teaching { background: linear-gradient(135deg,#faf5ff,#f5f3ff); }
+  .dept.admin    { background: linear-gradient(135deg,#ecfeff,#f0fdfa); }
+
+  /* Ажилтны карт */
+  .staff-list { display: flex; flex-direction: column; gap: 8px; }
+  .staff { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #fff; border-radius: 10px; cursor: pointer; transition: all .15s; border: 2px solid transparent; }
+  .staff:hover { transform: translateX(3px); border-color: var(--pri); box-shadow: 0 3px 10px rgba(124,58,237,.12); }
+  .staff .avatar { flex-shrink: 0; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; background: #faf5ff; border: 3px solid #ddd6fe; }
+  .staff .info { flex: 1; min-width: 0; }
+  .staff .name { font-weight: 700; font-size: 14px; color: var(--tx); margin-bottom: 2px; }
+  .staff .role { font-size: 11px; color: var(--mu); }
+  .staff .badges { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+  .staff .badges span { padding: 1px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .staff .badges .pending  { background: #dbeafe; color: #1e40af; }
+  .staff .badges .approved { background: #d1fae5; color: #065f46; }
+  .staff .badges .none     { background: #f3f4f6; color: #6b7280; }
+  .staff .arrow { color: var(--mu); font-size: 20px; }
+  /* Гүйцэтгэлийн progress bar */
+  .staff .perf { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .staff .bar { flex: 1; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
+  .staff .bar > div { height: 100%; border-radius: 3px; transition: width .3s; }
+  .staff .bar.excellent > div { background: linear-gradient(90deg, #10b981, #059669); }
+  .staff .bar.good      > div { background: linear-gradient(90deg, #f59e0b, #d97706); }
+  .staff .bar.warn      > div { background: linear-gradient(90deg, #ef4444, #dc2626); }
+  .staff .pct { font-size: 12px; font-weight: 700; color: var(--tx); min-width: 40px; text-align: right; }
+  .staff .trend { font-size: 11px; font-weight: 700; margin-left: 4px; }
+  .staff .trend.up { color: #059669; }
+  .staff .trend.dn { color: #dc2626; }
+  /* Эрэмбийн хэсгүүд */
+  .priority-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  .priority { background: #fff; border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+  .priority.warn { border-left: 5px solid #ef4444; background: linear-gradient(135deg,#fef2f2,#fee2e2); }
+  .priority.top  { border-left: 5px solid #10b981; background: linear-gradient(135deg,#f0fdf4,#d1fae5); }
+  .priority h3 { font-size: 14px; margin-bottom: 10px; }
+  .priority.warn h3 { color: #991b1b; }
+  .priority.top  h3 { color: #065f46; }
+  /* Ажлын хэсгүүд */
+  .wg-box { background: #fff; border-radius: 14px; padding: 16px 20px; box-shadow: 0 3px 10px rgba(0,0,0,.05); }
+  .wg-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 2px solid #f3f4f6; margin-bottom: 12px; }
+  .wg-head h2 { display: flex; align-items: center; gap: 10px; color: var(--tx); font-size: 17px; }
+  .wg-head .count-badge { background: linear-gradient(135deg,#f59e0b,#d97706); color: #fff; padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+  .wg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .wg-card { background: linear-gradient(135deg,#fef3c7,#fef9c3); border-radius: 12px; padding: 14px 16px; border-left: 5px solid #f59e0b; }
+  .wg-card h3 { color: #78350f; font-size: 14px; margin-bottom: 6px; }
+  .wg-card .desc { font-size: 11px; color: #92400e; margin-bottom: 10px; line-height: 1.4; }
+  .wg-card .leader { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #fff; border-radius: 8px; margin-bottom: 6px; }
+  .wg-card .leader .lbl { font-size: 10px; color: #92400e; font-weight: 700; padding: 2px 8px; background: #fef3c7; border-radius: 10px; }
+  .wg-card .leader .n { font-weight: 700; font-size: 12px; }
+  .wg-card .members { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .wg-card .members .m { background: #fff; padding: 3px 10px; border-radius: 12px; font-size: 11px; color: #78350f; display: inline-flex; align-items: center; gap: 4px; }
+  .wg-card .actions { display: flex; gap: 6px; margin-top: 10px; }
+  .wg-card .actions button { padding: 5px 10px; border: 1px solid #f59e0b; background: #fff; color: #92400e; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600; }
+  .wg-card .actions button:hover { background: #fef3c7; }
+  .wg-card .actions button.del { border-color: #dc2626; color: #dc2626; }
+  .wg-card .actions button.del:hover { background: #fee2e2; }
+  .wg-add-btn { padding: 8px 14px; background: linear-gradient(135deg,#f59e0b,#d97706); color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; }
+
+  /* Manager Modal */
+  .mgr-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 200; align-items: flex-start; justify-content: center; padding: 24px; overflow-y: auto; }
+  .mgr-modal.open { display: flex; }
+  .mgr-box { background: #fff; border-radius: 14px; max-width: 900px; width: 100%; padding: 0; box-shadow: 0 20px 60px rgba(0,0,0,.3); overflow: hidden; }
+  .mgr-head { background: linear-gradient(135deg, var(--pri), var(--pri2)); color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .mgr-head h2 { font-size: 18px; }
+  .mgr-head .x { background: none; border: none; color: #fff; font-size: 26px; cursor: pointer; opacity: .8; }
+  .mgr-body { padding: 20px 24px; max-height: 75vh; overflow-y: auto; }
+  .mgr-body table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .mgr-body th, .mgr-body td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+  .mgr-body th { background: #faf5ff; color: var(--pri); font-weight: 700; font-size: 12px; }
+  .mgr-body td input, .mgr-body td select { width: 100%; padding: 5px 8px; border: 1px solid transparent; border-radius: 4px; font-size: 12px; background: transparent; }
+  .mgr-body td input:focus, .mgr-body td select:focus { border-color: var(--pri); background: #fff; outline: none; }
+  .mgr-body td.act { text-align: center; white-space: nowrap; }
+  .mgr-body td.act button { background: none; border: none; cursor: pointer; padding: 2px 6px; margin: 0 2px; border-radius: 4px; font-size: 14px; }
+  .mgr-body td.act button:hover { background: #f3f4f6; }
+  .mgr-body td.act .del { color: #dc2626; }
+  .mgr-body td.act .del:hover { background: #fee2e2; }
+  .mgr-body td.act .sv { color: #059669; }
+  .mgr-add-row { display: flex; gap: 8px; margin: 12px 0; padding: 12px; background: #faf5ff; border-radius: 8px; align-items: center; flex-wrap: wrap; }
+  .mgr-add-row input, .mgr-add-row select { padding: 7px 10px; border: 2px solid #ddd6fe; border-radius: 6px; font-size: 13px; }
+  .mgr-add-row input { flex: 1; min-width: 140px; }
+  .mgr-add-row button { padding: 8px 16px; background: linear-gradient(135deg, var(--pri), var(--pri2)); color: #fff; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; }
+
+  /* WG editor */
+  .wg-editor { background: #fef3c7; padding: 16px; border-radius: 10px; margin-bottom: 14px; }
+  .wg-editor label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 13px; color: #78350f; }
+  .wg-editor input, .wg-editor textarea, .wg-editor select { width: 100%; padding: 8px 12px; border: 2px solid #fde68a; border-radius: 6px; font-family: inherit; font-size: 13px; margin-bottom: 8px; }
+  .wg-editor .member-picker { background: #fff; padding: 10px; border-radius: 8px; max-height: 200px; overflow-y: auto; margin-bottom: 8px; }
+  .wg-editor .member-picker label { display: block; padding: 4px 0; font-size: 12px; font-weight: 400; cursor: pointer; }
+  .wg-editor .member-picker input[type=checkbox] { width: auto; margin-right: 6px; }
+  .wg-editor .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+  .wg-editor .btn-row button { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; }
+  .wg-editor .btn-row .save { background: linear-gradient(135deg,#10b981,#059669); color: #fff; }
+  .wg-editor .btn-row .cancel { background: #f3f4f6; color: #374151; }
+
+  /* Хэвлэх горим */
+  @media print {
+    body { background: #fff; padding: 0; }
+    header, .stats-row, .modal, button, .back, select { display: none !important; }
+    .departments, .priority-sections { display: block !important; }
+    .dept, .priority { break-inside: avoid; box-shadow: none; margin-bottom: 12px; }
+    @page { size: A4; margin: 12mm; }
+  }
+
+  /* Модал — ажилтны профайл */
+  .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; align-items: flex-start; justify-content: center; padding: 24px; overflow-y: auto; }
+  .modal.open { display: flex; }
+  .modal-box { background: #fff; border-radius: 16px; max-width: 780px; width: 100%; padding: 0; box-shadow: 0 20px 60px rgba(0,0,0,.3); overflow: hidden; }
+  .profile-head { background: linear-gradient(135deg, var(--pri), var(--pri2)); color: #fff; padding: 20px 24px; display: flex; align-items: center; gap: 16px; position: relative; }
+  .profile-head .avatar { width: 72px; height: 72px; border-radius: 50%; background: rgba(255,255,255,.25); display: flex; align-items: center; justify-content: center; font-size: 36px; border: 3px solid rgba(255,255,255,.4); }
+  .profile-head .info h2 { font-size: 20px; margin-bottom: 4px; }
+  .profile-head .info p { opacity: .95; font-size: 13px; }
+  .profile-head .x { position: absolute; top: 12px; right: 14px; background: none; border: none; color: #fff; font-size: 26px; cursor: pointer; opacity: .8; }
+  .profile-head .x:hover { opacity: 1; }
+
+  .profile-body { padding: 20px 24px; }
+  .contact-row { display: flex; gap: 16px; margin-bottom: 16px; padding: 10px 14px; background: #faf5ff; border-radius: 8px; font-size: 13px; }
+  .contact-row b { color: var(--pri); }
+
+  /* Табууд — Ерөнхий / Төлөвлөгөө / Санал */
+  .tabs2 { display: flex; gap: 4px; border-bottom: 2px solid #f3f4f6; margin-bottom: 14px; }
+  .tabs2 button { padding: 10px 16px; background: transparent; border: none; cursor: pointer; font-weight: 700; font-size: 13px; color: var(--mu); border-bottom: 3px solid transparent; margin-bottom: -2px; }
+  .tabs2 button.active { color: var(--pri); border-bottom-color: var(--pri); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .plan-item { padding: 10px 14px; background: #faf5ff; border-radius: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .plan-item .plan-title { font-weight: 600; font-size: 13px; }
+  .plan-item .plan-meta { font-size: 11px; color: var(--mu); }
+  .plan-item .plan-status { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  .status-draft     { background: #f3f4f6; color: #6b7280; }
+  .status-submitted { background: #dbeafe; color: #1e40af; }
+  .status-approved  { background: #d1fae5; color: #065f46; }
+  .status-revise    { background: #fee2e2; color: #991b1b; }
+
+  .feedback-form { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 14px 16px; border-radius: 10px; }
+  .feedback-form h4 { color: #78350f; margin-bottom: 10px; font-size: 14px; }
+  .feedback-form textarea { width: 100%; padding: 8px 12px; border: 2px solid #fde68a; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 70px; }
+  .feedback-form button { margin-top: 8px; padding: 10px 20px; background: linear-gradient(135deg, var(--pri), var(--pri2)); color: #fff; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+
+  /* Үнэлгээний хэсэг */
+  .eval-box { background: #f0fdf4; border-left: 4px solid #10b981; padding: 14px 16px; border-radius: 10px; }
+  .eval-box h4 { color: #065f46; margin-bottom: 8px; font-size: 14px; }
+  .stars { display: flex; gap: 6px; font-size: 30px; cursor: pointer; user-select: none; margin: 10px 0; }
+  .stars .st { color: #d1d5db; transition: transform .1s; }
+  .stars .st:hover { transform: scale(1.15); }
+  .stars .st.on { color: #f59e0b; }
+  .eval-row { display: flex; gap: 12px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+  .eval-row select { padding: 6px 10px; border: 2px solid #a7f3d0; border-radius: 8px; font-size: 13px; }
+  .eval-item { padding: 10px 12px; background: #fff; border-radius: 8px; margin-bottom: 6px; border-left: 3px solid #10b981; font-size: 12px; }
+  .eval-item .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .eval-item .row .m { font-weight: 700; color: #065f46; }
+  .eval-item .stars-mini { color: #f59e0b; font-size: 14px; }
+
+  /* Ирц ба чөлөө */
+  .att-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 14px 16px; border-radius: 10px; }
+  .att-box h4 { color: #1e40af; margin-bottom: 8px; font-size: 14px; }
+  .att-controls { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+  .att-controls input, .att-controls select { padding: 7px 10px; border: 2px solid #bfdbfe; border-radius: 8px; font-size: 13px; }
+  .att-controls button { padding: 8px 14px; background: #3b82f6; color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .att-list { max-height: 240px; overflow-y: auto; margin-top: 10px; }
+  .att-item { padding: 8px 12px; background: #fff; border-radius: 6px; margin-bottom: 4px; font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .att-item .badge { padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+  .att-item .badge.present { background: #d1fae5; color: #065f46; }
+  .att-item .badge.leave   { background: #fef3c7; color: #92400e; }
+  .att-item .badge.sick    { background: #fee2e2; color: #991b1b; }
+  .att-item .badge.other   { background: #e0e7ff; color: #3730a3; }
+  .att-item .del { background: none; border: none; color: #dc2626; cursor: pointer; font-size: 16px; padding: 0 4px; }
+  .att-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; padding: 10px 12px; background: #fff; border-radius: 8px; font-size: 12px; }
+  .att-summary span { padding: 3px 10px; border-radius: 10px; font-weight: 700; }
+  .stars-mini { color: #f59e0b; }
+
+  .empty { text-align: center; padding: 30px 10px; color: var(--mu); font-size: 13px; font-style: italic; }
+
+  /* Toast мэдэгдэл — модалиас дээр гарна */
+  #msg { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; min-width: 320px; max-width: 90vw; pointer-events: none; }
+  #msg .msg { pointer-events: auto; padding: 14px 20px; border-radius: 10px; margin: 4px 0; font-size: 14px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.2); text-align: center; animation: slideDown .3s; }
+  @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .msg.success { background: #10b981; color: #fff; }
+  .msg.error   { background: #ef4444; color: #fff; }
+  .msg.info    { background: #3b82f6; color: #fff; }
+
+  @media (max-width: 900px) {
+    .departments { grid-template-columns: 1fr; }
+    header h1 { font-size: 18px; }
+  }
+</style>
+
+<header>
+  <div class="header-flex">
+    <div style="display:flex;align-items:center;gap:14px">
+      <img id="hLogo" src="logo.png" alt="Лого" style="height:64px;width:auto;border-radius:8px;background:#fff;padding:4px;display:none" onload="this.style.display='block'" onerror="this.style.display='none'">
+      <div>
+        <h1 id="hTitle">🏫 Эрхлэгчийн самбар</h1>
+        <p id="hDesc">Ажилтнуудын нэгдсэн хяналт, төлөвлөгөө батламж, ажлын үнэлгээ</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="color:#fff;font-size:13px;font-weight:600">📅 Сар:</label>
+      <select id="reportMonth" onchange="loadPlans().then(()=>{renderStats();renderChart();renderChildDevelopment();renderPriority();renderDepts();renderWorkGroups();})" style="padding:6px 10px;border:none;border-radius:8px;font-weight:700;font-size:13px">
+        <option value="0">Бүх сар</option>
+        <option value="9">9-р сар</option><option value="10">10-р сар</option>
+        <option value="11">11-р сар</option><option value="12">12-р сар</option>
+        <option value="1">1-р сар</option><option value="2">2-р сар</option>
+        <option value="3">3-р сар</option><option value="4">4-р сар</option>
+        <option value="5">5-р сар</option>
+      </select>
+      <button onclick="downloadReport()" style="background:#10b981;color:#fff;padding:8px 14px;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">📊 Тайлан татах</button>
+      <button onclick="window.print()" style="background:#3b82f6;color:#fff;padding:8px 14px;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">🖨️ Хэвлэх</button>
+      <a href="javascript:void(0)" onclick="if(confirm('Гарах уу?')){sessionStorage.removeItem('auth');location.href='index.html';}" class="back">🚪 Гарах</a>
+    </div>
+  </div>
+
+  <!-- Гол цэс -->
+  <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+    <button onclick="openStaffManager()" style="background:rgba(255,255,255,.2);color:#fff;padding:9px 16px;border:1px solid rgba(255,255,255,.3);border-radius:8px;font-weight:600;font-size:13px;cursor:pointer">👥 Ажилтан удирдах</button>
+    <button onclick="openWorkGroupsManager()" style="background:rgba(255,255,255,.2);color:#fff;padding:9px 16px;border:1px solid rgba(255,255,255,.3);border-radius:8px;font-weight:600;font-size:13px;cursor:pointer">🎯 Ажлын хэсгүүд</button>
+    <a href="task-manager.html" target="_blank" style="background:rgba(255,255,255,.2);color:#fff;padding:9px 16px;border:1px solid rgba(255,255,255,.3);border-radius:8px;font-weight:600;font-size:13px;text-decoration:none">📌 Үүрэг даалгавар</a>
+    <a href="task-manager.html?tab=report" target="_blank" style="background:#10b981;color:#fff;padding:9px 16px;border:none;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none">📊 Даалгаврын нэгтгэл</a>
+    <a href="index.html?view=announcements" target="_blank" style="background:rgba(255,255,255,.2);color:#fff;padding:9px 16px;border:1px solid rgba(255,255,255,.3);border-radius:8px;font-weight:600;font-size:13px;text-decoration:none">📢 Зар мэдээ</a>
+    <a href="index.html?view=assessGroups" target="_blank" style="background:rgba(255,255,255,.2);color:#fff;padding:9px 16px;border:1px solid rgba(255,255,255,.3);border-radius:8px;font-weight:600;font-size:13px;text-decoration:none">🌱 Хүүхдийн хөгжлийн үнэлгээ</a>
+    <a href="methodist-approval.html" target="_blank" style="background:rgba(255,255,255,.2);color:#fff;padding:9px 16px;border:1px solid rgba(255,255,255,.3);border-radius:8px;font-weight:600;font-size:13px;text-decoration:none">👔 Батламжийн ширээ</a>
+  </div>
+</header>
+
+<div class="stats-row" id="stats"></div>
+
+<div id="msg"></div>
+
+<div id="chartBox" style="margin-bottom:16px"></div>
+
+<div id="childDevBox" style="margin-bottom:16px"></div>
+
+<div class="priority-sections" id="priority"></div>
+
+<div class="departments" id="depts"></div>
+
+<div id="workGroupsBox" style="margin-top:16px"></div>
+
+<!-- Ажилтны профайл модал -->
+<div class="modal" id="staffModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" id="modalBox">
+    <!-- Динамик агуулга -->
+  </div>
+</div>
+
+<!-- Ажилтан удирдах модал (CRUD) -->
+<div class="mgr-modal" id="staffMgr" onclick="if(event.target===this)closeStaffManager()">
+  <div class="mgr-box">
+    <div class="mgr-head">
+      <h2>👥 Ажилтан удирдах (<span id="staffCount">0</span> хүн)</h2>
+      <button class="x" onclick="closeStaffManager()">×</button>
+    </div>
+    <div class="mgr-body">
+      <div class="mgr-add-row">
+        <input id="newStaffName" placeholder="Ажилтны нэр (жишээ: Б.Батаа)">
+        <select id="newStaffRole"></select>
+        <input id="newStaffPhone" placeholder="Утас (сонголт)" style="max-width:140px">
+        <button onclick="addStaff()">➕ Нэмэх</button>
+      </div>
+      <table>
+        <thead><tr>
+          <th style="width:30px">#</th><th>Нэр</th><th>Албан тушаал</th><th style="width:130px">Утас</th><th style="width:80px" class="act">Үйлдэл</th>
+        </tr></thead>
+        <tbody id="staffMgrTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Ажлын хэсэг удирдах модал -->
+<div class="mgr-modal" id="wgMgr" onclick="if(event.target===this)closeWorkGroupsManager()">
+  <div class="mgr-box">
+    <div class="mgr-head">
+      <h2>🎯 Ажлын хэсгүүд (<span id="wgCount">0</span>)</h2>
+      <button class="x" onclick="closeWorkGroupsManager()">×</button>
+    </div>
+    <div class="mgr-body" id="wgMgrBody">
+      <!-- Динамик агуулга -->
+    </div>
+  </div>
+</div>
+
+<!-- Ажлын хэсгийн үйл ажиллагааны модаль -->
+<div class="mgr-modal" id="wgActMgr" onclick="if(event.target===this)closeWgActivities()">
+  <div class="mgr-box" style="max-width:800px">
+    <div class="mgr-head">
+      <h2 id="wgActTitle">📝 Ажлын хэсгийн үйл ажиллагаа</h2>
+      <button class="x" onclick="closeWgActivities()">×</button>
+    </div>
+    <div class="mgr-body" id="wgActBody"></div>
+  </div>
+</div>
+
+<!-- Тайлангийн preview модал -->
+<div class="mgr-modal" id="reportPreview" onclick="if(event.target===this)closeReportPreview()">
+  <div class="mgr-box" style="max-width:1000px">
+    <div class="mgr-head">
+      <h2>📊 Тайлангийн урьдчилсан харагдац</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button onclick="downloadReportNow()" style="background:#10b981;color:#fff;padding:8px 14px;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">📥 Word татах</button>
+        <button onclick="printReport()" style="background:#3b82f6;color:#fff;padding:8px 14px;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">🖨️ Хэвлэх</button>
+        <button class="x" onclick="closeReportPreview()">×</button>
+      </div>
+    </div>
+    <div class="mgr-body" id="reportPreviewBody" style="background:#fff">
+      <!-- Динамик тайлан агуулга -->
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════ SUPABASE ═══════
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_KEY = window.SUPABASE_KEY || "";
+let sb = null;
+if (SUPABASE_URL && SUPABASE_KEY && window.supabase) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let allPlans = [];   // Supabase-с ирсэн бүх plans
+let allEvals = [];   // Ажлын үнэлгээ
+let allAttendance = []; // Ирц ба чөлөө
+let activeStaffId = null;
+let selectedStars = 0;
+
+// Одоогийн сонгосон сар (0 = бүх сар)
+function getSelectedMonth() { return parseInt(document.getElementById('reportMonth')?.value || '0'); }
+
+// Header-т цэцэрлэгийн нэр
+if (window.KINDERGARTEN?.name) {
+  document.getElementById('hDesc').textContent =
+    `${window.KINDERGARTEN.name} · ${window.STAFF_LIST.length} ажилтан`;
+}
+
+// Ажилтны байгууллагын мэдээллийг group_id-тэй холбох (багш болгонд group)
+const ROLE_GROUP = {
+  teacher_baga: 'baga', teacher_dund: 'dund', teacher_ahlah: 'ahlah', teacher_beltgel: 'beltgel',
+  assistant_baga: 'baga', assistant_dund: 'dund', assistant_ahlah: 'ahlah', assistant_beltgel: 'beltgel',
+  music_teacher: 'music', teacher_alt: 'alt'
+};
+
+let allTaskItems = []; // Даалгаврууд
+let allWgActivities = []; // Ажлын хэсгийн үйл ажиллагаа
+
+async function loadPlans() {
+  if (!sb) return;
+  try {
+    const { data } = await sb.from('plans').select('*');
+    allPlans = (data || []).map(row => {
+      let c = {}; try { c = JSON.parse(row.content || '{}'); } catch(e) {}
+      return { ...row, parsedContent: c, submitted_at: c.submitted_at, approval: c.approval };
+    });
+    // Үнэлгээ, ирц, даалгавар — methodist_notes-с төрлөөр нь ялган ачаална
+    const { data: notes } = await sb.from('methodist_notes').select('*');
+    allEvals = (notes || []).filter(n => n.title && n.title.startsWith('EVAL:')).map(n => {
+      const parts = (n.title || '').split(':');
+      return { id: n.id, staff_id: parts[1], month: parseInt(parts[2]||'0'), rating: parseInt(parts[3]||'0'),
+               comments: n.text, from_name: n.from_name, created_at: n.created_at };
+    });
+    allAttendance = (notes || []).filter(n => n.title && n.title.startsWith('ATT:')).map(n => {
+      const parts = (n.title || '').split(':');
+      return { id: n.id, staff_id: parts[1], date: parts[2], status: parts[3],
+               reason: n.text, from_name: n.from_name, created_at: n.created_at };
+    });
+    // Даалгавар
+    allTaskItems = (notes || []).filter(n => n.title && n.title.startsWith('TASK:')).map(n => {
+      let payload = {}; try { payload = JSON.parse(n.text || '{}'); } catch(e) {}
+      const parts = (n.title || '').split(':');
+      return {
+        id: n.id, taskId: parts[1], status: parts[2] || 'pending',
+        recipients: payload.recipients || [], created_at: n.created_at
+      };
+    });
+    // Ажлын хэсгийн үйл ажиллагаа: WGA:${wgId}
+    allWgActivities = (notes || []).filter(n => n.title && n.title.startsWith('WGA:')).map(n => {
+      let payload = {}; try { payload = JSON.parse(n.text || '{}'); } catch(e) {}
+      const parts = (n.title || '').split(':');
+      return {
+        id: n.id, wg_id: parts[1],
+        activity_title: payload.title || '',
+        description: payload.description || '',
+        activity_date: payload.date || '',
+        participants: payload.participants || [],
+        created_by: n.from_name || '',
+        created_at: n.created_at
+      };
+    });
+  } catch(e) { console.warn(e); }
+}
+
+// Ажилтны даалгаврын гүйцэтгэл
+function taskStatsForStaff(staffId, month) {
+  const filtered = allTaskItems.filter(t => {
+    if (!(t.recipients || []).includes(staffId)) return false;
+    if (month === 0) return true;
+    return new Date(t.created_at).getMonth() + 1 === month;
+  });
+  const done = filtered.filter(t => t.status === 'done').length;
+  const total = filtered.length;
+  const pct = total > 0 ? Math.round(done * 100 / total) : 0;
+  return { total, done, pending: total - done, pct };
+}
+
+function countPlansForStaff(staff) {
+  const gId = ROLE_GROUP[staff.role];
+  const forStaff = allPlans.filter(p => {
+    if (staff.role === 'methodist') return true; // Арга зүйч бүх төлөвлөгөөнд оролцоно
+    if (gId) return p.group_id === gId;
+    return false;
+  });
+  const month = getSelectedMonth();
+  // Тухайн сард хамаарах плантай (period нь "9-1" гэх мэт)
+  const monthPlans = month === 0 ? forStaff : forStaff.filter(p => {
+    const m = (p.period || '').split('-')[0];
+    return parseInt(m) === month;
+  });
+  return {
+    pending:  forStaff.filter(p => p.submitted_at && !p.approved_at).length,
+    approved: forStaff.filter(p => p.approved_at).length,
+    total:    forStaff.length,
+    // Тухайн сарын статистик
+    monthTotal:    monthPlans.length,
+    monthApproved: monthPlans.filter(p => p.approved_at).length,
+    monthPending:  monthPlans.filter(p => p.submitted_at && !p.approved_at).length
+  };
+}
+
+function renderStats() {
+  const totalStaff = window.STAFF_LIST.length;
+  const totalPending = allPlans.filter(p => p.submitted_at && !p.approved_at).length;
+  const totalApproved = allPlans.filter(p => p.approved_at).length;
+  const totalTeaching = window.getStaffByDept('teaching').length;
+  const totalAdmin = window.getStaffByDept('admin').length;
+
+  // Дундаж гүйцэтгэлийн хувь
+  const perfs = window.STAFF_LIST.map(s => staffPerformance(s.id)).filter(p => p.count > 0);
+  const avgPerf = perfs.length ? Math.round(perfs.reduce((s,p) => s+p.pct, 0) / perfs.length) : 0;
+
+  // Ирцийн харьцаа
+  const attTotal = allAttendance.length;
+  const attPresent = allAttendance.filter(a => a.status === 'present').length;
+  const attPct = attTotal > 0 ? Math.round(attPresent * 100 / attTotal) : 0;
+
+  // Ажлын хэсгийн тоо
+  const wgCount = (window.WORK_GROUPS || []).length;
+
+  // Даалгаврын ерөнхий гүйцэтгэл
+  const month = getSelectedMonth();
+  const filteredTasks = month === 0 ? allTaskItems : allTaskItems.filter(t => new Date(t.created_at).getMonth() + 1 === month);
+  const taskTotal = filteredTasks.length;
+  const taskDone = filteredTasks.filter(t => t.status === 'done').length;
+  const taskPct = taskTotal > 0 ? Math.round(taskDone * 100 / taskTotal) : 0;
+  const taskColor = taskPct >= 85 ? '#059669' : taskPct >= 60 ? '#d97706' : '#dc2626';
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="icon">👥</div><div class="n">${totalStaff}</div><div class="l">Нийт ажилтан</div></div>
+    <div class="stat"><div class="icon">📚</div><div class="n">${totalTeaching}</div><div class="l">Заах нэгдэл</div></div>
+    <div class="stat"><div class="icon">🏢</div><div class="n">${totalAdmin}</div><div class="l">Захиргаа</div></div>
+    <div class="stat"><div class="icon">🎯</div><div class="n">${wgCount}</div><div class="l">Ажлын хэсэг</div></div>
+    <div class="stat" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7)"><div class="icon">⭐</div><div class="n" style="color:#059669">${avgPerf}%</div><div class="l">Дундаж үнэлгээ</div></div>
+    <div class="stat" style="background:linear-gradient(135deg,#fef3c7,#fde68a);cursor:pointer" onclick="window.open('task-manager.html?tab=report','_blank')"><div class="icon">📌</div><div class="n" style="color:${taskColor}">${taskPct}%</div><div class="l">Даалгаврын биелэлт<br><span style="font-size:9px">(${taskDone}/${taskTotal})</span></div></div>
+    <div class="stat" style="background:linear-gradient(135deg,#eff6ff,#dbeafe)"><div class="icon">🗓️</div><div class="n" style="color:#1e40af">${attPct}%</div><div class="l">Ирцийн хувь</div></div>
+    <div class="stat"><div class="icon">✅</div><div class="n">${totalApproved}</div><div class="l">Батлагдсан</div></div>
+  `;
+}
+
+function renderDepts() {
+  const depts = Object.values(window.STAFF_DEPARTMENTS);
+  const html = depts.map(d => {
+    const staff = window.getStaffByDept(d.id);
+    const month = getSelectedMonth();
+    const monthLbl = month === 0 ? 'Нийт' : `${month}-р сар`;
+    const items = staff.map(s => {
+      const role = window.getRoleInfo(s.role);
+      const cnt = countPlansForStaff(s);
+      const perf = staffPerformance(s.id);
+      let badges = '';
+      // Багш болон арга зүйчид «Энэ сард» статистик харагдана
+      if (ROLE_GROUP[s.role] || s.role === 'methodist' || s.role === 'music_teacher' || s.role === 'teacher_alt') {
+        badges += `<span style="background:#faf5ff;color:#7c3aed;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">${monthLbl}: ${cnt.monthTotal} төл.</span>`;
+      }
+      if (cnt.pending)  badges += `<span class="pending">⏳ ${cnt.pending} хүлээж</span>`;
+      if (cnt.approved) badges += `<span class="approved">✅ ${cnt.approved} батлагдсан</span>`;
+      if (!badges) badges = `<span class="none">Төлөвлөгөө байхгүй</span>`;
+
+      // Progress bar + trend (хэрэв үнэлгээ байвал)
+      let perfHtml = '';
+      if (perf.count > 0) {
+        const trendHtml = perf.trend > 0 ? `<span class="trend up">↑${perf.trend}</span>` : perf.trend < 0 ? `<span class="trend dn">↓${Math.abs(perf.trend)}</span>` : '';
+        perfHtml = `<div class="perf">
+          <div class="bar ${perfClass(perf.pct)}"><div style="width:${perf.pct}%"></div></div>
+          <div class="pct">${perf.pct}%${trendHtml}</div>
+        </div>`;
+      }
+
+      return `
+        <div class="staff" onclick="openStaff('${s.id}')">
+          <div class="avatar" style="background:${role.color}22;border-color:${role.color}55">${role.icon}</div>
+          <div class="info">
+            <div class="name">${escape(s.name)}</div>
+            <div class="role">${escape(role.name)}</div>
+            <div class="badges">${badges}</div>
+            ${perfHtml}
+          </div>
+          <div class="arrow">›</div>
+        </div>`;
+    }).join('') || '<div class="empty">Ажилтан бүртгэгдээгүй</div>';
+
+    return `
+      <div class="dept ${d.id}">
+        <div class="dept-head">
+          <h2>${d.icon} ${escape(d.name)}</h2>
+          <span class="count">${staff.length}</span>
+        </div>
+        <div class="staff-list">${items}</div>
+      </div>`;
+  }).join('');
+  document.getElementById('depts').innerHTML = html;
+}
+
+function openStaff(id) {
+  activeStaffId = id;
+  const s = window.STAFF_LIST.find(x => x.id === id);
+  if (!s) return;
+  const role = window.getRoleInfo(s.role);
+  const gId = ROLE_GROUP[s.role];
+  const plans = allPlans.filter(p => {
+    if (s.role === 'methodist') return p.submitted_at || p.approved_at;
+    return gId && p.group_id === gId;
+  });
+
+  const plansHtml = plans.length ? plans.map(p => {
+    const c = p.parsedContent || {};
+    let status = 'draft', label = '📝 Ноорог', cls = 'status-draft';
+    if (p.approved_at) {
+      status = 'approved';
+      const rating = c.approval?.rating;
+      if (rating === 'excellent') { label = '🌟 Онц сайн'; cls = 'status-approved'; }
+      else if (rating === 'revise') { label = '📝 Засварлах'; cls = 'status-revise'; }
+      else { label = '✅ Батлагдсан'; cls = 'status-approved'; }
+    } else if (p.submitted_at) { status = 'submitted'; label = '📤 Хүлээгдэж буй'; cls = 'status-submitted'; }
+
+    return `
+      <div class="plan-item">
+        <div>
+          <div class="plan-title">${escape(p.title || p.tab + ' · ' + p.period)}</div>
+          <div class="plan-meta">${p.tab} · ${p.period || ''} · ${p.submitted_at ? new Date(p.submitted_at).toLocaleDateString('mn-MN') : ''}</div>
+        </div>
+        <span class="plan-status ${cls}">${label}</span>
+      </div>`;
+  }).join('') : '<div class="empty">Одоогоор төлөвлөгөө байхгүй</div>';
+
+  // ── Үнэлгээ жагсаалт ──
+  const staffEvals = allEvals.filter(e => e.staff_id === s.id).sort((a,b) => (b.month||0) - (a.month||0));
+  const evalsHtml = staffEvals.length ? staffEvals.map(e => `
+    <div class="eval-item">
+      <div class="row">
+        <span class="m">${e.month}-р сар</span>
+        <span class="stars-mini">${'★'.repeat(e.rating||0)}${'☆'.repeat(5-(e.rating||0))}</span>
+      </div>
+      ${e.comments ? `<div style="color:#374151">${escape(e.comments)}</div>` : ''}
+      <div style="color:#94a3b8;font-size:10px;margin-top:4px">— ${escape(e.from_name||'Эрхлэгч')} · ${new Date(e.created_at).toLocaleDateString('mn-MN')}</div>
+    </div>`).join('') : '<div class="empty">Үнэлгээ өгөөгүй байна</div>';
+
+  const avgRating = staffEvals.length ? (staffEvals.reduce((s,e) => s+(e.rating||0), 0) / staffEvals.length).toFixed(1) : 0;
+
+  // ── Ирц жагсаалт ──
+  const staffAtt = allAttendance.filter(a => a.staff_id === s.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  const attSummary = {
+    present: staffAtt.filter(a => a.status === 'present').length,
+    leave:   staffAtt.filter(a => a.status === 'leave').length,
+    sick:    staffAtt.filter(a => a.status === 'sick').length,
+    other:   staffAtt.filter(a => a.status === 'other').length
+  };
+  const STATUS_LABELS = { present:['✓ Ирсэн','present'], leave:['🏖 Чөлөө','leave'], sick:['🤒 Өвдсөн','sick'], other:['📌 Бусад','other'] };
+  const attHtml = staffAtt.length ? staffAtt.map(a => {
+    const lbl = STATUS_LABELS[a.status] || ['—','other'];
+    return `
+      <div class="att-item">
+        <div>
+          <b>${a.date}</b>
+          ${a.reason ? `<span style="color:#64748b;margin-left:8px">· ${escape(a.reason)}</span>` : ''}
+        </div>
+        <div>
+          <span class="badge ${lbl[1]}">${lbl[0]}</span>
+          <button class="del" onclick="deleteAttendance('${a.id}')" title="Устгах">×</button>
+        </div>
+      </div>`;
+  }).join('') : '<div class="empty">Тэмдэглэл байхгүй</div>';
+
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('modalBox').innerHTML = `
+    <div class="profile-head">
+      <button class="x" onclick="closeModal()">×</button>
+      <div class="avatar">${role.icon}</div>
+      <div class="info">
+        <h2>${escape(s.name)}</h2>
+        <p>${escape(role.name)}${avgRating > 0 ? ` · Дундаж үнэлгээ: <b>${avgRating}/5</b> ★` : ''}</p>
+      </div>
+    </div>
+    <div class="profile-body">
+      <div class="contact-row">
+        ${s.phone ? `<div>📞 <b>${escape(s.phone)}</b></div>` : ''}
+        ${s.note  ? `<div>📝 ${escape(s.note)}</div>` : ''}
+        <div style="margin-left:auto"><button onclick="downloadStaffReport('${s.id}')" style="background:#10b981;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer">📥 Хувь тайлан</button></div>
+      </div>
+      <div class="tabs2">
+        <button class="active" onclick="switchTab2(this,'plans')">📋 Төлөвлөгөө (${plans.length})</button>
+        <button onclick="switchTab2(this,'eval')">⭐ Үнэлгээ (${staffEvals.length})</button>
+        <button onclick="switchTab2(this,'att')">🗓️ Ирц/Чөлөө (${staffAtt.length})</button>
+        <button onclick="switchTab2(this,'feedback')">💬 Зөвлөгөө</button>
+      </div>
+
+      <div class="tab-content active" id="tab-plans">
+        ${plansHtml}
+        ${plans.filter(p => p.submitted_at && !p.approved_at).length ? `
+          <div style="margin-top:12px;text-align:center">
+            <a href="methodist-approval.html" target="_blank" style="display:inline-block;padding:10px 20px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;text-decoration:none;border-radius:8px;font-weight:700;font-size:13px">
+              👔 Батламжийн ширээнд орох
+            </a>
+          </div>` : ''}
+      </div>
+
+      <div class="tab-content" id="tab-eval">
+        <div class="eval-box">
+          <h4>⭐ ${escape(s.name)}-ийн ажлын сарын үнэлгээ</h4>
+          <div class="eval-row">
+            <label><b>Сар:</b>
+              <select id="evalMonth" style="margin-left:6px">
+                <option value="9">9-р сар</option><option value="10">10-р сар</option>
+                <option value="11">11-р сар</option><option value="12">12-р сар</option>
+                <option value="1">1-р сар</option><option value="2">2-р сар</option>
+                <option value="3">3-р сар</option><option value="4">4-р сар</option>
+                <option value="5">5-р сар</option>
+              </select>
+            </label>
+            <div class="stars" id="starRow">
+              ${[1,2,3,4,5].map(n => `<span class="st" data-n="${n}" onclick="setStars(${n})">★</span>`).join('')}
+            </div>
+          </div>
+          <textarea id="evalComments" placeholder="Үнэлгээний тайлбар, сэтгэгдэл..." style="width:100%;padding:8px 12px;border:2px solid #a7f3d0;border-radius:8px;font-family:inherit;font-size:13px;resize:vertical;min-height:70px"></textarea>
+          <button onclick="saveEvaluation('${s.id}')" style="margin-top:8px;padding:10px 20px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">💾 Үнэлгээ хадгалах</button>
+        </div>
+        <div style="margin-top:14px">
+          <h4 style="color:#065f46;font-size:13px;margin-bottom:8px">Өмнөх үнэлгээнүүд:</h4>
+          ${evalsHtml}
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-att">
+        <div class="att-box">
+          <h4>🗓️ Ирц, чөлөө, өвчний тэмдэглэл</h4>
+          <div class="att-summary">
+            <span class="badge present" style="background:#d1fae5;color:#065f46">✓ Ирсэн: ${attSummary.present}</span>
+            <span class="badge leave"   style="background:#fef3c7;color:#92400e">🏖 Чөлөө: ${attSummary.leave}</span>
+            <span class="badge sick"    style="background:#fee2e2;color:#991b1b">🤒 Өвдсөн: ${attSummary.sick}</span>
+            <span class="badge other"   style="background:#e0e7ff;color:#3730a3">📌 Бусад: ${attSummary.other}</span>
+          </div>
+          <div class="att-controls" style="margin-top:12px">
+            <input type="date" id="attDate" value="${today}">
+            <select id="attStatus">
+              <option value="present">✓ Ирсэн</option>
+              <option value="leave">🏖 Чөлөө</option>
+              <option value="sick">🤒 Өвдсөн</option>
+              <option value="other">📌 Бусад</option>
+            </select>
+            <input id="attReason" placeholder="Шалтгаан (сонголт)" style="flex:1;min-width:180px">
+            <button onclick="saveAttendance('${s.id}')">➕ Тэмдэглэх</button>
+          </div>
+          <div class="att-list">${attHtml}</div>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-feedback">
+        <div class="feedback-form">
+          <h4>💬 ${escape(s.name)}-т зөвлөгөө / санал өгөх</h4>
+          <p style="color:#78350f;font-size:12px;margin-bottom:10px">Ажилтанд захиалах ерөнхий санал, магтаал, шүүмж.</p>
+          <textarea id="fbText" placeholder="Санаа, зөвлөгөөгөө энд бичнэ үү..."></textarea>
+          <button onclick="sendFeedback('${s.id}')">💾 Зөвлөгөө илгээх</button>
+        </div>
+      </div>
+    </div>`;
+  selectedStars = 0;
+  document.getElementById('staffModal').classList.add('open');
+}
+
+// ═══════ ҮНЭЛГЭЭ ═══════
+function setStars(n) {
+  selectedStars = n;
+  document.querySelectorAll('#starRow .st').forEach(el => {
+    el.classList.toggle('on', parseInt(el.dataset.n) <= n);
+  });
+}
+
+async function saveEvaluation(staffId) {
+  const month = parseInt(document.getElementById('evalMonth').value);
+  const comments = document.getElementById('evalComments').value.trim();
+  if (!selectedStars) { showMsg('error', 'Оноо (★) сонгоно уу'); return; }
+  if (!sb) { showMsg('error', 'Supabase холбогдоогүй'); return; }
+  try {
+    const { error } = await sb.from('methodist_notes').insert({
+      from_role: 'Эрхлэгч',
+      from_name: window.KINDERGARTEN?.director?.name || 'Эрхлэгч',
+      title: `EVAL:${staffId}:${month}:${selectedStars}`,
+      text: comments || ''
+    }).select();
+    if (error) { console.error(error); showMsg('error', 'Supabase алдаа: ' + (error.message || JSON.stringify(error))); return; }
+    showMsg('success', '✅ Үнэлгээ хадгалагдлаа');
+    await loadPlans();
+    openStaff(staffId);
+  } catch(e) { console.error(e); showMsg('error', 'Алдаа: ' + (e.message || 'үл мэдэгдэх')); }
+}
+
+// ═══════ ИРЦ / ЧӨЛӨӨ ═══════
+async function saveAttendance(staffId) {
+  const date = document.getElementById('attDate').value;
+  const status = document.getElementById('attStatus').value;
+  const reason = document.getElementById('attReason').value.trim();
+  if (!date) { showMsg('error', 'Огноо сонгоно уу'); return; }
+  if (!sb) { showMsg('error', 'Supabase холбогдоогүй'); return; }
+  try {
+    const { error } = await sb.from('methodist_notes').insert({
+      from_role: 'Эрхлэгч',
+      from_name: window.KINDERGARTEN?.director?.name || 'Эрхлэгч',
+      title: `ATT:${staffId}:${date}:${status}`,
+      text: reason || ''
+    }).select();
+    if (error) { console.error(error); showMsg('error', 'Supabase алдаа: ' + (error.message || JSON.stringify(error))); return; }
+    showMsg('success', '✅ Тэмдэглэгдлээ');
+    await loadPlans();
+    openStaff(staffId);
+  } catch(e) { console.error(e); showMsg('error', 'Алдаа: ' + (e.message || 'үл мэдэгдэх')); }
+}
+
+async function deleteAttendance(id) {
+  if (!confirm('Тэмдэглэлийг устгах уу?')) return;
+  try {
+    await sb.from('methodist_notes').delete().eq('id', id);
+    showMsg('info', '↩ Устгагдлаа');
+    await loadPlans();
+    if (activeStaffId) openStaff(activeStaffId);
+  } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+}
+
+// ═══════ ТАЙЛАН ТАТАХ ═══════
+function downloadStaffReport(staffId) {
+  const s = window.STAFF_LIST.find(x => x.id === staffId);
+  if (!s) return;
+  const role = window.getRoleInfo(s.role);
+  const staffEvals = allEvals.filter(e => e.staff_id === staffId);
+  const staffAtt = allAttendance.filter(a => a.staff_id === staffId);
+  const cnt = countPlansForStaff(s);
+  const avg = staffEvals.length ? (staffEvals.reduce((sm,e) => sm+(e.rating||0), 0) / staffEvals.length).toFixed(1) : '—';
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${s.name} — Хувь тайлан</title>
+    <style>body{font-family:Arial;font-size:11pt;padding:20px}h1{color:#7c3aed;text-align:center}h2{color:#7c3aed;border-bottom:2px solid #ddd;padding-bottom:4px;margin-top:16px}table{border-collapse:collapse;width:100%;margin:8px 0}th,td{border:1px solid #999;padding:6px;text-align:left}th{background:#ede9fe;color:#5b21b6}</style>
+  </head><body>
+    <h1>${role.icon} ${escape(s.name)} — Хувь ажлын тайлан</h1>
+    <p style="text-align:center;color:#666">${escape(role.name)} · ${window.KINDERGARTEN?.name || ''}</p>
+    <p style="text-align:center;color:#666;font-size:10pt">Хэвлэсэн: ${new Date().toLocaleDateString('mn-MN')}</p>
+
+    <h2>📊 Ерөнхий үзүүлэлт</h2>
+    <table>
+      <tr><th>Үзүүлэлт</th><th>Утга</th></tr>
+      <tr><td>Дундаж үнэлгээ</td><td><b>${avg} / 5 ★</b></td></tr>
+      <tr><td>Батлагдсан төлөвлөгөө</td><td>${cnt.approved}</td></tr>
+      <tr><td>Хүлээгдэж буй төлөвлөгөө</td><td>${cnt.pending}</td></tr>
+      <tr><td>Нийт ирсэн өдөр</td><td>${staffAtt.filter(a => a.status==='present').length}</td></tr>
+      <tr><td>Чөлөө</td><td>${staffAtt.filter(a => a.status==='leave').length}</td></tr>
+      <tr><td>Өвдсөн</td><td>${staffAtt.filter(a => a.status==='sick').length}</td></tr>
+    </table>
+
+    <h2>⭐ Сарын үнэлгээ</h2>
+    ${staffEvals.length ? `<table>
+      <tr><th>Сар</th><th>Оноо</th><th>Сэтгэгдэл</th><th>Огноо</th></tr>
+      ${staffEvals.map(e => `<tr><td>${e.month}-р сар</td><td>${e.rating}/5 ★</td><td>${escape(e.comments||'')}</td><td>${new Date(e.created_at).toLocaleDateString('mn-MN')}</td></tr>`).join('')}
+    </table>` : '<p><i>Үнэлгээ өгөөгүй</i></p>'}
+
+    <h2>🗓️ Ирц, чөлөө</h2>
+    ${staffAtt.length ? `<table>
+      <tr><th>Огноо</th><th>Төлөв</th><th>Шалтгаан</th></tr>
+      ${staffAtt.map(a => `<tr><td>${a.date}</td><td>${(STATUS_LABELS_STATIC[a.status]||['—'])[0]}</td><td>${escape(a.reason||'')}</td></tr>`).join('')}
+    </table>` : '<p><i>Тэмдэглэл байхгүй</i></p>'}
+  </body></html>`;
+  const blob = new Blob(['﻿', html], {type:'application/msword'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${s.name.replace(/\s/g,'_')}_hувь_тайлан.doc`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+const STATUS_LABELS_STATIC = { present:['✓ Ирсэн'], leave:['🏖 Чөлөө'], sick:['🤒 Өвдсөн'], other:['📌 Бусад'] };
+
+// Тайлангийн HTML агуулгыг үүсгэх (preview + download-т ижил хэрэглэнэ)
+let _lastReportHTML = '';
+let _lastReportName = '';
+
+function buildReportHTML() {
+  const month = getSelectedMonth();
+  const monthLabel = month === 0 ? 'бүх сарын' : `${month}-р сарын`;
+
+  // Хэлтэс тус бүрд бүлэглэн харуулах
+  const depts = Object.values(window.STAFF_DEPARTMENTS);
+  const deptTables = depts.map(d => {
+    const staff = window.getStaffByDept(d.id);
+    if (!staff.length) return '';
+    const rows = staff.map((s, i) => {
+      const role = window.getRoleInfo(s.role);
+      const cnt = countPlansForStaff(s);
+      const evs = allEvals.filter(e => e.staff_id === s.id && (month === 0 || e.month === month));
+      const att = allAttendance.filter(a => a.staff_id === s.id && (month === 0 || parseInt((a.date||'').split('-')[1]||'0') === month));
+      const avg = evs.length ? (evs.reduce((sm,e) => sm+(e.rating||0), 0) / evs.length).toFixed(1) : '—';
+      const pct = evs.length ? Math.round(evs.reduce((sm,e) => sm+(e.rating||0), 0) / evs.length * 20) + '%' : '—';
+      const tk = taskStatsForStaff(s.id, month);
+      const tkLabel = tk.total > 0 ? `${tk.done}/${tk.total} (${tk.pct}%)` : '—';
+      const tkBg = tk.total === 0 ? '#fff' : tk.pct >= 85 ? '#d1fae5' : tk.pct >= 60 ? '#fef3c7' : '#fee2e2';
+      return `<tr>
+        <td style="text-align:center">${i+1}</td>
+        <td>${role.icon} <b>${escape(s.name)}</b></td>
+        <td>${escape(role.name)}</td>
+        <td style="text-align:center">${avg !== '—' ? avg + ' ★' : '—'}</td>
+        <td style="text-align:center;background:${pct !== '—' && parseInt(pct) >= 85 ? '#d1fae5' : pct !== '—' && parseInt(pct) < 70 ? '#fee2e2' : '#fff'}"><b>${pct}</b></td>
+        <td style="text-align:center;background:${tkBg}"><b>${tkLabel}</b></td>
+        <td style="text-align:center">${cnt.approved}</td>
+        <td style="text-align:center">${cnt.pending}</td>
+        <td style="text-align:center;color:#059669"><b>${att.filter(a => a.status==='present').length}</b></td>
+        <td style="text-align:center;color:#d97706">${att.filter(a => a.status==='leave').length}</td>
+        <td style="text-align:center;color:#dc2626">${att.filter(a => a.status==='sick').length}</td>
+      </tr>`;
+    }).join('');
+    return `<h2 style="color:${d.color}">${d.icon} ${escape(d.name)} <span style="font-size:10pt;color:#666">(${staff.length} ажилтан)</span></h2>
+      <table>
+        <thead><tr>
+          <th style="width:30px">#</th><th>Нэр</th><th>Албан тушаал</th>
+          <th style="width:60px">Ажлын<br>үнэлгээ</th><th style="width:60px">Гүйцэтгэл</th>
+          <th style="width:90px">Даалгавар<br>биелэлт</th>
+          <th style="width:70px">Батлагдсан<br>төлөвлөгөө</th><th style="width:70px">Хүлээж буй</th>
+          <th style="width:50px">Ирсэн</th><th style="width:50px">Чөлөө</th><th style="width:50px">Өвдсөн</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }).join('');
+
+  // Ажлын хэсгүүд
+  const wgSection = (window.WORK_GROUPS || []).length ? `
+    <h2 style="color:#f59e0b">🎯 Ажлын хэсгүүд</h2>
+    <table>
+      <thead><tr>
+        <th style="width:30px">#</th><th>Ажлын хэсэг</th><th style="width:150px">Ахлагч</th><th>Гишүүд</th>
+      </tr></thead>
+      <tbody>
+        ${window.WORK_GROUPS.map((g, i) => {
+          const leader = window.getStaffById(g.leader_id);
+          const members = (g.member_ids || []).map(mid => window.getStaffById(mid)).filter(Boolean);
+          return `<tr>
+            <td style="text-align:center">${i+1}</td>
+            <td>${g.icon || '🎯'} <b>${escape(g.name)}</b><br><span style="color:#666;font-size:9pt">${escape(g.description || '')}</span></td>
+            <td>${leader ? escape(leader.name) : '—'}</td>
+            <td>${members.map(m => escape(m.name)).join(', ') || '<i>—</i>'}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>` : '';
+
+  // Ерөнхий үзүүлэлт
+  const totalStaff = window.STAFF_LIST.length;
+  const perfs = window.STAFF_LIST.map(s => staffPerformance(s.id)).filter(p => p.count > 0);
+  const avgPerf = perfs.length ? Math.round(perfs.reduce((s,p) => s+p.pct, 0) / perfs.length) : 0;
+  const attPresent = allAttendance.filter(a => a.status === 'present').length;
+  const attTotal = allAttendance.length;
+  const attPct = attTotal > 0 ? Math.round(attPresent * 100 / attTotal) : 0;
+  const totalApproved = allPlans.filter(p => p.approved_at).length;
+  const totalPending = allPlans.filter(p => p.submitted_at && !p.approved_at).length;
+  // Даалгаврын ерөнхий гүйцэтгэл
+  const filteredTasks = month === 0 ? allTaskItems : allTaskItems.filter(t => new Date(t.created_at).getMonth() + 1 === month);
+  const taskTotal = filteredTasks.length;
+  const taskDone = filteredTasks.filter(t => t.status === 'done').length;
+  const taskPct = taskTotal > 0 ? Math.round(taskDone * 100 / taskTotal) : 0;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Нэгдсэн тайлан</title>
+    <style>
+      body { font-family: Arial; font-size: 10pt; padding: 16px; color: #1e293b; }
+      h1 { color: #7c3aed; text-align: center; font-size: 16pt; margin-bottom: 4px; }
+      h2 { margin-top: 18px; font-size: 12pt; border-bottom: 2px solid #ddd; padding-bottom: 4px; }
+      h3 { color: #7c3aed; font-size: 11pt; margin-top: 12px; margin-bottom: 6px; }
+      table { border-collapse: collapse; width: 100%; margin: 6px 0 14px; font-size: 9pt; }
+      th, td { border: 1px solid #999; padding: 5px 6px; text-align: left; vertical-align: top; }
+      th { background: #ede9fe; color: #5b21b6; text-align: center; font-size: 9pt; }
+      .summary { display: table; width: 100%; margin: 10px 0; }
+      .summary-cell { display: table-cell; text-align: center; padding: 10px; border: 1px solid #ddd; width: 20%; }
+      .summary-cell .n { color: #7c3aed; font-size: 18pt; font-weight: 800; }
+      .summary-cell .l { color: #666; font-size: 9pt; }
+      .signature { margin-top: 40px; text-align: right; }
+    </style>
+  </head><body>
+    <h1>🏫 ${escape(window.KINDERGARTEN?.name || 'Цэцэрлэг')}</h1>
+    <p style="text-align:center;color:#666;margin-bottom:16px">Ажилчдын нэгдсэн тайлан · ${monthLabel} үзүүлэлт · ${new Date().toLocaleDateString('mn-MN')}</p>
+
+    <h3>📊 Ерөнхий үзүүлэлт</h3>
+    <div class="summary">
+      <div class="summary-cell"><div class="n">${totalStaff}</div><div class="l">Нийт ажилтан</div></div>
+      <div class="summary-cell"><div class="n">${avgPerf}%</div><div class="l">Дундаж ажлын үнэлгээ</div></div>
+      <div class="summary-cell"><div class="n" style="color:${taskPct >= 85 ? '#059669' : taskPct >= 60 ? '#d97706' : '#dc2626'}">${taskPct}%</div><div class="l">Даалгаврын биелэлт<br><span style="font-size:8pt">(${taskDone}/${taskTotal})</span></div></div>
+      <div class="summary-cell"><div class="n">${attPct}%</div><div class="l">Ирцийн хувь</div></div>
+      <div class="summary-cell"><div class="n">${totalApproved}</div><div class="l">Батлагдсан төлөвлөгөө</div></div>
+      <div class="summary-cell"><div class="n">${totalPending}</div><div class="l">Хүлээж буй</div></div>
+    </div>
+
+    ${deptTables}
+    ${wgSection}
+
+    <div class="signature">
+      <p style="margin-bottom:40px">БАТЛАВ:</p>
+      <p><b>${escape(window.KINDERGARTEN?.director?.name || 'Эрхлэгч')}</b> · Эрхлэгч</p>
+      <p style="font-size:9pt;color:#666;margin-top:4px">.............................. (гарын үсэг)</p>
+    </div>
+
+    <p style="margin-top:24px;font-size:8pt;color:#94a3b8"><i>Тайланг «${escape(window.KINDERGARTEN?.name || 'Цэцэрлэг')}» эрхлэгчийн цахим самбараас ${new Date().toLocaleString('mn-MN')}-т автомат үүсгэсэн.</i></p>
+  </body></html>`;
+  _lastReportHTML = html;
+  _lastReportName = `Ажилчдын_нэгдсэн_тайлан_${monthLabel.replace(/\s/g,'_')}.doc`;
+  return html;
+}
+
+// «📊 Тайлан татах» товч дархад preview-т ордог
+function downloadReport() {
+  const html = buildReportHTML();
+  // Preview iframe-т харуулах
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/);
+  const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
+  const inner = bodyMatch ? bodyMatch[1] : html;
+  const styles = styleMatch ? styleMatch[1] : '';
+  document.getElementById('reportPreviewBody').innerHTML =
+    `<style>${styles}</style><div style="background:#fff;padding:20px;max-width:100%;overflow-x:auto">${inner}</div>`;
+  document.getElementById('reportPreview').classList.add('open');
+}
+
+function closeReportPreview() {
+  document.getElementById('reportPreview').classList.remove('open');
+}
+
+function downloadReportNow() {
+  if (!_lastReportHTML) buildReportHTML();
+  const blob = new Blob(['﻿', _lastReportHTML], {type:'application/msword'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = _lastReportName;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showMsg('success', '📥 Тайлан татагдлаа');
+}
+
+function printReport() {
+  if (!_lastReportHTML) buildReportHTML();
+  const w = window.open('', '_blank');
+  w.document.write(_lastReportHTML);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { w.print(); }, 500);
+}
+
+function switchTab2(btn, tab) {
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+async function sendFeedback(staffId) {
+  const textEl = document.getElementById('fbText');
+  if (!textEl) { showMsg('error', 'Textarea олдсонгүй'); return; }
+  const text = textEl.value.trim();
+  if (!text) { showMsg('error', 'Зөвлөгөөгөө бичнэ үү'); return; }
+  if (!sb) { showMsg('error', 'Supabase холбогдоогүй'); return; }
+  const s = window.STAFF_LIST.find(x => x.id === staffId);
+  try {
+    const { data, error } = await sb.from('methodist_notes').insert({
+      from_role: 'Эрхлэгч',
+      from_name: window.KINDERGARTEN?.director?.name || 'Эрхлэгч',
+      title: `FB:${staffId}:${s?.name || 'багш'}-т зөвлөгөө`,
+      text: text
+    }).select();
+    if (error) {
+      console.error('Supabase error:', error);
+      showMsg('error', 'Supabase алдаа: ' + (error.message || error.hint || JSON.stringify(error)));
+      return;
+    }
+    showMsg('success', '✅ Зөвлөгөө илгээгдлээ');
+    textEl.value = '';
+    await loadPlans(); // мэдээллийг шинэчил
+  } catch(e) {
+    console.error('Feedback error:', e);
+    showMsg('error', 'Алдаа: ' + (e.message || 'үл мэдэгдэх алдаа'));
+  }
+}
+
+function closeModal() { document.getElementById('staffModal').classList.remove('open'); }
+
+function escape(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showMsg(type, text) {
+  const el = document.getElementById('msg');
+  el.innerHTML = `<div class="msg ${type}">${text}</div>`;
+  setTimeout(() => el.innerHTML = '', 4000);
+}
+
+// ═══════ АЖИЛТНЫ ГҮЙЦЭТГЭЛ (⭐ дундаж + %) ═══════
+function staffPerformance(staffId) {
+  const evs = allEvals.filter(e => e.staff_id === staffId);
+  if (!evs.length) return { avg: 0, pct: 0, count: 0, trend: 0 };
+  const avg = evs.reduce((s,e) => s+(e.rating||0), 0) / evs.length;
+  const pct = Math.round(avg * 20); // 5 од = 100%
+  // Trend: сүүлийн 2 үнэлгээний зөрүү
+  const sorted = [...evs].sort((a,b) => (a.created_at||'').localeCompare(b.created_at||''));
+  const trend = sorted.length >= 2 ? Math.round((sorted[sorted.length-1].rating - sorted[sorted.length-2].rating) * 20) : 0;
+  return { avg: avg.toFixed(1), pct, count: evs.length, trend };
+}
+
+function perfClass(pct) { return pct >= 85 ? 'excellent' : pct >= 65 ? 'good' : 'warn'; }
+
+// ═══════ ЭРЭМБИЙН САМБАР (Дэмжлэг шаардлагатай / Онц сайн) ═══════
+function renderPriority() {
+  const staffPerf = window.STAFF_LIST.map(s => ({...s, ...staffPerformance(s.id)})).filter(s => s.count > 0);
+  const warn = staffPerf.filter(s => s.pct < 70).sort((a,b) => a.pct - b.pct).slice(0, 5);
+  const top  = staffPerf.filter(s => s.pct >= 85).sort((a,b) => b.pct - a.pct).slice(0, 5);
+
+  const html = `
+    <div class="priority warn">
+      <h3>⚠️ Дэмжлэг шаардлагатай <span style="font-weight:400;color:#991b1b;font-size:12px">(${warn.length})</span></h3>
+      ${warn.length ? warn.map(s => renderPriorityItem(s)).join('') : '<div style="color:#991b1b;font-size:12px;font-style:italic">Одоогоор байхгүй байна</div>'}
+    </div>
+    <div class="priority top">
+      <h3>🌟 Онц сайн ажилтнууд <span style="font-weight:400;color:#065f46;font-size:12px">(${top.length})</span></h3>
+      ${top.length ? top.map(s => renderPriorityItem(s)).join('') : '<div style="color:#065f46;font-size:12px;font-style:italic">Үнэлгээ хүлээгдэж буй</div>'}
+    </div>`;
+  document.getElementById('priority').innerHTML = html;
+}
+
+function renderPriorityItem(s) {
+  const role = window.getRoleInfo(s.role);
+  const trendHtml = s.trend > 0 ? `<span class="trend up">↑${s.trend}</span>` : s.trend < 0 ? `<span class="trend dn">↓${Math.abs(s.trend)}</span>` : '';
+  return `
+    <div class="staff" onclick="openStaff('${s.id}')" style="background:rgba(255,255,255,.7)">
+      <div class="avatar" style="background:${role.color}22;border-color:${role.color}55">${role.icon}</div>
+      <div class="info">
+        <div class="name">${escape(s.name)}</div>
+        <div class="role">${escape(role.name)}</div>
+        <div class="perf">
+          <div class="bar ${perfClass(s.pct)}"><div style="width:${s.pct}%"></div></div>
+          <div class="pct">${s.pct}%${trendHtml}</div>
+        </div>
+      </div>
+      <div class="arrow">›</div>
+    </div>`;
+}
+
+// ═══════ АЖЛЫН ХЭСГҮҮД (харагдац) ═══════
+function renderWorkGroups() {
+  const groups = window.WORK_GROUPS || [];
+  const html = `
+    <div class="wg-box">
+      <div class="wg-head">
+        <h2>🎯 Ажлын хэсгүүд <span class="count-badge">${groups.length}</span></h2>
+        <button class="wg-add-btn" onclick="openWorkGroupsManager()">➕ Нэмэх / Засах</button>
+      </div>
+      <div class="wg-grid">
+        ${groups.map(g => {
+          const leader = window.getStaffById(g.leader_id);
+          const leaderRole = leader ? window.getRoleInfo(leader.role) : null;
+          const members = (g.member_ids || []).map(mid => window.getStaffById(mid)).filter(Boolean);
+          const acts = allWgActivities.filter(a => a.wg_id === g.id);
+          const lastAct = acts.length ? acts.sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0] : null;
+          return `
+            <div class="wg-card">
+              <h3>${g.icon || '🎯'} ${escape(g.name)}</h3>
+              <div class="desc">${escape(g.description || '')}</div>
+              <div class="leader">
+                <span class="lbl">АХЛАГЧ</span>
+                <span class="n">${leaderRole ? leaderRole.icon + ' ' : ''}${leader ? escape(leader.name) : '—'}</span>
+              </div>
+              <div class="members">
+                ${members.length ? members.map(m => {
+                  const r = window.getRoleInfo(m.role);
+                  return `<span class="m">${r.icon} ${escape(m.name)}</span>`;
+                }).join('') : '<span style="color:#92400e;font-size:11px;font-style:italic">Гишүүд бүртгэгдээгүй</span>'}
+              </div>
+              <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-top:10px;border-top:1px dashed #fbbf24">
+                <button onclick="openWgActivities('${g.id}')" style="padding:6px 12px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer">📝 Үйл ажиллагаа <b>(${acts.length})</b></button>
+                ${lastAct ? `<span style="font-size:11px;color:#92400e">Сүүлд: <b>${escape(lastAct.activity_title || '')}</b> · ${lastAct.activity_date || new Date(lastAct.created_at).toLocaleDateString('mn-MN')}</span>` : '<span style="font-size:11px;color:#94a3b8;font-style:italic">Үйл ажиллагаа бүртгээгүй</span>'}
+              </div>
+            </div>`;
+        }).join('')}
+        ${groups.length === 0 ? '<div class="empty" style="grid-column:1/-1">Ажлын хэсэг байхгүй байна. «Нэмэх» товч дараад үүсгэнэ үү.</div>' : ''}
+      </div>
+    </div>`;
+  document.getElementById('workGroupsBox').innerHTML = html;
+}
+
+// ═══════ АЖИЛТНЫ CRUD ═══════
+function openStaffManager() {
+  const sel = document.getElementById('newStaffRole');
+  sel.innerHTML = Object.entries(window.STAFF_ROLES).map(([id, r]) =>
+    `<option value="${id}">${r.icon} ${r.name}</option>`
+  ).join('');
+  renderStaffMgrTable();
+  document.getElementById('staffMgr').classList.add('open');
+}
+function closeStaffManager() {
+  document.getElementById('staffMgr').classList.remove('open');
+  renderStats(); renderDepts(); renderPriority(); renderWorkGroups();
+}
+
+function renderStaffMgrTable() {
+  document.getElementById('staffCount').textContent = window.STAFF_LIST.length;
+  const roleOpts = Object.entries(window.STAFF_ROLES).map(([id, r]) =>
+    `<option value="${id}">${r.icon} ${r.name}</option>`
+  ).join('');
+  const rows = window.STAFF_LIST.map((s, i) => `
+    <tr data-id="${s.id}">
+      <td>${i+1}</td>
+      <td><input value="${escape(s.name)}" onchange="editStaff('${s.id}','name',this.value)"></td>
+      <td><select onchange="editStaff('${s.id}','role',this.value)">
+        ${Object.entries(window.STAFF_ROLES).map(([id, r]) =>
+          `<option value="${id}" ${id===s.role?'selected':''}>${r.icon} ${r.name}</option>`
+        ).join('')}
+      </select></td>
+      <td><input value="${escape(s.phone||'')}" onchange="editStaff('${s.id}','phone',this.value)"></td>
+      <td class="act">
+        <button class="del" onclick="deleteStaff('${s.id}')" title="Устгах">🗑️</button>
+      </td>
+    </tr>`).join('');
+  document.getElementById('staffMgrTbody').innerHTML = rows;
+}
+
+function addStaff() {
+  const name = document.getElementById('newStaffName').value.trim();
+  const role = document.getElementById('newStaffRole').value;
+  const phone = document.getElementById('newStaffPhone').value.trim();
+  if (!name) { showMsg('error', 'Нэр бичнэ үү'); return; }
+  const id = window.newStaffId(role);
+  window.STAFF_LIST.push({ id, role, name, phone });
+  window.saveStaffList();
+  document.getElementById('newStaffName').value = '';
+  document.getElementById('newStaffPhone').value = '';
+  renderStaffMgrTable();
+  showMsg('success', `✅ ${name} нэмэгдлээ`);
+}
+
+function editStaff(id, field, value) {
+  const s = window.STAFF_LIST.find(x => x.id === id);
+  if (!s) return;
+  s[field] = value;
+  window.saveStaffList();
+}
+
+function deleteStaff(id) {
+  const s = window.STAFF_LIST.find(x => x.id === id);
+  if (!s) return;
+  if (!confirm(`«${s.name}»-ыг устгах уу?`)) return;
+  window.STAFF_LIST = window.STAFF_LIST.filter(x => x.id !== id);
+  window.saveStaffList();
+  // Ажлын хэсгүүдээс ч устгах
+  (window.WORK_GROUPS || []).forEach(g => {
+    if (g.leader_id === id) g.leader_id = null;
+    g.member_ids = (g.member_ids || []).filter(mid => mid !== id);
+  });
+  window.saveWorkGroups();
+  renderStaffMgrTable();
+  showMsg('info', `🗑️ ${s.name} устгагдлаа`);
+}
+
+// ═══════ АЖЛЫН ХЭСГИЙН CRUD ═══════
+let editingWgId = null;
+
+function openWorkGroupsManager() {
+  editingWgId = null;
+  renderWgMgrBody();
+  document.getElementById('wgMgr').classList.add('open');
+}
+function closeWorkGroupsManager() {
+  document.getElementById('wgMgr').classList.remove('open');
+  renderWorkGroups();
+}
+
+function renderWgMgrBody() {
+  const groups = window.WORK_GROUPS || [];
+  document.getElementById('wgCount').textContent = groups.length;
+  const editor = editingWgId !== null ? renderWgEditor() : `
+    <button onclick="startNewWg()" style="padding:10px 20px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;margin-bottom:14px">➕ Шинэ ажлын хэсэг үүсгэх</button>
+  `;
+  const list = groups.map(g => {
+    const leader = window.getStaffById(g.leader_id);
+    const members = (g.member_ids || []).map(mid => window.getStaffById(mid)).filter(Boolean);
+    return `
+      <div class="wg-card" style="margin-bottom:10px">
+        <h3>${g.icon || '🎯'} ${escape(g.name)}</h3>
+        <div class="desc">${escape(g.description || '')}</div>
+        <div class="leader">
+          <span class="lbl">АХЛАГЧ</span>
+          <span class="n">${leader ? escape(leader.name) : '—'}</span>
+        </div>
+        <div class="members">
+          ${members.map(m => `<span class="m">${window.getRoleInfo(m.role).icon} ${escape(m.name)}</span>`).join('') || '<span style="color:#92400e;font-size:11px">—</span>'}
+        </div>
+        <div class="actions">
+          <button onclick="startEditWg('${g.id}')">✏️ Засах</button>
+          <button class="del" onclick="deleteWg('${g.id}')">🗑️ Устгах</button>
+        </div>
+      </div>`;
+  }).join('') || '<div class="empty">Ажлын хэсэг байхгүй байна</div>';
+  document.getElementById('wgMgrBody').innerHTML = editor + list;
+}
+
+function startNewWg() {
+  editingWgId = 'new';
+  renderWgMgrBody();
+}
+function startEditWg(id) {
+  editingWgId = id;
+  renderWgMgrBody();
+}
+
+function renderWgEditor() {
+  const g = editingWgId === 'new' ? { name:'', icon:'🎯', description:'', leader_id:'', member_ids:[] } : (window.WORK_GROUPS.find(x => x.id === editingWgId) || {});
+  const isNew = editingWgId === 'new';
+  const staffOpts = window.STAFF_LIST.map(s => {
+    const r = window.getRoleInfo(s.role);
+    return `<option value="${s.id}" ${g.leader_id===s.id?'selected':''}>${r.icon} ${escape(s.name)} (${escape(r.name)})</option>`;
+  }).join('');
+  const memberChecks = window.STAFF_LIST.map(s => {
+    const r = window.getRoleInfo(s.role);
+    const checked = (g.member_ids || []).includes(s.id) ? 'checked' : '';
+    return `<label><input type="checkbox" value="${s.id}" ${checked}> ${r.icon} ${escape(s.name)} <span style="color:#94a3b8">(${escape(r.name)})</span></label>`;
+  }).join('');
+
+  return `
+    <div class="wg-editor">
+      <h3 style="color:#78350f;margin-bottom:12px">${isNew ? '➕ Шинэ ажлын хэсэг' : '✏️ Ажлын хэсэг засах'}</h3>
+      <label>Нэр:</label>
+      <input id="wgName" value="${escape(g.name || '')}" placeholder="жишээ: Хүүхдийн эрх хамгаалах хэсэг">
+      <label>Эможи (сонголт):</label>
+      <input id="wgIcon" value="${escape(g.icon || '🎯')}" placeholder="жишээ: 🛡️ 🩺 🎭">
+      <label>Тайлбар:</label>
+      <textarea id="wgDesc" rows="2" placeholder="Ажлын хэсгийн зорилго, чиг үүрэг">${escape(g.description || '')}</textarea>
+      <label>👑 Ахлагч сонго:</label>
+      <select id="wgLeader">
+        <option value="">— Ахлагч байхгүй —</option>
+        ${staffOpts}
+      </select>
+      <label>👥 Гишүүд (олон сонгож болно):</label>
+      <div class="member-picker" id="wgMembers">${memberChecks}</div>
+      <div class="btn-row">
+        <button class="cancel" onclick="cancelWgEdit()">Болих</button>
+        <button class="save" onclick="saveWg()">💾 Хадгалах</button>
+      </div>
+    </div>`;
+}
+
+function cancelWgEdit() { editingWgId = null; renderWgMgrBody(); }
+
+function saveWg() {
+  const name = document.getElementById('wgName').value.trim();
+  const icon = document.getElementById('wgIcon').value.trim() || '🎯';
+  const desc = document.getElementById('wgDesc').value.trim();
+  const leader = document.getElementById('wgLeader').value;
+  const members = Array.from(document.querySelectorAll('#wgMembers input:checked')).map(cb => cb.value);
+  if (!name) { showMsg('error', 'Ажлын хэсгийн нэрийг бичнэ үү'); return; }
+
+  if (editingWgId === 'new') {
+    window.WORK_GROUPS.push({
+      id: window.newWorkGroupId(),
+      name, icon, description: desc,
+      leader_id: leader || null,
+      member_ids: members
+    });
+  } else {
+    const g = window.WORK_GROUPS.find(x => x.id === editingWgId);
+    if (g) {
+      g.name = name; g.icon = icon; g.description = desc;
+      g.leader_id = leader || null; g.member_ids = members;
+    }
+  }
+  window.saveWorkGroups();
+  editingWgId = null;
+  renderWgMgrBody();
+  showMsg('success', '✅ Ажлын хэсэг хадгалагдлаа');
+}
+
+function deleteWg(id) {
+  const g = window.WORK_GROUPS.find(x => x.id === id);
+  if (!g) return;
+  if (!confirm(`«${g.name}» ажлын хэсгийг устгах уу?`)) return;
+  window.WORK_GROUPS = window.WORK_GROUPS.filter(x => x.id !== id);
+  window.saveWorkGroups();
+  renderWgMgrBody();
+  showMsg('info', `🗑️ Ажлын хэсэг устгагдлаа`);
+}
+
+// ═══════ ГРАФИК (SVG bar chart) ═══════
+function renderChart() {
+  // Хэлтэс тус бүрийн дундаж гүйцэтгэл + Ирц-Чөлөө-Өвчний нийт
+  const depts = Object.values(window.STAFF_DEPARTMENTS);
+  const deptStats = depts.map(d => {
+    const staff = window.getStaffByDept(d.id);
+    const perfs = staff.map(s => staffPerformance(s.id)).filter(p => p.count > 0);
+    const avg = perfs.length ? Math.round(perfs.reduce((s,p) => s+p.pct, 0) / perfs.length) : 0;
+    return { dept: d, staff: staff.length, avg, evaluated: perfs.length };
+  });
+
+  // Ирцийн нийт харьцаа
+  const attTotals = {
+    present: allAttendance.filter(a => a.status === 'present').length,
+    leave:   allAttendance.filter(a => a.status === 'leave').length,
+    sick:    allAttendance.filter(a => a.status === 'sick').length,
+    other:   allAttendance.filter(a => a.status === 'other').length
+  };
+  const attTotal = attTotals.present + attTotals.leave + attTotals.sick + attTotals.other;
+  const attPct = attTotal > 0 ? Math.round(attTotals.present * 100 / attTotal) : 0;
+
+  // Bar chart HTML (CSS-based, no external chart lib)
+  const barChart = deptStats.map(d => `
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px;font-weight:600;color:${d.dept.color}">
+        <span>${d.dept.icon} ${escape(d.dept.name)} · ${d.evaluated}/${d.staff} үнэлсэн</span>
+        <span>${d.avg}%</span>
+      </div>
+      <div style="height:24px;background:#f1f5f9;border-radius:12px;overflow:hidden;position:relative">
+        <div style="height:100%;width:${d.avg}%;background:linear-gradient(90deg,${d.dept.color},${d.dept.color}dd);border-radius:12px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;color:#fff;font-size:11px;font-weight:700;transition:width .5s">
+          ${d.avg > 15 ? d.avg + '%' : ''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  // Attendance доногут диаграм (segments)
+  const attHtml = attTotal > 0 ? `
+    <div style="display:flex;height:24px;border-radius:12px;overflow:hidden;background:#f1f5f9">
+      <div style="width:${attTotals.present*100/attTotal}%;background:#10b981" title="Ирсэн: ${attTotals.present}"></div>
+      <div style="width:${attTotals.leave*100/attTotal}%;background:#f59e0b" title="Чөлөө: ${attTotals.leave}"></div>
+      <div style="width:${attTotals.sick*100/attTotal}%;background:#ef4444" title="Өвдсөн: ${attTotals.sick}"></div>
+      <div style="width:${attTotals.other*100/attTotal}%;background:#6366f1" title="Бусад: ${attTotals.other}"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:6px;flex-wrap:wrap;gap:6px">
+      <span style="color:#065f46"><b style="display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px;vertical-align:middle;margin-right:4px"></b>Ирсэн ${attTotals.present}</span>
+      <span style="color:#92400e"><b style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;vertical-align:middle;margin-right:4px"></b>Чөлөө ${attTotals.leave}</span>
+      <span style="color:#991b1b"><b style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;vertical-align:middle;margin-right:4px"></b>Өвдсөн ${attTotals.sick}</span>
+      <span style="color:#3730a3"><b style="display:inline-block;width:10px;height:10px;background:#6366f1;border-radius:2px;vertical-align:middle;margin-right:4px"></b>Бусад ${attTotals.other}</span>
+    </div>` : '<div style="color:#94a3b8;font-size:12px;text-align:center;padding:20px">Ирцийн тэмдэглэл байхгүй байна</div>';
+
+  document.getElementById('chartBox').innerHTML = `
+    <div style="background:#fff;border-radius:14px;padding:16px 20px;box-shadow:0 3px 10px rgba(0,0,0,.05);display:grid;grid-template-columns:1.5fr 1fr;gap:20px">
+      <div>
+        <h3 style="color:#7c3aed;font-size:14px;margin-bottom:12px">📊 Хэлтэсийн дундаж гүйцэтгэл</h3>
+        ${barChart}
+      </div>
+      <div>
+        <h3 style="color:#7c3aed;font-size:14px;margin-bottom:12px">🗓️ Ирцийн харьцаа (${attPct}% ирсэн)</h3>
+        ${attHtml}
+      </div>
+    </div>`;
+}
+
+// ═══════ АЖЛЫН ХЭСГИЙН ҮЙЛ АЖИЛЛАГАА (WG Activities) ═══════
+let currentWgId = null;
+let editingActivityId = null;
+
+function openWgActivities(wgId) {
+  currentWgId = wgId;
+  editingActivityId = null;
+  renderWgActivitiesModal();
+  document.getElementById('wgActMgr').classList.add('open');
+}
+function closeWgActivities() {
+  document.getElementById('wgActMgr').classList.remove('open');
+  currentWgId = null;
+  editingActivityId = null;
+  renderWorkGroups(); // Гол дэлгэц шинэчлэх
+}
+
+function renderWgActivitiesModal() {
+  const g = window.WORK_GROUPS.find(x => x.id === currentWgId);
+  if (!g) return;
+  const acts = allWgActivities.filter(a => a.wg_id === currentWgId).sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+  document.getElementById('wgActTitle').textContent = `📝 ${g.icon || '🎯'} ${g.name} — Үйл ажиллагаа (${acts.length})`;
+
+  const today = new Date().toISOString().slice(0,10);
+  const editing = editingActivityId ? acts.find(a => a.id == editingActivityId) : null;
+
+  // Оролцогчдын checkbox — гишүүдээс сонгож болно
+  const members = (g.member_ids || []).map(id => window.getStaffById(id)).filter(Boolean);
+  const leader = window.getStaffById(g.leader_id);
+  const allWgStaff = leader ? [leader, ...members.filter(m => m.id !== leader.id)] : members;
+  const selectedIds = editing ? editing.participants : [];
+
+  const form = `
+    <div style="background:#fef3c7;padding:16px;border-radius:10px;margin-bottom:14px;border-left:4px solid #f59e0b">
+      <h3 style="color:#78350f;font-size:14px;margin-bottom:10px">${editing ? '✏️ Үйл ажиллагаа засах' : '➕ Шинэ үйл ажиллагаа нэмэх / тайлагнах'}</h3>
+      <div style="display:grid;grid-template-columns:1fr 140px;gap:10px;margin-bottom:8px">
+        <input id="actTitle" placeholder="Үйл ажиллагааны нэр (жишээ: Хурал зохион байгуулав)" value="${escape(editing?.activity_title || '')}" style="padding:8px 12px;border:2px solid #fde68a;border-radius:6px;font-size:13px">
+        <input id="actDate" type="date" value="${editing?.activity_date || today}" style="padding:8px 12px;border:2px solid #fde68a;border-radius:6px;font-size:13px">
+      </div>
+      <textarea id="actDesc" placeholder="Тайлбар — юуг хийсэн, юуг ярилцсан, ямар үр дүнд хүрсэн..." style="width:100%;padding:8px 12px;border:2px solid #fde68a;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;min-height:80px;margin-bottom:8px">${escape(editing?.description || '')}</textarea>
+      <label style="display:block;margin-bottom:6px;font-weight:600;color:#78350f;font-size:12px">👥 Оролцсон гишүүд (сонголт):</label>
+      <div style="background:#fff;padding:8px 12px;border-radius:6px;max-height:140px;overflow-y:auto;margin-bottom:10px">
+        ${allWgStaff.length ? allWgStaff.map(s => {
+          const r = window.getRoleInfo(s.role);
+          const ch = selectedIds.includes(s.id) ? 'checked' : '';
+          return `<label style="display:block;padding:3px 0;font-size:12px;cursor:pointer"><input type="checkbox" class="actP" value="${s.id}" ${ch} style="margin-right:6px"> ${r.icon} ${escape(s.name)} <span style="color:#94a3b8">(${escape(r.name)})</span></label>`;
+        }).join('') : '<span style="color:#94a3b8;font-size:12px">Ажлын хэсэгт гишүүд байхгүй</span>'}
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="saveWgActivity()" style="flex:1;padding:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer">💾 Хадгалах</button>
+        ${editing ? `<button onclick="cancelWgActivityEdit()" style="padding:10px 20px;background:#f3f4f6;color:#374151;border:none;border-radius:6px;font-weight:700;cursor:pointer">Болих</button>` : ''}
+      </div>
+    </div>
+  `;
+
+  const list = acts.length ? acts.map(a => {
+    const participants = (a.participants || []).map(pid => {
+      const s = window.getStaffById(pid);
+      return s ? escape(s.name) : '';
+    }).filter(Boolean).join(', ');
+    return `
+      <div style="background:#fff;padding:12px 16px;border-radius:10px;margin-bottom:8px;border-left:4px solid #10b981;box-shadow:0 1px 4px rgba(0,0,0,.05)">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;margin-bottom:4px">
+          <h4 style="color:#065f46;font-size:14px">${escape(a.activity_title || 'Гарчиггүй')}</h4>
+          <div style="display:flex;gap:4px;flex-shrink:0">
+            <button onclick="editWgActivity('${a.id}')" style="padding:4px 10px;background:#f59e0b;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600">✏️ Засах</button>
+            <button onclick="deleteWgActivity('${a.id}')" style="padding:4px 10px;background:#fff;color:#dc2626;border:1px solid #dc2626;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600">🗑️ Устгах</button>
+          </div>
+        </div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:6px">📅 <b>${a.activity_date || new Date(a.created_at).toLocaleDateString('mn-MN')}</b> · Бичсэн: <b>${escape(a.created_by || '—')}</b></div>
+        ${a.description ? `<div style="font-size:13px;color:#374151;background:#f8fafc;padding:8px 12px;border-radius:6px;line-height:1.5;white-space:pre-wrap">${escape(a.description)}</div>` : ''}
+        ${participants ? `<div style="margin-top:6px;font-size:11px;color:#065f46">👥 Оролцогч: ${participants}</div>` : ''}
+      </div>`;
+  }).join('') : '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px;font-style:italic">Одоогоор үйл ажиллагаа бүртгэгдээгүй байна</div>';
+
+  document.getElementById('wgActBody').innerHTML = form + `<h3 style="color:#065f46;font-size:13px;margin-bottom:10px">📋 Гүйцэтгэсэн үйл ажиллагаанууд</h3>` + list;
+}
+
+function editWgActivity(id) {
+  editingActivityId = id;
+  renderWgActivitiesModal();
+}
+
+function cancelWgActivityEdit() {
+  editingActivityId = null;
+  renderWgActivitiesModal();
+}
+
+async function saveWgActivity() {
+  const title = document.getElementById('actTitle').value.trim();
+  const date = document.getElementById('actDate').value;
+  const desc = document.getElementById('actDesc').value.trim();
+  const participants = Array.from(document.querySelectorAll('.actP:checked')).map(cb => cb.value);
+
+  if (!title) { showMsg('error', 'Үйл ажиллагааны нэрийг бичнэ үү'); return; }
+  if (!sb) { showMsg('error', 'Supabase холбогдоогүй'); return; }
+
+  const payload = { title, description: desc, date, participants };
+  try {
+    if (editingActivityId) {
+      const { error } = await sb.from('methodist_notes').update({ text: JSON.stringify(payload) }).eq('id', editingActivityId).select();
+      if (error) { showMsg('error', 'Алдаа: ' + (error.message || JSON.stringify(error))); return; }
+      showMsg('success', '✅ Үйл ажиллагаа засварлагдлаа');
+    } else {
+      const { error } = await sb.from('methodist_notes').insert({
+        from_role: 'Эрхлэгч',
+        from_name: window.KINDERGARTEN?.director?.name || 'Эрхлэгч',
+        title: `WGA:${currentWgId}`,
+        text: JSON.stringify(payload)
+      }).select();
+      if (error) { showMsg('error', 'Алдаа: ' + (error.message || JSON.stringify(error))); return; }
+      showMsg('success', '✅ Үйл ажиллагаа бүртгэгдлээ');
+    }
+    editingActivityId = null;
+    await loadPlans();
+    renderWgActivitiesModal();
+  } catch(e) { console.error(e); showMsg('error', 'Алдаа: ' + (e.message || 'үл мэдэгдэх')); }
+}
+
+async function deleteWgActivity(id) {
+  if (!confirm('Үйл ажиллагааг устгах уу?')) return;
+  try {
+    const { error } = await sb.from('methodist_notes').delete().eq('id', id);
+    if (error) { showMsg('error', 'Алдаа: ' + error.message); return; }
+    showMsg('info', '🗑️ Устгагдлаа');
+    if (editingActivityId == id) editingActivityId = null;
+    await loadPlans();
+    renderWgActivitiesModal();
+  } catch(e) { showMsg('error', 'Алдаа: ' + e.message); }
+}
+
+// ═══════ ХҮҮХДИЙН ХӨГЖЛИЙН ЯВЦ ═══════
+let childData = { assessments: [], children: [], activities: [], musicChecks: [], criteriaChecks: [] };
+
+async function loadChildData() {
+  if (!sb) return;
+  try {
+    const [aRes, cRes, actRes, mcRes, ccRes] = await Promise.all([
+      sb.from('assessments').select('*').limit(2000).then(r => r).catch(() => ({data:[]})),
+      sb.from('children').select('*').limit(500).then(r => r).catch(() => ({data:[]})),
+      sb.from('activities').select('*').limit(1000).then(r => r).catch(() => ({data:[]})),
+      sb.from('music_criteria_checks').select('*').limit(2000).then(r => r).catch(() => ({data:[]})),
+      sb.from('criteria_checks').select('*').limit(2000).then(r => r).catch(() => ({data:[]}))
+    ]);
+    childData.assessments = aRes.data || [];
+    childData.children = cRes.data || [];
+    childData.activities = actRes.data || [];
+    childData.musicChecks = mcRes.data || [];
+    childData.criteriaChecks = ccRes.data || [];
+  } catch(e) { console.warn('Child data load failed:', e); }
+}
+
+function renderChildDevelopment() {
+  const GROUP_LABELS = {
+    baga:    { name: 'Нархан (Бага)',      icon: '👶', color: '#ec4899' },
+    dund:    { name: 'Багачууд (Дунд)',    icon: '🧒', color: '#f59e0b' },
+    ahlah:   { name: 'Дэгдээхий (Ахлах)',  icon: '🐣', color: '#eab308' },
+    beltgel: { name: 'Бүжинхэн (Бэлтгэл)', icon: '🐰', color: '#8b5cf6' },
+    music:   { name: 'Хөгжмийн бүлэг',     icon: '🎵', color: '#7c3aed' },
+    alt:     { name: 'Хувилбарт (3-4 холимог)', icon: '🎨', color: '#06b6d4' }
+  };
+
+  const today = new Date().toISOString().slice(0,10);
+  const cards = Object.entries(GROUP_LABELS).map(([gid, g]) => {
+    const groupChildren = childData.children.filter(c => c.group_id === gid);
+    const groupAssess = childData.assessments.filter(a => a.group_id === gid);
+    const groupActs = childData.activities.filter(a => a.group_id === gid);
+    // Хөгжмийн бүлгийн хувьд music_criteria_checks-ыг бас тоолно
+    const musicChecks = gid === 'music' ? childData.musicChecks : [];
+    const totalWork = groupAssess.length + groupActs.length + musicChecks.length;
+
+    // Хамгийн сүүлийн огноо (үнэлгээ + үйл ажиллагаа + шалгуур)
+    const allDates = [
+      ...groupAssess.map(a => a.created_at || a.date || ''),
+      ...groupActs.map(a => a.created_at || a.activity_date || ''),
+      ...musicChecks.map(m => m.updated_at || '')
+    ].filter(Boolean).sort();
+    const latest = allDates.length ? allDates[allDates.length - 1] : null;
+
+    // Дундаж хувь
+    const rated = groupAssess.filter(a => a.rating || a.score);
+    const avg = rated.length
+      ? Math.round(rated.reduce((s, a) => s + (parseInt(a.rating || a.score) * 20), 0) / rated.length)
+      : 0;
+    // Өнөөдрийн ажил
+    const todayCount = [...groupAssess, ...groupActs].filter(a =>
+      (a.created_at || a.date || a.activity_date || '').startsWith(today)).length;
+
+    return `
+      <div style="background:linear-gradient(135deg,${g.color}11,${g.color}22);border:2px solid ${g.color}44;border-radius:12px;padding:14px 16px;cursor:pointer" onclick="window.open('index.html?view=assessGroups','_blank')">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h4 style="color:${g.color};font-size:14px">${g.icon} ${g.name}</h4>
+          <span style="background:${g.color};color:#fff;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700">${groupChildren.length} хүүхэд</span>
+        </div>
+        ${avg > 0 ? `
+          <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+            <div style="flex:1;height:10px;background:#fff;border-radius:5px;overflow:hidden">
+              <div style="height:100%;width:${avg}%;background:linear-gradient(90deg,${g.color},${g.color}dd);border-radius:5px"></div>
+            </div>
+            <span style="font-weight:700;color:${g.color};font-size:13px">${avg}%</span>
+          </div>` : totalWork === 0 ? '<div style="color:#94a3b8;font-size:11px;font-style:italic;padding:6px 0">Мэдээлэл хүлээгдэж буй</div>' : ''}
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-top:6px;flex-wrap:wrap;gap:4px">
+          <span>📊 Үнэлгээ: <b>${groupAssess.length}</b></span>
+          <span>📸 Үйл ажил: <b>${groupActs.length}</b></span>
+          ${gid === 'music' && musicChecks.length ? `<span>🎵 Хөгжим: <b>${musicChecks.length}</b></span>` : ''}
+        </div>
+        ${todayCount > 0 ? `<div style="color:#059669;font-size:11px;margin-top:4px">✨ Өнөөдөр: <b>${todayCount}</b></div>` : ''}
+        ${latest ? `<div style="font-size:10px;color:#94a3b8;margin-top:4px">Сүүлд: ${new Date(latest).toLocaleDateString('mn-MN')}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  const totalChildren = childData.children.length;
+  const totalAssess = childData.assessments.length + childData.activities.length + childData.musicChecks.length;
+  const todayAssess = [...childData.assessments, ...childData.activities].filter(a =>
+    (a.created_at || a.date || a.activity_date || '').startsWith(today)).length;
+
+  document.getElementById('childDevBox').innerHTML = `
+    <div style="background:#fff;border-radius:14px;padding:16px 20px;box-shadow:0 3px 10px rgba(0,0,0,.05)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <h3 style="color:#7c3aed;font-size:15px">🌱 Хүүхдийн хөгжлийн явц <span style="font-weight:400;color:#64748b;font-size:12px">· Бүлгээр</span></h3>
+        <div style="display:flex;gap:12px;font-size:12px;color:#64748b;flex-wrap:wrap">
+          <span>👶 Нийт: <b>${totalChildren}</b></span>
+          <span>📊 Үнэлгээ: <b>${totalAssess}</b></span>
+          <span style="color:#059669">✨ Өнөөдөр: <b>${todayAssess}</b></span>
+          <a href="index.html?view=assessGroups" target="_blank" style="color:#7c3aed;text-decoration:none;font-weight:700">Дэлгэрэнгүй →</a>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+        ${cards}
+      </div>
+    </div>`;
+}
+
+// ═══════ ЭХЛЭЛ ═══════
+(async () => {
+  await Promise.all([loadPlans(), loadChildData()]);
+  renderStats();
+  renderChart();
+  renderChildDevelopment();
+  renderPriority();
+  renderDepts();
+  renderWorkGroups();
+})();
+</script>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Хөгжмийн төлөвлөгөөний сан — Татах</title>
+<style>
+  :root { --primary:#2e7d32; --accent:#ff8f00; --bg:#f5f7fa; --card:#fff; --border:#e0e0e0; --text:#212121; --muted:#666; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family: Arial, sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5; }
+  header { text-align:center; margin-bottom:24px; padding:20px; background:linear-gradient(135deg,#2e7d32,#43a047); color:#fff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,.1); }
+  h1 { font-size:1.6em; margin-bottom:6px; }
+  header p { opacity:.95; font-size:.95em; }
+  .back { display:inline-block; margin-bottom:16px; padding:8px 14px; background:#fff; color:var(--primary); border:1px solid var(--primary); border-radius:6px; text-decoration:none; font-weight:600; }
+  .back:hover { background:var(--primary); color:#fff; }
+  .tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; justify-content:center; }
+  .tab { padding:10px 20px; background:#fff; border:2px solid var(--border); border-radius:8px; cursor:pointer; font-weight:600; font-size:1em; transition:all .2s; }
+  .tab.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .tab:hover:not(.active) { border-color:var(--primary); color:var(--primary); }
+  .group { display:none; }
+  .group.active { display:block; }
+  .section { background:var(--card); border-radius:10px; padding:16px 20px; margin-bottom:14px; box-shadow:0 2px 6px rgba(0,0,0,.05); }
+  .section h2 { color:var(--primary); font-size:1.15em; margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid #e8f5e9; display:flex; align-items:center; gap:8px; }
+  .files { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:10px; }
+  .file { display:flex; align-items:center; gap:10px; padding:12px; background:#fafafa; border:1px solid var(--border); border-radius:8px; text-decoration:none; color:var(--text); transition:all .2s; }
+  .file:hover { background:#e8f5e9; border-color:var(--primary); transform:translateY(-1px); box-shadow:0 2px 8px rgba(46,125,50,.15); }
+  .icon { font-size:1.6em; flex-shrink:0; }
+  .fname { flex:1; font-size:.92em; }
+  .fname strong { display:block; margin-bottom:2px; }
+  .fname small { color:var(--muted); font-size:.85em; }
+  .stats { display:flex; gap:12px; justify-content:center; margin-bottom:16px; flex-wrap:wrap; }
+  .stat { background:#fff; padding:10px 16px; border-radius:8px; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,.05); }
+  .stat b { display:block; color:var(--primary); font-size:1.4em; }
+  .stat small { color:var(--muted); font-size:.85em; }
+  .note { background:#fff8e1; border-left:4px solid var(--accent); padding:12px 16px; border-radius:6px; margin-bottom:16px; font-size:.92em; }
+  @media (max-width:600px) { h1 { font-size:1.3em; } .tab { padding:8px 12px; font-size:.9em; } }
+</style>
+</head>
+<body>
+<a href="index.html" class="back">← Гол хуудас руу</a>
+<header>
+  <h1>🎵 Хөгжмийн сургалтын төлөвлөгөөний сан</h1>
+  <p>Бага · Дунд · Ахлах · Бэлтгэл бүлгийн жилийн, сарын, ээлжит хичээлийн бүрэн багц</p>
+</header>
+
+<div class="stats">
+  <div class="stat"><b>4</b><small>бүлэг</small></div>
+  <div class="stat"><b>45</b><small>Word файл</small></div>
+  <div class="stat"><b>576+</b><small>ээлжит хичээл</small></div>
+  <div class="stat"><b>36</b><small>дуу заах материал</small></div>
+</div>
+
+<div class="note">
+  📌 <b>Ашиглах заавар:</b> Доорх бүлгээс сонгоод хүссэн файлаа товшин татаж авна. Файл бүр Microsoft Word-оор нээгдэнэ. Ээлжит хичээл нь Arial 12 фонттой, засаж ашиглахад бэлэн.
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-group="Бага">I · Бага бүлэг</button>
+  <button class="tab" data-group="Дунд">II · Дунд бүлэг</button>
+  <button class="tab" data-group="Ахлах">III · Ахлах бүлэг</button>
+  <button class="tab" data-group="Бэлтгэл">IV · Бэлтгэл бүлэг</button>
+</div>
+
+<div id="content"></div>
+
+<script>
+const MONTHS = [
+  {num:"09", name:"9-р сар"}, {num:"10", name:"10-р сар"}, {num:"11", name:"11-р сар"},
+  {num:"12", name:"12-р сар"}, {num:"01", name:"1-р сар"}, {num:"02", name:"2-р сар"},
+  {num:"03", name:"3-р сар"}, {num:"04", name:"4-р сар"}, {num:"05", name:"5-р сар"}
+];
+
+const THEMES = {
+  Бага: ["Танилцах, амьтад","Бие махбод","Намар, унтаа амьтад","Хөгжилтэй, шинэ жил","Өвөл, эрүүл мэнд","Цагаан сар","Ээжийн баяр","Аюулгүй байдал","Хүүхдийн баяр"],
+  Дунд: ["Танилцах, тэжээвэр","Эрүүл мэнд","Бие махбод","Шинэ жил","Мөнгөн өвөл","Цагаан сар","Ээжийн баяр","Хавар, ой","Хүүхдийн баяр"],
+  Ахлах:["Найзууд, тоглох","Эрүүл мэнд","Гэр бүл","Шинэ жил","Өвлийн байгаль","Цагаан сар","Ээжийн баяр","Хавар, бороо","Хүүхдийн баяр, өв"],
+  Бэлтгэл:["Ёс зүй","Экологи","Найзууд","Шинэ жил, мөрөөдөл","Оньсого","Цагаан сар","Ээжийн баяр","Уламжлал","Төгсөлт"]
+};
+
+const SONGS = {
+  Бага: ["«Туулай»","«Бие эрхтнээ нэрлэе»","«Баавгай»","«Үсрээрэй»","«Өглөөний дасгал»","«Аа гоёо гоёо»","«Хуруугаар тоглоё»","«Болохгүй»","«Унтаж байна уу»"],
+  Дунд: ["«Тугал»","«Би угаадаг»","«Хос эрхтнээ нэрлэе»","«Шинэ жил»","«Мөнгөн өвөл»","«Цагаан сар»","«Амин хүүдээ би»","«Хөвчийн ойд гэртэй бүжин»","«Алгаа ташаарай»"],
+  Ахлах:["«Наадан тоглоё»","«Шүдээ угаацгаая»","«Ам бүл таван хуруу»","«Өвлийн өвгөн хүрээд ирлээ»","«Цасан дор жимс ургана»","«Цагаан сар»","«Ахин нэг тоглоё»","«Бороо»","«Дөрвөн бэрх»"],
+  Бэлтгэл:["«Зөв хүүхэд»","«Хогоо бүү хаяарай»","«Найзуудаа зурлаа»","«Мөрөөдлийн гацуур»","«Оньсого»","«Цагаан идээ»","«Гоёо»","«Шагайн наадгай»","«Миний бүтээл»"]
+};
+
+function fileEl(path, name, sub) {
+  return `<a href="downloads/${encodeURI(path)}" class="file" download>
+    <span class="icon">📄</span>
+    <span class="fname"><strong>${name}</strong>${sub?`<small>${sub}</small>`:''}</span>
+  </a>`;
+}
+
+function render(group) {
+  // Special handling for Бага — has legacy filename structure
+  const isBaga = group === "Бага";
+  const bagaPrefix = isBaga ? "Хөгжим_Бага_" : `Хөгжим_${group}_`;
+
+  const yearFiles = isBaga ? [
+    {n:"Жилийн төлөвлөгөө (матриц)", f:"Хөгжим_Бага_бүлэг_жилийн_төлөвлөгөө_матриц.docx"},
+    {n:"Сарын төлөвлөгөө (9 сар)", f:"Хөгжим_Бага_бүлэг_сарын_төлөвлөгөө.docx"}
+  ] : [
+    {n:"Жилийн төлөвлөгөө (матриц)", f:`${bagaPrefix}жилийн_матриц.docx`},
+    {n:"Сарын төлөвлөгөө (9 сар)", f:`${bagaPrefix}сарын_төлөвлөгөө.docx`}
+  ];
+
+  let html = `<div class="section">
+    <h2>📋 Ерөнхий төлөвлөгөө</h2>
+    <div class="files">${yearFiles.map(x=>fileEl(`${group}/${x.f}`, x.n, "Жилийн ба сарын дүр зураг")).join('')}</div>
+  </div>`;
+
+  html += `<div class="section"><h2>📅 Сар бүрийн ээлжит хичээлүүд <small style="font-weight:normal;color:#666;">(4 долоо хоног × 4 хувилбар = 16 ээлжит)</small></h2><div class="files">`;
+
+  MONTHS.forEach((m, i) => {
+    let fname;
+    if (isBaga && m.num === "09") {
+      // Бага has TWO September files
+      html += fileEl(`Бага/Хөгжим_Бага_9сар_1дэх_7хоног_4ээлжит.docx`,
+        `${m.name} · 1-р 7 хоног`,
+        `${SONGS[group][i]} · ${THEMES[group][i]}`);
+      html += fileEl(`Бага/Хөгжим_Бага_9сар_2-4дэх_7хоног_12ээлжит.docx`,
+        `${m.name} · 2-4-р 7 хоног`,
+        `${SONGS[group][i]} үргэлжлэл (12 ээлжит)`);
+      return;
+    }
+    if (isBaga) {
+      // Бага 10-05 files use different naming
+      fname = `Хөгжим_Бага_${m.num.replace(/^0/,'')}сар_16ээлжит.docx`;
+      if (m.num === "01" || m.num === "02" || m.num === "03" || m.num === "04" || m.num === "05") {
+        fname = `Хөгжим_Бага_${m.num}сар_16ээлжит.docx`;
+      } else if (m.num === "10" || m.num === "11" || m.num === "12") {
+        fname = `Хөгжим_Бага_${m.num}сар_16ээлжит.docx`;
+      }
+    } else {
+      fname = `${bagaPrefix}${m.num}сар_16ээлжит.docx`;
+    }
+    html += fileEl(`${group}/${fname}`, m.name, `${SONGS[group][i]} · ${THEMES[group][i]}`);
+  });
+
+  html += `</div></div>`;
+  return html;
+}
+
+const content = document.getElementById('content');
+const tabs = document.querySelectorAll('.tab');
+
+function show(group) {
+  tabs.forEach(t => t.classList.toggle('active', t.dataset.group === group));
+  content.innerHTML = render(group);
+}
+
+tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.group)));
+show('Бага');
+</script>
+</body>
+</html>

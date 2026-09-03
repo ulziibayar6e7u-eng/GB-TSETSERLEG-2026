@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="mn"><head><meta charset="UTF-8">
+<title>Сарын төлөвлөгөө · Хөгжим Өлзий</title>
+<style>
+  @page { size: A4 portrait; margin: 15mm; }
+  body { font-family: "Times New Roman", serif; color:#000; padding: 20px; font-size: 12px; line-height: 1.4; max-width: 900px; margin: 0 auto; }
+  .toolbar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center; background:#f3f4f6; padding:10px 14px; border-radius:8px }
+  .toolbar select, .toolbar button { padding:6px 12px; border:1px solid #444; border-radius:6px; background:#fff; font-size:13px; cursor:pointer; font-family:inherit; }
+  .toolbar button.print { background:#111827; color:#fff; border-color:#111827 }
+  .toolbar button.dl { background:#8b5cf6; color:#fff; border-color:#8b5cf6 }
+  .head { text-align:center; margin-bottom: 20px; }
+  .head .right { text-align:right; font-size:11px; margin-bottom:14px; line-height:1.6 }
+  .head h1 { font-size: 14px; font-weight:bold; margin: 4px 0; text-transform:uppercase }
+  .head .date { font-size: 12px; margin-top: 8px; text-align:right; padding-right:20px }
+  table { width:100%; border-collapse: collapse; font-size:11px; margin: 10px 0; }
+  th, td { border:1px solid #000; padding:5px 7px; vertical-align:top; }
+  th { background:#e5e7eb; font-weight:bold; text-align:center }
+  td.center { text-align:center; vertical-align:middle }
+  .row-label { font-weight:600; background:#fef3c7; text-align:center; vertical-align:middle }
+  .meta-label { background:#d1fae5; font-weight:600; vertical-align:middle }
+  .meta-value { background:#f0fdf4 }
+  .sig { margin-top: 30px; font-size: 12px; text-align:left; }
+  @media print { body { padding: 0; } .toolbar { display:none } }
+</style></head>
+<body>
+
+<div class="toolbar">
+  <label><strong>Бүлэг:</strong>
+    <select id="lvl" onchange="update()">
+      <option value="1">I · Бага</option>
+      <option value="2">II · Дунд</option>
+      <option value="3">III · Ахлах</option>
+      <option value="4" selected>IV · Бэлтгэл</option>
+    </select>
+  </label>
+  <label><strong>Сар:</strong>
+    <select id="mon" onchange="update()">
+      <option value="9" selected>9-р сар</option>
+      <option value="10">10-р сар</option>
+      <option value="11">11-р сар</option>
+      <option value="12">12-р сар</option>
+      <option value="1">1-р сар</option>
+      <option value="2">2-р сар</option>
+      <option value="3">3-р сар</option>
+      <option value="4">4-р сар</option>
+      <option value="5">5-р сар</option>
+    </select>
+  </label>
+  <span style="flex:1"></span>
+  <button onclick="openEditor()" style="background:#ec4899;color:#fff;border-color:#ec4899">✏️ Засах</button>
+  <button onclick="resetMonth()" style="background:#fff;color:#dc2626;border-color:#dc2626" title="Тухайн сарын өөрчлөлтийг цуцлаад автомат загварт эргүүлэх">↺ Автомат</button>
+  <button class="print" onclick="window.print()">🖨 Хэвлэх / PDF</button>
+  <button class="dl" onclick="downloadDoc()">📥 Word татах</button>
+  <button onclick="saveToSystem()" style="background:#10b981;color:#fff;border-color:#10b981">💾 Системд хадгалах</button>
+</div>
+
+<div id="plan"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js" onerror="0"></script>
+<script>
+const SUPABASE_URL = window.SUPABASE_URL || "https://dehxrmupnbilwlxsovpi.supabase.co";
+const SUPABASE_KEY = window.SUPABASE_KEY || "sb_publishable_VRNBeM9nqwFlrDhT2-wD3w_Gp3O85uy";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let OVERRIDES = {}; // { "level-month": {theme, newSong, ...} }
+
+async function loadOverrides() {
+  const { data } = await sb.from('monthly_matrix').select('*');
+  OVERRIDES = {};
+  for (const r of (data||[])) OVERRIDES[`${r.level}-${r.month}`] = r.data || {};
+}
+function getMonthData(lvl, mon) {
+  const base = (MONTHLY[lvl] && MONTHLY[lvl][mon]) || {theme:'',newSong:'',repeatSong:'',listening:'',movement:'',game:'',rhythm:'',voiceExercise:'',newCode:'',cross:[]};
+  const ov = OVERRIDES[`${lvl}-${mon}`] || {};
+  return {...base, ...ov};
+}
+async function saveOverride(lvl, mon, data) {
+  await sb.from('monthly_matrix').upsert({level:parseInt(lvl), month:parseInt(mon), data, updated_at:new Date().toISOString()});
+  OVERRIDES[`${lvl}-${mon}`] = data;
+}
+function openEditor() {
+  const lvl = document.getElementById("lvl").value;
+  const mon = document.getElementById("mon").value;
+  const m = getMonthData(lvl, mon);
+  const modal = document.createElement("div");
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto";
+  const field = (label, key, textarea) => `
+    <div style="margin-bottom:10px">
+      <label style="display:block;font-size:12px;color:#6b7280;margin-bottom:4px;font-weight:600">${label}</label>
+      ${textarea?`<textarea id="ed-${key}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;font-family:inherit;min-height:60px">${(m[key]||'').replace(/</g,'&lt;')}</textarea>`
+      :`<input id="ed-${key}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;font-family:inherit" value="${(m[key]||'').replace(/"/g,'&quot;')}">`}
+    </div>`;
+  modal.innerHTML = `
+    <div style="background:white;padding:24px;border-radius:12px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">
+      <h3 style="margin-bottom:14px;font-size:16px">✏️ ${mon}-р сарын төлөвлөгөө засах</h3>
+      ${field('🎯 Гол сэдэв','theme',true)}
+      ${field('🎵 Шинэ дуу','newSong')}
+      ${field('🔁 Давтах дуу','repeatSong')}
+      ${field('👂 Сонсох хөгжим','listening',true)}
+      ${field('💃 Хөгжимт хөдөлгөөн','movement',true)}
+      ${field('🎮 Тоглоом','game',true)}
+      ${field('🥁 Хэмнэл','rhythm',true)}
+      ${field('🎤 Хоолойны дасгал','voiceExercise',true)}
+      ${field('📌 СҮД код','newCode')}
+      ${field('🔗 Уялдаа (таслалаар тусгаарла)','crossStr')}
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button onclick="this.closest('div[style*=fixed]').remove()" style="padding:8px 16px;background:#f3f4f6;border:none;border-radius:6px;cursor:pointer">Болих</button>
+        <button onclick="saveEditor()" style="padding:8px 16px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer">💾 Хадгалах</button>
+      </div>
+    </div>`;
+  modal.onclick = () => modal.remove();
+  document.body.appendChild(modal);
+  document.getElementById("ed-crossStr").value = (m.cross||[]).join(", ");
+}
+async function saveEditor() {
+  const lvl = document.getElementById("lvl").value;
+  const mon = document.getElementById("mon").value;
+  const keys = ['theme','newSong','repeatSong','listening','movement','game','rhythm','voiceExercise','newCode'];
+  const data = {};
+  keys.forEach(k => data[k] = document.getElementById("ed-"+k).value.trim());
+  data.cross = document.getElementById("ed-crossStr").value.split(",").map(s=>s.trim()).filter(Boolean);
+  await saveOverride(lvl, mon, data);
+  document.querySelector("div[style*=fixed]").remove();
+  render();
+}
+async function saveToSystem() {
+  const lvl = document.getElementById("lvl").value;
+  const mon = document.getElementById("mon").value;
+  const m = getMonthData(lvl, mon);
+  const groupMap = {1:'baga',2:'dund',3:'ahlah',4:'beltgel'};
+  const groupNames = {1:'Бага',2:'Дунд',3:'Ахлах',4:'Бэлтгэл'};
+  const gid = groupMap[lvl];
+  if (!confirm(`${groupNames[lvl]} бүлгийн ${mon}-р сарын төлөвлөгөөг системд хадгалах уу?\n\nАрга зүйч харах, батлах боломжтой болно.`)) return;
+  // Word файлыг Supabase Storage-т upload
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="UTF-8"><style>' +
+    document.querySelector("style").innerText + '</style></head><body>' + document.getElementById("plan").outerHTML + '</body></html>';
+  const blob = new Blob(['﻿'+html], {type:'application/msword;charset=utf-8'});
+  const fname = `${Date.now()}-${gid}-month${mon}.doc`;
+  const { error: upErr } = await sb.storage.from('media').upload(fname, blob);
+  if (upErr) { alert("Файл хадгалахад алдаа: "+upErr.message); return; }
+  const { data: {publicUrl} } = sb.storage.from('media').getPublicUrl(fname);
+  const content = `🎯 Гол сэдэв: ${m.theme}\n🎵 Шинэ дуу: ${m.newSong}\n🔁 Давтах дуу: ${m.repeatSong}\n👂 Сонсох хөгжим: ${m.listening}\n💃 Хөгжимт хөдөлгөөн: ${m.movement}\n🎮 Тоглоом: ${m.game}\n🥁 Хэмнэл: ${m.rhythm}\n🎤 Хоолойны дасгал: ${m.voiceExercise}`;
+  const { error: insErr } = await sb.from('plans').insert({
+    group_id: gid, tab: 'monthly',
+    title: `${groupNames[lvl]} бүлгийн ${mon}-р сарын төлөвлөгөө`,
+    period: `${mon}-р сар`,
+    goal: m.newCode,
+    content: content,
+    files: [{ src: publicUrl, label: `${groupNames[lvl]}_${mon}сар_төлөвлөгөө.doc` }]
+  });
+  if (insErr) { alert("Хадгалахад алдаа: "+insErr.message); return; }
+  alert(`✅ Амжилттай! Одоо системийн Хөтөлбөр төлөвлөгөө → ${groupNames[lvl]} бүлэг → Сарын tab-т орсон байгаа.\n\nАрга зүйч нэвтэрч батлах боломжтой боллоо.`);
+}
+async function resetMonth() {
+  const lvl = document.getElementById("lvl").value;
+  const mon = document.getElementById("mon").value;
+  if (!confirm(`${mon}-р сарын өөрчлөлтийг цуцлаад автомат загварт эргүүлэх үү?`)) return;
+  await sb.from('monthly_matrix').delete().eq('level',parseInt(lvl)).eq('month',parseInt(mon));
+  delete OVERRIDES[`${lvl}-${mon}`];
+  render();
+}
+
+const LEVELS = {
+  1: { name:"БАГА", codes:["ХӨГ1.1а","ХӨГ1.1б","ХӨГ1.1в"] },
+  2: { name:"ДУНД", codes:["ХӨГ2.1а","ХӨГ2.1б","ХӨГ2.1в","ХӨГ2.1г","ХӨГ2.1д"] },
+  3: { name:"АХЛАХ", codes:["ХӨГ3.1а","ХӨГ3.1б","ХӨГ3.1в","ХӨГ3.1г","ХӨГ3.1д"] },
+  4: { name:"БЭЛТГЭЛ", codes:["ХӨГ4.1а","ХӨГ4.1б","ХӨГ4.1в","ХӨГ4.1г","ХӨГ4.1д"] }
+};
+
+// Сар тус бүрд сэдэв, дуу, тоглоом, уялдаа
+// Жилийн төлөвлөгөөтэй нийцүүлсэн
+const MONTHLY = {
+  4: { // Бэлтгэл
+    9: {
+      theme: "Танилцах, Төрийн бэлгэдэл",
+      newSong: "«Зөв хүүхэд» (Б.Нацагдорж, С.Батболд)",
+      repeatSong: "Төрийн дуулал",
+      listening: "Ц.Нацагдорж «Миний нутаг»",
+      movement: "«Тойрон бүжиг» — найрсаг хамтын хөдөлгөөн",
+      game: "«Танилцъя» дүрд тоглох",
+      rhythm: "2/4 хэмнэлийг алга ташилтаар",
+      voiceExercise: "«Эрхийг сурахаар бэрхийг сураарай» с-g хүртэл хоолойны дасгал",
+      newCode: "ХӨГ4.1а", cross: ["БНО4.1в","ХЯ4.1а","НСХ4.1а"]
+    },
+    10: {
+      theme: "Найзууд, Намрын байгаль",
+      newSong: "«Найзуудаа зурлаа» (Ц.Болормаа, Б.Амарбаяр)",
+      repeatSong: "«Зөв хүүхэд»",
+      listening: "П.И.Чайковский «Улирлууд — Намрын дуу»",
+      movement: "«Найзууд» хос бүжиг, тууз ашиглан",
+      game: "«Хамтдаа тоглоё» багийн хөгжимт тоглоом",
+      rhythm: "3/4 хэмнэл, царгил цохих",
+      voiceExercise: "Ам хаалттай/нээлттэй амьсгал уртасгах",
+      newCode: "ХӨГ4.1б", cross: ["ХЯ4.1а","НСХ4.1а","БНО4.2д"]
+    },
+    11: {
+      theme: "Ахмад настан, Өв соёл",
+      newSong: "«Өв соёлоо дээдэлье» (О.Сундуй, С.Батболд)",
+      repeatSong: "«Найзуудаа зурлаа», «Зөв хүүхэд»",
+      listening: "Морин хуурын «Жонон харын явдал»",
+      movement: "Ардын биелгээний энгийн хөдөлгөөн",
+      game: "«Монгол өв соёл» дүрд тоглох",
+      rhythm: "Ардын аялгууны хэмнэл, шагайгаар цохих",
+      voiceExercise: "«Тэнгэрийн заяат Монгол минь» магтан дуу",
+      newCode: "ХӨГ4.1в", cross: ["БНО4.1в","НСХ4.1а","ХЯ4.2а"]
+    },
+    12: {
+      theme: "Өвөл, Шинэ жил",
+      newSong: "«Мөрөөдлийн гацуур» (Д.Батзориг, Ч.Алтансүх)",
+      repeatSong: "«Өв соёлоо дээдэлье»",
+      listening: "П.Чайковский «Хунт нуур — Хунгийн бүжиг»",
+      movement: "«Гацуур модны бүжиг» — тойрон бүжиг",
+      game: "«Шинэ жилийн бэлэг» дуут тоглоом",
+      rhythm: "«Гацуур» дууны хэмнэлийг хонхоор",
+      voiceExercise: "Хүйтэн-халуун салхи амьсгал",
+      newCode: "ХӨГ4.1г", cross: ["БНО4.2д","НСХ4.1а","ХЭМ4.1г"]
+    },
+    1: {
+      theme: "Өвөл, Спорт, Дасгал",
+      newSong: "«Таньдаггүй гэнэ байх даа» (Г.Ганболд, С.Батболд)",
+      repeatSong: "«Мөрөөдлийн гацуур»",
+      listening: "Э.Григ «Өглөө» + өвлийн байгалийн бичлэг",
+      movement: "«Цасан хүн» дүр илэрхийлэх хөдөлгөөн",
+      game: "«Өвлийн тоглоом» хөгжимт наадгай",
+      rhythm: "Хосолсон хэмнэл (удаан + хурдан)",
+      voiceExercise: "«Цав цагаан цас» хэл зүшгрүүлэх с-g",
+      newCode: "ХӨГ4.1д", cross: ["ХЯ4.1а","БНО4.1в","НСХ4.1а"]
+    },
+    2: {
+      theme: "Цагаан сар, Ёс заншил",
+      newSong: "«Цагаан идээ» (С.Ууганбаяр) + «Шагайн наадгай» (П.Одсүрэн)",
+      repeatSong: "«Таньдаггүй гэнэ байх даа»",
+      listening: "«Жонон харын явдал» + Уртын дуу",
+      movement: "«Цагаан сарын золголт» дүр илэрхийлэл",
+      game: "Шагай интерактив тоглоом",
+      rhythm: "4/4 хэмнэлийг 3-5 такт болгон тоглох",
+      voiceExercise: "«Эрхийг сурахаар бэрхийг» зүйр үг с-g",
+      newCode: "ХӨГ4.1а · давталт", cross: ["ХЯ4.1а","БНО4.2д","НСХ4.3в","ХЭМ4.1г"]
+    },
+    3: {
+      theme: "Ээжийн баяр, Хавар",
+      newSong: "«Гоёо» (Б.Эрдэнэбат) + «Миний бүтээл» (С.Ганчимэг)",
+      repeatSong: "«Цагаан идээ», «Шагайн наадгай»",
+      listening: "К.Сен-Санс «Хун» + хаврын шувууд",
+      movement: "«Бяцхан цэцэг» хөгжимт хөдөлгөөн",
+      game: "«Ээждээ бэлэг» дуут тоглоом",
+      rhythm: "«Гоёо» дууны хэмнэл, гурвалжингаар",
+      voiceExercise: "Ам хаалттай-2, ам нээлттэй-2 c-e хүртэл",
+      newCode: "ХӨГ4.1б · давталт", cross: ["ХЯ4.1а","НСХ4.1а","БНО4.2в"]
+    },
+    4: {
+      theme: "Байгаль хамгаалах, Дэлхийн өдөр",
+      newSong: "«Хогоо бүү хаяарай» (Ч.Алтансүх, Э.Дөлгөөн)",
+      repeatSong: "«Гоёо», «Миний бүтээл»",
+      listening: "К.Сен-Санс «Загас», «Хөхөө» + байгалийн чимээ",
+      movement: "«Мод суулгая» дүр илэрхийлэл",
+      game: "«Байгальд ээлтэй» дүрд тоглох",
+      rhythm: "Байгалийн чимээг зэмсгээр (эгшигт хонх, царгил)",
+      voiceExercise: "Шувууны дуу дуурайх, өндөр-нам эгшиг",
+      newCode: "ХӨГ4.1в · давталт", cross: ["БНО4.1в","БНО4.2в","НСХ4.1а"]
+    },
+    5: {
+      theme: "Хүүхдийн баяр, Жилийн үр дүн, Тайлант тоглолт",
+      newSong: "«Монгол ухаан» (С.Ууганбаяр) — жилийн үр дүнгийн дуу",
+      repeatSong: "Жилийн турш сурсан бүх дуу (Зөв хүүхэд, Найзуудаа зурлаа, Өв соёлоо, Мөрөөдлийн гацуур, Цагаан идээ, Гоёо г.м)",
+      listening: "И.Штраус «Валс» тайлант тоглолтын нээлт",
+      movement: "«Найрал тоглолт» олон бүлгийн хамтарсан бүжиг",
+      game: "«Багш би байна» дүрд тоглох",
+      rhythm: "Хамтын найрал хэмнэлийн үзэсгэлэн",
+      voiceExercise: "Бүх жилийн дасгалыг нэгтгэн давталт",
+      newCode: "ХӨГ4.1г, ХӨГ4.1д · давталт", cross: ["НСХ4.1а","ХЯ4.1а","БНО4.1в"]
+    }
+  }
+};
+
+MONTHLY[1] = { // Бага
+  9: { theme:"Танилцах, амьтдын дуу авиа",
+    newSong:"«Туулай» (Үг Д.Тунгалаг, Ая У.Ариунзул)", repeatSong:"—",
+    listening:"«Төрөл бүрийн дуу авиа», «Амьтдыг илэрхийлсэн ая»",
+    movement:"«Тоглоом» (Д.Чимэддорж/Г.Бирваа) хөдөлгөөнт дуу",
+    game:"«Алгаа таш» орчуулгын дуу", rhythm:"Алга ташилтын жигд хэмнэл",
+    voiceExercise:"Амьтдын дуу дуурайх: мяу-мяу, гав-гав, шив-шив",
+    newCode:"ХӨГ1.1а", cross:["БНО1.1в","ХЯ1.1а"] },
+  10: { theme:"Миний бие",
+    newSong:"«Бие эрхтнээ нэрлэе» (орчуулгын дуу)", repeatSong:"«Туулай»",
+    listening:"«Хурдан удаан, жижиг том»",
+    movement:"«Бүгдийг чадна би, би» (М.Отгонбаяр/Л.Санжаа)",
+    game:"«Хуруугаар тоглоё» - гарын дасгал",
+    rhythm:"Ширээ товших «тук-тук»", voiceExercise:"Уу-уу, аа-аа, оо-оо",
+    newCode:"ХӨГ1.1б", cross:["ХЯ1.1а","НСХ1.1а"] },
+  11: { theme:"Намар, унтаа амьтад",
+    newSong:"«Баавгай» (Үг, Ая Ө.Ариунзул)", repeatSong:"«Туулай», «Бие эрхтнээ нэрлэе»",
+    listening:"«Улирал — Намар» (Чайковский), «Бор шувуу» (Руббах)",
+    movement:"«Амьтад болж тоглоё» (Н.Энхжаргал/С.Батболд)",
+    game:"«Нуугдсан уу» дуут тоглоом (З.Түмэнжаргал)",
+    rhythm:"Эгшигт хонх удаан, царгил хурдан",
+    voiceExercise:"Баавгайн дуу «мур-мур», унтах-сэрэх",
+    newCode:"ХӨГ1.1а · давталт", cross:["БНО1.1в","НСХ1.1а"] },
+  12: { theme:"Хөгжилтэй хөдөлгөөн, шинэ жил",
+    newSong:"«Үсрээрэй» (Үг Г.Ганболд, Ая Б.Цэвээнсүрэн)", repeatSong:"«Баавгай»",
+    listening:"«Дэгдээхэйнүүд» (Мусоргский), «Хунт нуур»",
+    movement:"«Хөгжилтэй алхаа» (Ц.Амарсайхан)",
+    game:"«Өвлийн өвгөний улаан малгай» дуут тоглоом",
+    rhythm:"Үсрэлт хэмнэл — «тас-тас-тас»",
+    voiceExercise:"Хүйтэн-халуун салхи амьсгал",
+    newCode:"ХӨГ1.1в", cross:["БНО1.2д","НСХ1.1а"] },
+  1: { theme:"Өвөл, эрүүл мэнд",
+    newSong:"«Өглөөний дасгал» (Үг, Ая Д.Хоролсүрэн)", repeatSong:"«Үсрээрэй», «Баавгай»",
+    listening:"«Өглөө» (Григ), «Морин хуурын татлага»",
+    movement:"«Хөгжилтэй алхаа» — өглөөний дасгал",
+    game:"«Юу хийх вэ?» хөгжимт хөдөлгөөн",
+    rhythm:"Дасгалын жигд хэмнэл",
+    voiceExercise:"Уртаар «аа», богиноор «оп»",
+    newCode:"ХӨГ1.1б · давталт", cross:["БНО1.1в","НСХ1.1а"] },
+  2: { theme:"Цагаан сар, гоёо аяс",
+    newSong:"«Аа гоёо гоёо» (Үг О.Сэрээнэн, Ая П.Жүрмэд)", repeatSong:"«Өглөөний дасгал»",
+    listening:"«Ёохор» (Гончигсумлаа), «Монгол аялгуу»",
+    movement:"«Дуулан бүжиглэе» (Ц.Амарсайхан)",
+    game:"«Цэцэг» орчуулгын дуу",
+    rhythm:"Ардын хэмнэл, шагайгаар",
+    voiceExercise:"Гоёо-гоёо-гоёо цуврал",
+    newCode:"ХӨГ1.1в · давталт", cross:["БНО1.1в","ХЯ1.1а","НСХ1.1а"] },
+  3: { theme:"Ээжийн баяр, гарын хөдөлгөөн",
+    newSong:"«Хуруугаар тоглоё» (орчуулгын дуу)", repeatSong:"«Аа гоёо гоёо»",
+    listening:"«Хун» (Сен-Санс), «Шуточка»",
+    movement:"«Би бол бяцхан цэцэг» (С.Ууганбаяр)",
+    game:"«Мангас Оди» дуут тоглоом",
+    rhythm:"Хуруугаар тогших нарийн хэмнэл",
+    voiceExercise:"Богино авиа «ла-ла-ла»",
+    newCode:"ХӨГ1.1а · давталт", cross:["ХЯ1.1а","НСХ1.1а"] },
+  4: { theme:"Аюулгүй байдал, хавар",
+    newSong:"«Болохгүй» (Үг, Ая Д.Хоролсүрэн)", repeatSong:"«Хуруугаар тоглоё»",
+    listening:"«Загас», «Хөхөө» (Сен-Санс)",
+    movement:"«Хэрэм» (Г.Сэсмээ/П.Жүрмэд) - модонд авирах",
+    game:"«Хос хосоороо эргэе»",
+    rhythm:"Эгшигт хонх — «болно, болохгүй» сонсох",
+    voiceExercise:"«Болно, болохгүй» ялгах",
+    newCode:"ХӨГ1.1б · давталт", cross:["БНО1.2д","НСХ1.1а"] },
+  5: { theme:"Хүүхдийн баяр, тайлант тоглолт",
+    newSong:"«Унтаж байна уу» (орчуулгын дуу)", repeatSong:"Жилийн бүх дуу",
+    listening:"«Бүүвэйн дуу» (Брамс), «Орос марш»",
+    movement:"«Мөөгхөн», «Болжмор» бүлгээр",
+    game:"«Хүүхэлдэй» (Д.Отгонсүрэн/С.Ганчимэг)",
+    rhythm:"Хамтын найрал хэмнэл",
+    voiceExercise:"Бүх жилийн дасгал давтах",
+    newCode:"ХӨГ1.1в · давталт", cross:["НСХ1.1а","ХЯ1.1а"] }
+};
+
+MONTHLY[2] = { // Дунд
+  9: { theme:"Танилцах, хос эрхтэн",
+    newSong:"«Хос эрхтнээ нэрлэе» (Ц.Тэргүүнцэцэг)", repeatSong:"—",
+    listening:"«Хөгжмийн өнгө аяс», «Төрөл бүрийн дуу авиа»",
+    movement:"«Тоглоом» (Д.Чимэддорж/Г.Бирваа)",
+    game:"«Танилцъя» - найрсаг тоглоом",
+    rhythm:"Жигд 2/4 хэмнэл",
+    voiceExercise:"До-Ми-Соль эгшиг «ло-ло-ло»",
+    newCode:"ХӨГ2.1а", cross:["БНО2.1в","ХЯ2.1а","НСХ2.1а"] },
+  10: { theme:"Өөрийгөө таних",
+    newSong:"«Би» (Г.Ганболд/Б.Цэвээнсүрэн)", repeatSong:"«Хос эрхтнээ нэрлэе»",
+    listening:"«Улирал — Намар» (Чайковский)",
+    movement:"«Бүгдийг чадна би, би»",
+    game:"«Би хэн бэ?» дүр таамаглах",
+    rhythm:"Алга ташилт + өвдөг цохилт",
+    voiceExercise:"«Ми-Мэ-Ма-Мо-Му» 5 эгшиг",
+    newCode:"ХӨГ2.1б", cross:["ХЯ2.1а","НСХ2.1а"] },
+  11: { theme:"Малчид, ахмад настан",
+    newSong:"«Тугал» (Г.Ганболд/Б.Цэвээнсүрэн)", repeatSong:"«Би», «Хос эрхтнээ нэрлэе»",
+    listening:"«Морин хуурын татлага», «Монгол аялгуу»",
+    movement:"«Амьтад болж тоглоё» - тугал, хурга",
+    game:"«Хос хосоороо эргэе»",
+    rhythm:"Малын дуу дуурайж хэмнэл",
+    voiceExercise:"Тугалын «мөө», хурганы «мэ-мэ»",
+    newCode:"ХӨГ2.1в", cross:["БНО2.1в","НСХ2.1а"] },
+  12: { theme:"Шинэ жил",
+    newSong:"«Шинэ жил» (Г.Ганболд/Б.Цэвээнсүрэн)", repeatSong:"«Тугал»",
+    listening:"«Хунт нуур» (Чайковский), «Дэгдээхэйнүүд»",
+    movement:"«Өвлийн өвгөний улаан малгай»",
+    game:"«Юу хийх вэ?» шинэ жилийн тоглоом",
+    rhythm:"Хонхны хэмнэл, гурвалжингаар",
+    voiceExercise:"«Хүрэн-Хүрэн» шинэ жилийн уриа",
+    newCode:"ХӨГ2.1г", cross:["БНО2.2д","НСХ2.1а","ХЭМ2.1г"] },
+  1: { theme:"Өвөл",
+    newSong:"«Мөнгөн өвөл» (Ая Нармандах)", repeatSong:"«Шинэ жил»",
+    listening:"«Өглөө» (Григ), «Улирал — Өвөл»",
+    movement:"«Хөгжилтэй алхаа» өвлийн дасгал",
+    game:"«Хөвчийн ойд гэртэй бүжин» орчуулгын дуу",
+    rhythm:"Цасны зөөлөн хэмнэл",
+    voiceExercise:"Хүйтэн-халуун ялгах",
+    newCode:"ХӨГ2.1д", cross:["БНО2.1в","НСХ2.1а"] },
+  2: { theme:"Цагаан сар",
+    newSong:"«Цагаан сар» (Г.Ганболд/Б.Цэвээнсүрэн)", repeatSong:"«Мөнгөн өвөл»",
+    listening:"«Ёохор», «Монгол аялгуу»",
+    movement:"«Дуулан бүжиглэе» ардын бүжиг",
+    game:"«Золголт» цагаан сарын дүр",
+    rhythm:"Ардын аялгуу, шагайгаар",
+    voiceExercise:"«Амар байна уу» ёсны үг",
+    newCode:"ХӨГ2.1а · давталт", cross:["БНО2.1в","НСХ2.1а","ХЯ2.1а"] },
+  3: { theme:"Ээжийн баяр, гэр бүл",
+    newSong:"«Алгаа ташаарай» (З.Юмчирсүрэн/Х.Пунцагдорж) + «Амин хүүдээ би» (Г.Ганболд/Л.Галмандах)",
+    repeatSong:"«Цагаан сар»",
+    listening:"«Хун» (Сен-Санс), «Бор шувуу»",
+    movement:"«Мангас Оди» ээжийн бэлэг",
+    game:"«Ээж, миний ээж» дүр илэрхийлэл",
+    rhythm:"Ээжийн зөөлөн ая, дэвсэлт",
+    voiceExercise:"«Ээж-ээж-ээж» хайрын дуудлага",
+    newCode:"ХӨГ2.1б · давталт", cross:["НСХ2.1а","ХЯ2.1а"] },
+  4: { theme:"Байгаль, эрүүл ахуй",
+    newSong:"«Би угаадаг» (Я.Отгонжаргал/Л.Алтангэрэл)", repeatSong:"«Алгаа ташаарай»",
+    listening:"«Загас», «Хөхөө» (Сен-Санс)",
+    movement:"«Би бол бяцхан цэцэг»",
+    game:"«Муур хулганы дуу» (Г.Ганболд/С.Батболд)",
+    rhythm:"Ус хийсэх, шүд угаах хэмнэл",
+    voiceExercise:"Ус зайлах «шур-шур»",
+    newCode:"ХӨГ2.1в · давталт", cross:["БНО2.1в","НСХ2.1а"] },
+  5: { theme:"Хүүхдийн баяр, тайлант тоглолт",
+    newSong:"«Хонхтой бойтог» (Д.Хоролсүрэн)", repeatSong:"Жилийн бүх дуу",
+    listening:"«Орос марш» (Штраус), «Хөгжилтэй зугаалга»",
+    movement:"«Хүүхэлдэй» бүлгийн үзвэр",
+    game:"«Цэцэг» орчуулгын дуу тайлант тоглолтод",
+    rhythm:"Хамтын найрал хэмнэл",
+    voiceExercise:"Бүх жилийн дасгал нэгтгэх",
+    newCode:"ХӨГ2.1д · давталт", cross:["НСХ2.1а","ХЯ2.1а","БНО2.1в"] }
+};
+
+MONTHLY[3] = { // Ахлах
+  9: { theme:"Танилцах, тоглох урам",
+    newSong:"«Ахин нэг тоглоё» (С.Ууганбаяр)", repeatSong:"—",
+    listening:"«Хөгжмийн өнгө аяс», «Төрөл бүрийн дуу авиа»",
+    movement:"«Тоглоом» хөдөлгөөнт дуу",
+    game:"«Танилцах» ба «Нуугдсан уу»",
+    rhythm:"Жигд 2/4 хэмнэлийг зэмсгээр",
+    voiceExercise:"До1-Ля1 цараанд «ла-ла-ла»",
+    newCode:"ХӨГ3.1а", cross:["БНО3.1в","ХЯ3.1а","НСХ3.1а"] },
+  10: { theme:"Найзууд, наадам",
+    newSong:"«Наадан тоглоё» (С.Батболд)", repeatSong:"«Ахин нэг тоглоё»",
+    listening:"«Улирал — Намар», «Морин хуурын татлага»",
+    movement:"«Хос хосоороо эргэе» ардын бүжиг",
+    game:"«Наадан тоглоё» дүр",
+    rhythm:"Ардын хэмнэл, царгил + гурвалжин",
+    voiceExercise:"«До-Ре-Ми» гурвал эгшиг",
+    newCode:"ХӨГ3.1б", cross:["ХЯ3.1а","НСХ3.1а","БНО3.1в"] },
+  11: { theme:"Ахмад настан, гэр бүл",
+    newSong:"«Ам бүл таван хуруу» (Г.Ганболд/Б.Цэвээнсүрэн)", repeatSong:"«Наадан тоглоё»",
+    listening:"«Морин хуурын татлага», «Хан хөхийн уянга» (лимбэ)",
+    movement:"«Хэрэм» - гэр бүлийн эв",
+    game:"«5 хуруу — 5 гишүүн» дүр",
+    rhythm:"5-т хэмнэл (аав, ээж, ах, эгч, би)",
+    voiceExercise:"Хос авиа «ба-би-бу»",
+    newCode:"ХӨГ3.1в", cross:["БНО3.1в","НСХ3.1а"] },
+  12: { theme:"Өвөл, шинэ жил",
+    newSong:"«Өвлийн өвгөн хүрээд ирлээ» (Г.Ганболд/С.Батболд)", repeatSong:"«Ам бүл таван хуруу»",
+    listening:"«Хунт нуур», «Улирал — Өвөл»",
+    movement:"«Өвлийн өвгөний улаан малгай»",
+    game:"«Мөөгхөн», «Болжмор»",
+    rhythm:"Хонх, царгил — өвлийн аяс",
+    voiceExercise:"Хүйтэн-халуун 3 өнгө",
+    newCode:"ХӨГ3.1г", cross:["БНО3.2д","НСХ3.1а","ХЭМ3.1г"] },
+  1: { theme:"Өвөл, ургамал",
+    newSong:"«Цасан дор жимс ургана» (Ш.Бадарч/С.Батболд)", repeatSong:"«Өвлийн өвгөн хүрээд ирлээ»",
+    listening:"«Дэгдээхэйнүүд» (Мусоргский), «Хунт нуур»",
+    movement:"«Мөөгхөн», «Би жолооч»",
+    game:"«Цасан дор ургана» дүр илэрхийлэл",
+    rhythm:"Цас унах зөөлөн хэмнэл",
+    voiceExercise:"Ре1-До2 хоёр октав",
+    newCode:"ХӨГ3.1д", cross:["БНО3.1в","НСХ3.1а"] },
+  2: { theme:"Цагаан сар, өв соёл",
+    newSong:"«Цагаан сар» (Ц.Сумьяабат)", repeatSong:"«Цасан дор жимс ургана»",
+    listening:"«Жонон харын явдал», «Ёохор»",
+    movement:"«Дуулан бүжиглэе» ардын биелгээ",
+    game:"Шагай интерактив тоглоом",
+    rhythm:"4/4 хэмнэл 3-5 такт",
+    voiceExercise:"«Амар байна уу» ёсны үг",
+    newCode:"ХӨГ3.1а · давталт", cross:["ХЯ3.1а","БНО3.2д","НСХ3.1а"] },
+  3: { theme:"Ээжийн баяр, хавар",
+    newSong:"«Ирээрэй» (Б.Эрдэнэбат) + «Лууван» (Я.Отгонжаргал)", repeatSong:"«Цагаан сар»",
+    listening:"«Хун», «Шуточка»",
+    movement:"«Би бол бяцхан цэцэг» - хаврын цэцэг",
+    game:"«Мангас Оди» ээжийн бэлэг",
+    rhythm:"Хаврын шувууны хэмнэл",
+    voiceExercise:"«Ло-Ла-Лэ» гурвал",
+    newCode:"ХӨГ3.1б · давталт", cross:["НСХ3.1а","ХЯ3.1а"] },
+  4: { theme:"Хавар, эрүүл ахуй",
+    newSong:"«Бороо» (Г.Ганболд/Б.Цэвээнсүрэн) + «Шүдээ угаацгаая» (Д.Амарсанаа/Б.Өнөржаргал)",
+    repeatSong:"«Ирээрэй», «Лууван»",
+    listening:"«Загас», «Хөхөө» (Сен-Санс)",
+    movement:"«Муур хулганы дуу»",
+    game:"«Хэрэм» модонд авирах",
+    rhythm:"Бороо орох «тик-тик» хэмнэл",
+    voiceExercise:"Ус зайлах, шүд угаах авиа",
+    newCode:"ХӨГ3.1в · давталт", cross:["БНО3.1в","НСХ3.1а"] },
+  5: { theme:"Хүүхдийн баяр, тайлант тоглолт",
+    newSong:"«Дөрвөн бэрх» (Б.Дашгомбо/Г.Жанцансамбуу)", repeatSong:"Жилийн бүх дуу",
+    listening:"«Орос марш» (Штраус), «Хөгжилтэй зугаалга»",
+    movement:"«Монгол дээлний магтаал»",
+    game:"«Хүүхэлдэй» найрал үзвэр",
+    rhythm:"Хамтын найрал хэмнэл, зэмсгээр",
+    voiceExercise:"Жилийн дасгал нэгтгэх",
+    newCode:"ХӨГ3.1д · давталт", cross:["НСХ3.1а","БНО3.1в","ХЯ3.1а"] }
+};
+
+const METHODS = ["Тоглоомд суурилсан арга зүй","Тоглоомд суурилсан арга зүй","Зохиолд суурилсан арга зүй","Шинжлэн судлах арга зүй"];
+
+function render() {
+  const lvl = document.getElementById("lvl").value;
+  const mon = document.getElementById("mon").value;
+  const L = LEVELS[lvl];
+  const m = getMonthData(lvl, mon);
+  const monthName = mon + "-р сар";
+  const monthOrder = mon==='9'?'ЭХНИЙ':mon==='5'?'ТӨГСГӨЛИЙН':'';
+
+  const html = `
+    <div class="head">
+      <div class="right">
+        <strong>БАТЛАВ</strong><br>
+        ГУРВАНБУЛАГ СУМЫН ЦЭЦЭРЛЭГИЙН<br>
+        АРГА ЗҮЙЧ ................................. С.САРАНЧИМЭГ<br>
+        2026 оны .... сарын .... өдөр
+      </div>
+      <h1>${L.name} БҮЛГИЙН ХӨГЖМИЙН СУРГАЛТЫН</h1>
+      <h1>${mon} ДУГААР САРЫН ТӨЛӨВЛӨГӨӨ</h1>
+      <div class="date">2026-2027 оны хичээлийн жил</div>
+    </div>
+
+    <div style="background:#fef3c7;padding:10px 14px;border-radius:8px;margin-bottom:14px;border-left:4px solid #f59e0b">
+      <strong>🎯 ${monthName}-ын гол сэдэв:</strong> ${m.theme}<br>
+      <strong>🎵 Шинэ дуу:</strong> ${m.newSong}<br>
+      <strong>🔁 Давтах:</strong> ${m.repeatSong}
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px">Д/д</th>
+          <th style="width:150px">Сургалтын бүтэц, агуулга</th>
+          <th>Хувилбар 1 (1-р 7 хон.)</th>
+          <th>Хувилбар 2 (2-р 7 хон.)</th>
+          <th>Хувилбар 3 (3-р 7 хон.)</th>
+          <th>Хувилбар 4 (4-р 7 хон.)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="center">1</td>
+          <td class="row-label">🎤 Хоолойны дасгал</td>
+          <td>${m.voiceExercise}</td>
+          <td>${m.voiceExercise} — давтан бэхжүүлэх</td>
+          <td>Хамсрааны хамт до-ре-ми дасгал</td>
+          <td>Амьсгаа уртасгах "Салхи болъё"</td>
+        </tr>
+        <tr>
+          <td class="center">2</td>
+          <td class="row-label">🎵 Шинэ / Давтах дуу</td>
+          <td><strong>Шинэ:</strong> ${m.newSong} — 1-р бадаг заах</td>
+          <td>${m.newSong} — 2-р бадаг + бүрэн дуулах</td>
+          <td>Давтах: ${m.repeatSong}</td>
+          <td>Хамтдаа: ${m.newSong} + ${m.repeatSong}</td>
+        </tr>
+        <tr>
+          <td class="center">3</td>
+          <td class="row-label">👂 Сонсох / Хэмнэл</td>
+          <td>Сонсох: ${m.listening}</td>
+          <td>${m.rhythm}</td>
+          <td>Сонсох: ${m.listening} (давтан)</td>
+          <td>Хэмнэлт зэмсгээр багаараа тоглох</td>
+        </tr>
+        <tr>
+          <td class="center">4</td>
+          <td class="row-label">💃 Хөгжимт хөдөлгөөн / Тоглоом</td>
+          <td>${m.movement}</td>
+          <td>${m.game}</td>
+          <td>${m.movement} + хосолсон бүжиг</td>
+          <td>${m.game} — тайлант тоглолт</td>
+        </tr>
+        <tr>
+          <td colspan="2" class="meta-label center">🧠 Арга зүй</td>
+          ${METHODS.map(mt => `<td class="meta-value">${mt}</td>`).join("")}
+        </tr>
+        <tr>
+          <td colspan="2" class="meta-label center">📌 СҮД (Суралцахуйн үр дүн)</td>
+          <td colspan="4" class="meta-value"><strong>${m.newCode}</strong> + ${L.codes.join(", ")}</td>
+        </tr>
+        <tr>
+          <td colspan="2" class="meta-label center">🔗 Уялдаа</td>
+          <td colspan="4" class="meta-value">${m.cross.length?m.cross.join(", "):'—'}</td>
+        </tr>
+        <tr>
+          <td colspan="2" class="meta-label center">🔁 Давтамж</td>
+          <td colspan="4" class="meta-value">Хоолойны дасгал, "${m.newSong}" дуу, ${m.movement}, ${m.rhythm}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:20px;background:#eff6ff;border:2px solid #3b82f6;border-radius:10px;padding:14px 18px">
+      <h3 style="font-size:13px;color:#1e40af;margin-bottom:10px">🎓 АРГА ЗҮЙЧИЙН ХЯНАЛТ, ЗӨВЛӨГӨӨ</h3>
+      <table style="margin:8px 0">
+        <tr>
+          <td style="width:120px;background:#dbeafe;font-weight:600">Батлах статус:</td>
+          <td>☐ Батласан &nbsp;&nbsp; ☐ Засах шаардлагатай &nbsp;&nbsp; ☐ Хүлээж байна</td>
+        </tr>
+        <tr>
+          <td style="background:#dbeafe;font-weight:600">Огноо:</td>
+          <td>....................... сар ....................... өдөр</td>
+        </tr>
+        <tr>
+          <td style="background:#dbeafe;font-weight:600">Зөвлөгөө:</td>
+          <td style="min-height:60px;height:60px;vertical-align:top">
+            ............................................................................................................<br>
+            ............................................................................................................<br>
+            ............................................................................................................
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#dbeafe;font-weight:600">Гарын үсэг:</td>
+          <td>Арга зүйч ..................................... <strong>С.САРАНЧИМЭГ</strong></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="sig">
+      ҮЙЛ АЖИЛЛАГААНЫ ТӨЛӨВЛӨЛТ БИЧСЭН:<br><br>
+      ХӨГЖМИЙН БАГШ ................................. <strong>Г.ӨЛЗИЙБАЯР</strong>
+    </div>`;
+
+  document.getElementById("plan").innerHTML = html;
+  document.title = `${L.name} · ${monthName} төлөвлөгөө`;
+}
+function update() {
+  const lvl = document.getElementById("lvl").value;
+  const mon = document.getElementById("mon").value;
+  location.hash = `${lvl}-${mon}`;
+  render();
+}
+function downloadDoc() {
+  const lvl = document.getElementById("lvl").value;
+  const mon = document.getElementById("mon").value;
+  const names = {1:"бага",2:"дунд",3:"ахлах",4:"бэлтгэл"};
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="UTF-8"><style>' +
+    document.querySelector("style").innerText +
+    '</style></head><body>' + document.getElementById("plan").outerHTML + '</body></html>';
+  const blob = new Blob(['﻿'+html], {type:'application/msword;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${names[lvl]}_${mon}сар_төлөвлөгөө.doc`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+// URL hash-с эхлэх утга
+const h = location.hash.slice(1).split("-");
+if (h[0] && LEVELS[h[0]]) document.getElementById("lvl").value = h[0];
+if (h[1]) document.getElementById("mon").value = h[1];
+(async () => {
+  try { await loadOverrides(); } catch(e) { console.error(e); }
+  render();
+})();
+</script>
+</body></html>

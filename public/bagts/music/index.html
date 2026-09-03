@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="mn"><head>
+<meta charset="UTF-8">
+<script>
+/* ZIP дотроос нээж байгааг мэдэрч, задлах зааврыг харуулна */
+(function(){
+  try{
+    var u = decodeURIComponent(location.href).toLowerCase();
+    var inArchive = location.protocol === 'file:' && u.indexOf('temp') !== -1 &&
+      (u.indexOf('.zip') !== -1 || u.indexOf('.rar') !== -1 || u.indexOf('rar$') !== -1 || u.indexOf('temp1_') !== -1 || u.indexOf('7z') !== -1);
+    if(!inArchive) return;
+    document.addEventListener('DOMContentLoaded', function(){
+      var o = document.createElement('div');
+      o.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;font-family:Segoe UI,Arial,sans-serif';
+      o.innerHTML = '<div style="max-width:560px;background:#fff7ed;border:3px solid #f59e0b;border-radius:20px;padding:30px;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,.3)">'
+        + '<div style="font-size:54px">⚠️</div>'
+        + '<h1 style="color:#c2410c;font-size:23px;margin:10px 0">Та ZIP дотроос нээж байна!</h1>'
+        + '<p style="color:#7c2d12;font-size:16px;margin-bottom:18px">Ингэж нээвэл систем зөв ажиллахгүй. Эхлээд <b>бүтнээр задлаарай</b>.</p>'
+        + '<div style="text-align:left;background:#fff;border-radius:12px;padding:16px 20px;font-size:16px;line-height:1.9;color:#1f2937">'
+        + '<b>1.</b> ZIP файл дээр <b>баруун товш</b> → <b>Extract All / Задлах</b><br>'
+        + '<b>2.</b> Нээх <b>код</b>оо оруул<br>'
+        + '<b>3.</b> Гарч ирсэн <b>ХАВТАС</b>-ыг нээ<br>'
+        + '<b>4.</b> Тэндээс <b>index.html</b> дээр 2 дар'
+        + '</div>'
+        + '<p style="color:#9a3412;font-size:13px;margin-top:16px">💡 ZIP дотор байхад файл дээр шууд дарж болохгүй.</p>'
+        + '<button onclick="this.closest(\'div\').parentNode.remove()" style="margin-top:16px;background:#f59e0b;color:#fff;border:none;padding:9px 20px;border-radius:9px;font-size:14px;cursor:pointer">Би аль хэдийн задалсан — үргэлжлүүлэх</button>'
+        + '</div>';
+      document.body.appendChild(o);
+    });
+  }catch(e){}
+})();
+</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>СӨБ Хөгжим PRO 🎵</title>
+<style>
+  :root {
+    --p1: #7c3aed; --p2: #ec4899; --p3: #f59e0b;
+    --p4: #10b981; --p5: #06b6d4;
+    --bg: #fef7ff; --tx: #1f2937; --mut: #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+    background: linear-gradient(135deg, #fef7ff 0%, #eff6ff 50%, #f0fdf4 100%);
+    color: var(--tx); line-height: 1.6; min-height: 100vh;
+    background-attachment: fixed;
+  }
+  .floating-notes { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .floating-notes span {
+    position: absolute; font-size: 24px; opacity: .1;
+    animation: float 15s linear infinite;
+    color: var(--p1);
+  }
+  @keyframes float {
+    0% { transform: translateY(100vh) rotate(0deg); }
+    100% { transform: translateY(-100px) rotate(360deg); }
+  }
+  @keyframes pulse-hearts {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  /* ==== ЛОГИН ==== */
+  #loginScreen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 20px; position: relative; z-index: 1;
+  }
+  #loginScreen.hidden { display: none; }
+  .login-card {
+    background: #fff; padding: 44px 36px; border-radius: 28px;
+    box-shadow: 0 30px 80px rgba(124,58,237,.2);
+    max-width: 440px; width: 100%; text-align: center;
+    border: 3px solid transparent;
+    background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, var(--p1), var(--p2), var(--p3));
+    background-origin: border-box; background-clip: padding-box, border-box;
+  }
+  .login-card .icon-big {
+    font-size: 64px; margin-bottom: 8px;
+    animation: pulse-hearts 2s ease-in-out infinite;
+  }
+  .login-card h1 {
+    font-size: 26px; margin-bottom: 4px; font-weight: 800;
+    background: linear-gradient(135deg, var(--p1), var(--p2), var(--p3));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    letter-spacing: .5px;
+  }
+  .login-card .sub {
+    color: var(--mut); font-size: 14px; margin-bottom: 30px;
+  }
+  .login-card .badge-pro {
+    display: inline-block; background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #78350f; padding: 3px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 800; margin-left: 4px;
+    box-shadow: 0 4px 12px rgba(245,158,11,.4);
+    vertical-align: middle;
+  }
+  .login-card input {
+    width: 100%; padding: 15px 18px; border: 2px solid #e5e7eb;
+    border-radius: 14px; font-size: 16px; font-family: inherit;
+    text-align: center; margin-bottom: 14px;
+    letter-spacing: 2px; font-weight: 600;
+    background: #fafafa; transition: .2s;
+  }
+  .login-card input:focus {
+    outline: none; border-color: var(--p1); background: #fff;
+    box-shadow: 0 0 0 4px rgba(124,58,237,.1);
+  }
+  .login-card button {
+    width: 100%; padding: 15px 20px; border: none; border-radius: 14px;
+    background: linear-gradient(135deg, var(--p1), var(--p2));
+    color: #fff; font-weight: 800; font-size: 15px; cursor: pointer;
+    box-shadow: 0 10px 24px rgba(124,58,237,.35);
+    transition: .2s; letter-spacing: .5px;
+  }
+  .login-card button:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(124,58,237,.45); }
+  .login-card button:disabled { opacity: .6; cursor: not-allowed; }
+  .login-err { color: #dc2626; font-size: 13px; margin-bottom: 12px; min-height: 18px; font-weight: 600; }
+  .login-info {
+    margin-top: 24px; padding: 14px; background: #f0fdf4; border-radius: 12px;
+    font-size: 12px; color: #065f46; line-height: 1.5;
+  }
+  .login-info b { color: #047857; }
+  .login-badges {
+    display: flex; gap: 8px; justify-content: center; margin-top: 18px; flex-wrap: wrap;
+  }
+  .login-badges .b {
+    background: #f5f3ff; color: #6d28d9; padding: 4px 10px;
+    border-radius: 20px; font-size: 11px; font-weight: 700;
+  }
+
+  /* ==== ГОЛ ХУУДАС ==== */
+  #mainScreen { padding: 20px; padding-top: 44px; }
+  #mainScreen.hidden { display: none; }
+  .lic-badge {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: linear-gradient(90deg, var(--p1), var(--p2), var(--p3));
+    color: #fff; padding: 6px 16px; font-size: 12px; text-align: center; z-index: 9999;
+    font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .lic-badge .logout {
+    background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.35);
+    color: #fff; padding: 3px 10px; border-radius: 12px; font-size: 11px;
+    cursor: pointer; font-weight: 600;
+  }
+  .lic-badge .logout:hover { background: rgba(255,255,255,.35); }
+  header {
+    max-width: 1200px; margin: 0 auto 30px; padding: 40px 30px;
+    background: linear-gradient(135deg, var(--p1), var(--p2));
+    color: #fff; border-radius: 24px; text-align: center;
+    box-shadow: 0 12px 40px rgba(124,58,237,.25);
+    position: relative; overflow: hidden;
+  }
+  header::before {
+    content: '♪ ♫ ♬ ♩ ♪ ♫ ♬ ♩ ♪ ♫ ♬ ♩ ♪ ♫';
+    position: absolute; top: -10px; left: 0; right: 0;
+    font-size: 80px; opacity: .1; letter-spacing: 20px;
+    white-space: nowrap; animation: floatNotes 20s linear infinite;
+  }
+  @keyframes floatNotes {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-200px); }
+  }
+  header h1 {
+    font-size: 2.4em; margin-bottom: 8px; position: relative;
+    text-shadow: 0 2px 8px rgba(0,0,0,.2); letter-spacing: 1px;
+  }
+  header .badge-pro-hd {
+    display: inline-block; background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #78350f; padding: 4px 14px; border-radius: 20px;
+    font-size: 14px; font-weight: 800; margin-left: 8px;
+    box-shadow: 0 4px 12px rgba(245,158,11,.4);
+  }
+  header .sub {
+    font-size: 1.05em; opacity: .95; position: relative;
+    max-width: 700px; margin: 8px auto 0;
+  }
+  header .greeting {
+    display: inline-block; margin-top: 14px; padding: 8px 20px;
+    background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.3);
+    border-radius: 20px; font-size: 14px; backdrop-filter: blur(8px);
+  }
+
+  .main-grid {
+    max-width: 1200px; margin: 0 auto 30px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+  }
+  .card {
+    background: #fff; border-radius: 20px; padding: 30px 26px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.06);
+    border: 2px solid transparent;
+    transition: all .3s ease;
+    position: relative; overflow: hidden;
+    cursor: pointer; text-decoration: none; color: inherit;
+    display: block;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px;
+    background: var(--card-color, var(--p1));
+  }
+  .card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 50px rgba(0,0,0,.12);
+    border-color: var(--card-color, var(--p1));
+  }
+  .card .icon-wrap {
+    width: 72px; height: 72px; border-radius: 20px;
+    background: var(--card-bg, linear-gradient(135deg, var(--p1), var(--p2)));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; margin-bottom: 20px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.1);
+  }
+  .card h2 {
+    font-size: 1.35em; margin-bottom: 10px; color: var(--tx);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card .badge {
+    background: var(--card-color, var(--p1)); color: #fff;
+    font-size: 10px; padding: 3px 8px; border-radius: 8px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  }
+  .card p { color: var(--mut); font-size: .95em; margin-bottom: 16px; }
+  .card ul { list-style: none; margin-bottom: 20px; }
+  .card ul li {
+    padding: 6px 0; padding-left: 24px; position: relative;
+    color: #374151; font-size: .92em;
+  }
+  .card ul li::before {
+    content: '♪'; position: absolute; left: 0;
+    color: var(--card-color, var(--p1)); font-weight: 700;
+  }
+  .card .btn {
+    display: inline-block; padding: 12px 22px; border-radius: 12px;
+    background: var(--card-bg, linear-gradient(135deg, var(--p1), var(--p2)));
+    color: #fff; font-weight: 700; text-decoration: none;
+    box-shadow: 0 6px 16px rgba(0,0,0,.12); transition: all .2s;
+  }
+  .card:hover .btn { transform: translateX(4px); box-shadow: 0 10px 24px rgba(0,0,0,.18); }
+
+  .c-bank { --card-color: var(--p1); --card-bg: linear-gradient(135deg, #7c3aed, #a855f7); }
+  .c-progress { --card-color: var(--p4); --card-bg: linear-gradient(135deg, #10b981, #059669); }
+  .c-journal { --card-color: var(--p3); --card-bg: linear-gradient(135deg, #f59e0b, #ef4444); }
+
+  .side-info {
+    max-width: 1200px; margin: 30px auto;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .stat {
+    background: #fff; padding: 20px; border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.05); text-align: center;
+  }
+  .stat .num {
+    font-size: 2em; font-weight: 800;
+    background: linear-gradient(135deg, var(--p1), var(--p2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; display: block;
+  }
+  .stat .lbl { color: var(--mut); font-size: .9em; margin-top: 4px; }
+
+  .divider {
+    max-width: 1200px; margin: 40px auto; text-align: center;
+    color: var(--p1); font-size: 24px; letter-spacing: 12px; opacity: .4;
+  }
+  footer {
+    max-width: 1200px; margin: 40px auto 0; padding: 20px;
+    text-align: center; color: var(--mut); font-size: .88em;
+  }
+
+  @media (max-width: 640px) {
+    header { padding: 26px 18px; }
+    header h1 { font-size: 1.6em; }
+    .card { padding: 22px 20px; }
+    .login-card { padding: 32px 24px; }
+    .login-card h1 { font-size: 22px; }
+  }
+</style>
+</head><body>
+
+<div class="floating-notes" aria-hidden="true">
+  <span style="left:5%; animation-delay:0s">♪</span>
+  <span style="left:15%; animation-delay:3s">♫</span>
+  <span style="left:30%; animation-delay:6s">♬</span>
+  <span style="left:45%; animation-delay:9s">♩</span>
+  <span style="left:60%; animation-delay:2s">♪</span>
+  <span style="left:75%; animation-delay:5s">♫</span>
+  <span style="left:88%; animation-delay:8s">♬</span>
+</div>
+
+<!-- ==== ЛОГИН ХУУДАС ==== -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="icon-big">🎵</div>
+    <h1>СӨБ Хөгжим <span class="badge-pro">PRO</span></h1>
+    <p class="sub">Хөгжмийн багшийн бэлэн сан<br>Нэвтрэх кодоо оруулна уу 🔐</p>
+    <form onsubmit="return doLogin(event)">
+      <input type="text" id="accessCode" placeholder="PRO-2026-XXX" autocomplete="off" autofocus>
+      <div class="login-err" id="loginErr"></div>
+      <button type="submit" id="loginBtn">🚀 Нэвтрэх</button>
+    </form>
+    <div class="login-info">
+      <b>🎁 Код авах:</b> Худалдан авсны дараа мессежээр авсан<br>
+      6-15 тэмдэгттэй тусгай кодоо оруулна уу
+    </div>
+    <div class="login-badges">
+      <span class="b">🎵 576+ бэлэн хичээл</span>
+      <span class="b">🌱 Хүүхдийн ахиц</span>
+      <span class="b">📖 Өдрийн тэмдэглэл</span>
+    </div>
+  </div>
+</div>
+
+<!-- ==== ГОЛ ХУУДАС (нэвтэрсний дараа) ==== -->
+<div id="mainScreen" class="hidden">
+
+<div class="lic-badge">
+  <span>🎵 <b id="lbName">…</b> · <span id="lbSchool">…</span></span>
+  <button class="logout" onclick="logout()">🚪 Гарах</button>
+</div>
+
+<header>
+  <h1>🎵 СӨБ Хөгжим <span class="badge-pro-hd">PRO</span></h1>
+  <p class="sub">Сургуулийн өмнөх боловсролын хөгжмийн багшид зориулсан бэлэн хөтөлбөрийн сан, хүүхдийн хөгжлийн ахиц, өдрийн тэмдэглэлийн нэгдсэн систем</p>
+  <div class="greeting" id="greetBox">Сайн байна уу, багш аа! 🎼</div>
+</header>
+
+<div class="side-info">
+  <div class="stat"><span class="num">576+</span><div class="lbl">Бэлэн ээлжит хичээл</div></div>
+  <div class="stat"><span class="num">4</span><div class="lbl">Бүлгийн түвшин</div></div>
+  <div class="stat"><span class="num">36</span><div class="lbl">Шинэ дуу</div></div>
+  <div class="stat"><span class="num">∞</span><div class="lbl">Хүүхдийн ахиц</div></div>
+</div>
+
+<div class="main-grid">
+
+  <a href="downloads.html" class="card c-bank">
+    <div class="icon-wrap">📚</div>
+    <h2>Бэлэн хөтөлбөрийн сан <span class="badge">Багц 1</span></h2>
+    <p>4 бүлгийн жилийн, сарын, ээлжит хичээлийн бүрэн бэлэн Word болон PDF файлууд. Утаснаас ч харах, засах, хэвлэх боломжтой.</p>
+    <ul>
+      <li>4 бүлэг × 9 сар = 576 ээлжит хичээл</li>
+      <li>Жилийн матриц + Сарын төлөвлөгөө</li>
+      <li>36 шинэ дуу + үг + аялгуу</li>
+      <li>СӨБ хөтөлбөртэй нийцсэн</li>
+      <li>Word/PDF — засаж хэвлэх бэлэн</li>
+    </ul>
+    <span class="btn">Санд орох →</span>
+  </a>
+
+  <a href="progress.html" class="card c-progress">
+    <div class="icon-wrap">🌱</div>
+    <h2>Хүүхдийн хөгжлийн ахиц <span class="badge">Багц 2</span></h2>
+    <p>Хүүхэд бүрийн хөгжмийн авьяас, чадвар, оролцоог сар, улирал бүрд бүртгэж, эцэг эхэд QR-ээр илгээх боломжтой.</p>
+    <ul>
+      <li>Хүүхэд бүрийн нэрсийн жагсаалт</li>
+      <li>СӨБ шалгуураар ахиц үнэлэх</li>
+      <li>Улирлын дүн ба график</li>
+      <li>QR-ээр эцэг эхэд илгээх</li>
+      <li>Гэрчилгээ автоматаар үүсгэх</li>
+    </ul>
+    <span class="btn">Хүүхэд рүү →</span>
+  </a>
+
+  <a href="journal.html" class="card c-journal">
+    <div class="icon-wrap">📖</div>
+    <h2>Өдрийн тэмдэглэл <span class="badge">Багц 3</span></h2>
+    <p>Багшийн өдөр тутмын тэмдэглэл, ажиглалт, эргэцүүлэл — мэргэжлийн өсөлтөө баталгаажуулах хамгийн зөв хэрэгсэл.</p>
+    <ul>
+      <li>Өдрийн ажиглалт бүртгэх</li>
+      <li>Хичээлийн үр дүнгийн эргэцүүлэл</li>
+      <li>Хүчтэй/сул талын дүн шинжилгээ</li>
+      <li>Дараагийн алхмын төлөвлөгөө</li>
+      <li>Хэвлэж багц болгох</li>
+    </ul>
+    <span class="btn">Тэмдэглэл нээх →</span>
+  </a>
+
+</div>
+
+<div class="divider">♪ ♫ ♬ ♩ ♪</div>
+
+<footer>
+  <p>🎵 <b>СӨБ Хөгжим PRO</b> · Хөгжмөөр хүүхдүүдийг хөгжүүл!</p>
+  <p style="margin-top:6px;font-size:.85em">Асуудал гарвал системийн зохиогчтой холбогдоно уу</p>
+</footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ==== Төв Supabase (зохиогчийн лиценз бүртгэлийн БҮТ) ====
+const CENTRAL_URL = "https://dehxrmupnbilwlxsovpi.supabase.co";
+const CENTRAL_KEY = "sb_publishable_VRNBeM9nqwFlrDhT2-wD3w_Gp3O85uy";
+
+// Локал session key
+const SESSION_KEY = 'pro_session_v1';
+
+async function doLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginErr');
+  const code = document.getElementById('accessCode').value.trim().toUpperCase();
+  err.textContent = '';
+  if (!code) { err.textContent = 'Кодоо оруулна уу'; return false; }
+  if (code.length < 4) { err.textContent = 'Код хэт богино байна'; return false; }
+  btn.disabled = true; btn.textContent = '⏳ Шалгаж байна...';
+
+  try {
+    const r = await fetch(`${CENTRAL_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(code)}&select=*`, {
+      headers: { 'apikey': CENTRAL_KEY, 'Authorization': 'Bearer '+CENTRAL_KEY }
+    });
+    if (!r.ok) throw new Error('Серверийн алдаа (' + r.status + ')');
+    const rows = await r.json();
+    if (!rows.length) { err.textContent = '❌ Ийм код олдсонгүй. Дахин шалгана уу.'; btn.disabled = false; btn.textContent = '🚀 Нэвтрэх'; return false; }
+    const lic = rows[0];
+    if (lic.status && lic.status !== 'active') { err.textContent = '⚠️ Таны эрх түр хаагдсан байна.\nЗохиогчтой холбогдоно уу.'; btn.disabled = false; btn.textContent = '🚀 Нэвтрэх'; return false; }
+
+    // Хадгалах — дараа нэвтрэхэд шаардахгүй
+    const session = {
+      code: lic.key,
+      teacher: lic.teacher_name || 'Багш',
+      school: lic.school || '',
+      location: lic.location || '',
+      loggedAt: new Date().toISOString()
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+
+    // Активжуулсан огноог тэмдэглэ (эхний удаа бол)
+    if (!lic.activated_at) {
+      fetch(`${CENTRAL_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(code)}`, {
+        method: 'PATCH',
+        headers: { 'apikey': CENTRAL_KEY, 'Authorization': 'Bearer '+CENTRAL_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+        body: JSON.stringify({ activated_at: new Date().toISOString() })
+      });
+    }
+
+    showMain();
+  } catch (ex) {
+    err.textContent = '⚠️ Интернет холболтоо шалгана уу';
+    btn.disabled = false; btn.textContent = '🚀 Нэвтрэх';
+  }
+  return false;
+}
+
+function loadSession() {
+  try {
+    const s = localStorage.getItem(SESSION_KEY);
+    return s ? JSON.parse(s) : null;
+  } catch (e) { return null; }
+}
+
+function logout() {
+  if (!confirm('Гарахдаа итгэлтэй байна уу?')) return;
+  localStorage.removeItem(SESSION_KEY);
+  location.reload();
+}
+
+function showMain() {
+  const s = loadSession();
+  if (!s) return;
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('mainScreen').classList.remove('hidden');
+  document.getElementById('lbName').textContent = s.teacher;
+  document.getElementById('lbSchool').textContent = s.school;
+
+  const h = new Date().getHours();
+  let greet = 'Өдрийн мэнд';
+  if (h < 6) greet = 'Шөнийн мэнд';
+  else if (h < 12) greet = 'Өглөөний мэнд';
+  else if (h < 18) greet = 'Үдээс хойшийн мэнд';
+  else greet = 'Оройн мэнд';
+  document.getElementById('greetBox').innerHTML = `${greet}, <b>${s.teacher}</b> аа! 🎼`;
+}
+
+// ⚡ ДОТООД НЭВТРЭХ ШАТ АРИЛГАВ — архив аль хэдийн кодтой хамгаалагдсан тул
+// давхар код шаардахгүй. Задарсны дараа шууд нээгдэнэ (интернет ч хэрэггүй).
+(function () {
+  var sess = loadSession();
+  if (!sess || !sess.code) {   // session байхгүй ЭСВЭЛ хуучин хоосон кодтой бол засна
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      code: 'PRO-OK',
+      teacher: (sess && sess.teacher) || 'Багш',
+      school: (sess && sess.school) || '',
+      loggedAt: new Date().toISOString()
+    }));
+  }
+  showMain();
+})();
+</script>
+</body></html>

@@ -1,0 +1,131 @@
+<meta charset="UTF-8">
+<title>Бэлэн хөтөлбөр — СӨБ Багш Өлзий</title>
+<script src="curriculum-data.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, sans-serif; background: linear-gradient(135deg,#f0fdf4,#dbeafe); color: #1e293b; padding: 20px; min-height: 100vh; }
+  .container { max-width: 1000px; margin: 0 auto; }
+  .header { background: linear-gradient(135deg,#7c3aed,#be185d); color: white; padding: 24px; border-radius: 16px; margin-bottom: 20px; }
+  .header h1 { font-size: 22px; margin-bottom: 4px; }
+  .header p { opacity: 0.9; font-size: 14px; }
+  .back { display: inline-block; padding: 8px 16px; background: white; border-radius: 8px; text-decoration: none; color: #7c3aed; font-weight: 600; margin-bottom: 12px; }
+  .selectors { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .row:last-child { margin-bottom: 0; }
+  .row label { font-weight: 700; min-width: 100px; align-self: center; }
+  .row select, .row button { padding: 10px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: white; cursor: pointer; }
+  .row select:focus { border-color: #7c3aed; outline: none; }
+  .load-btn { background: linear-gradient(135deg,#be185d,#7c3aed); color: white; border: none; font-weight: 700; padding: 10px 24px; }
+  .content { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); min-height: 400px; }
+  .content h2 { color: #7c3aed; margin-bottom: 12px; font-size: 20px; }
+  .content pre { white-space: pre-wrap; font-family: inherit; line-height: 1.7; color: #334155; font-size: 14px; }
+  .empty { text-align: center; padding: 60px 20px; color: #94a3b8; }
+  .info { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .btn-sm { padding: 8px 14px; border-radius: 8px; border: 2px solid #e5e7eb; background: white; cursor: pointer; font-weight: 600; font-size: 13px; }
+  .btn-sm:hover { background: #f9fafb; }
+</style>
+
+<div class="container">
+  <a href="javascript:history.length>1?history.back():location.href='index.html'" class="back">← Буцах</a>
+  <div class="header">
+    <h1>📚 Бэлэн хөтөлбөрийн сан</h1>
+    <p>СӨБ-ын албан ёсны багшийн гарын авлагаас — бүлэг, сараар</p>
+  </div>
+
+  <div class="selectors">
+    <div class="row">
+      <label>👶 Бүлэг:</label>
+      <select id="group">
+        <option value="baga">Бага (2-3 нас)</option>
+        <option value="dund">Дунд (3-4 нас)</option>
+        <option value="ahlah">Ахлах (4-5 нас)</option>
+        <option value="beltgel">Бэлтгэл (5-6 нас)</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>📅 Сар:</label>
+      <select id="month">
+        <option value="9">9-р сар</option>
+        <option value="10">10-р сар</option>
+        <option value="11">11-р сар</option>
+        <option value="12">12-р сар</option>
+        <option value="1">1-р сар</option>
+        <option value="2">2-р сар</option>
+        <option value="3">3-р сар</option>
+        <option value="4">4-р сар</option>
+        <option value="5">5-р сар</option>
+      </select>
+      <button class="load-btn" onclick="loadPlan()">📖 Уншуулах</button>
+    </div>
+  </div>
+
+  <div class="content" id="content">
+    <div class="empty">
+      Бүлэг, сар сонгоод <b>"Уншуулах"</b> дар
+    </div>
+  </div>
+</div>
+
+<script>
+const MONTHS = {9:"9-р сар (IX)",10:"10-р сар (X)",11:"11-р сар (XI)",12:"12-р сар (XII)",1:"1-р сар (I)",2:"2-р сар (II)",3:"3-р сар (III)",4:"4-р сар (IV)",5:"5-р сар (V)"};
+const GROUPS = {baga:"Бага бүлэг",dund:"Дунд бүлэг",ahlah:"Ахлах бүлэг",beltgel:"Бэлтгэл бүлэг"};
+
+async function loadPlan() {
+  const g = document.getElementById('group').value;
+  const m = document.getElementById('month').value;
+  const key = `${g}_${m}`;
+
+  const text = (window.CURRICULUM || {})[key];
+  if (!text) {
+    document.getElementById('content').innerHTML = `<div class="empty">⚠️ Хөтөлбөр олдсонгүй (${key})</div>`;
+    return;
+  }
+  try {
+    document.getElementById('content').innerHTML = `
+      <h2>📅 ${GROUPS[g]} — ${MONTHS[m]}</h2>
+      <div class="info">
+        💡 Энэ нь СӨБ-ын албан ёсны багшийн гарын авлагаас авсан төлөвлөгөө.
+        Багш өөрийн бүлгийн онцлогт тохируулан ашиглана.
+      </div>
+      <pre>${escapeHTML(text)}</pre>
+      <div class="actions">
+        <button class="btn-sm" onclick="downloadText('${g}_${m}')">📥 Word татах</button>
+        <button class="btn-sm" onclick="copyText()">📋 Хуулах</button>
+        <button class="btn-sm" onclick="window.print()">🖨️ Хэвлэх</button>
+      </div>
+    `;
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<div class="empty">⚠️ ${e.message}</div>`;
+  }
+}
+
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function copyText() {
+  const text = document.querySelector('.content pre').innerText;
+  navigator.clipboard.writeText(text);
+  alert('Хуулагдлаа ✅');
+}
+
+function downloadText(key) {
+  const text = document.querySelector('.content pre').innerText;
+  const g = document.getElementById('group').value;
+  const m = document.getElementById('month').value;
+  const html = `<html xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><title>Хөтөлбөр</title></head>
+<body><h1>${GROUPS[g]} — ${MONTHS[m]}</h1><pre style="font-family:Times New Roman;font-size:12pt">${escapeHTML(text)}</pre></body></html>`;
+  const blob = new Blob([html], {type:'application/msword'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${g}_${m}_sar.doc`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Load default
+loadPlan();
+</script>

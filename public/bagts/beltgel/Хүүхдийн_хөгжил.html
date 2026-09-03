@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="mn"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🌱 Хүүхдийн хөгжлийн үнэлгээ — Бэлтгэл</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--a:#0ea5e9;--a2:#38bdf8;--bg1:#f0f9ff;--bg2:#faf5ff;
+  --ok:#16a34a;--mid:#f59e0b;--low:#ef4444;
+  --dM:#2563eb;--dC:#16a34a;--dT:#db2777}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;line-height:1.5;color:#1e293b;background:linear-gradient(135deg,var(--bg1),var(--bg2));min-height:100vh;padding:16px 12px}
+.wrap{max-width:1400px;margin:0 auto}
+header{background:linear-gradient(135deg,var(--a),var(--a2));padding:22px 26px;border-radius:20px;box-shadow:0 12px 30px color-mix(in srgb,var(--a) 38%,transparent);margin-bottom:16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;position:relative;overflow:hidden}
+header::before{content:'';position:absolute;top:-60%;right:-8%;width:340px;height:340px;background:radial-gradient(circle,#fff 0%,transparent 70%);opacity:.17}
+header h1{color:#fff;font-size:1.6em;font-weight:900;flex:1;position:relative;text-shadow:0 2px 6px rgba(0,0,0,.2)}
+header .back{background:#fff;color:var(--a);padding:9px 18px;border-radius:10px;text-decoration:none;font-weight:800;border:2px solid #fff;position:relative}
+header .back:hover{background:transparent;color:#fff}
+.group-card{background:linear-gradient(135deg,color-mix(in srgb,var(--a) 22%,#fff),color-mix(in srgb,var(--a2) 12%,#fff));border:2px solid color-mix(in srgb,var(--a) 45%,transparent);border-radius:16px;padding:16px 22px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px}
+.group-card .info h2{color:var(--a);font-size:1.4em;margin-bottom:2px;font-weight:900}
+.group-card .info small{color:#475569;font-size:12px;font-weight:600}
+.group-card .badge{background:var(--a);color:#fff;padding:6px 16px;border-radius:20px;font-weight:800;font-size:13px;box-shadow:0 4px 12px color-mix(in srgb,var(--a) 45%,transparent)}
+.law-note{background:linear-gradient(135deg,#eff6ff,#f0f9ff);border-left:5px solid var(--dM);padding:12px 16px;border-radius:10px;color:#1e3a8a;margin-bottom:14px;font-size:12.5px}
+.law-note b{color:#1d4ed8}
+.grade-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.grade-legend span{display:inline-flex;align-items:center;gap:6px;background:#fff;padding:4px 12px;border-radius:20px;font-weight:700;font-size:11.5px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.gl-dot{width:12px;height:12px;border-radius:50%}
+
+.main-tabs{display:flex;gap:6px;margin-bottom:16px;background:rgba(255,255,255,.7);padding:8px;border-radius:14px;flex-wrap:wrap}
+.main-tab{flex:1;min-width:130px;padding:12px 18px;background:transparent;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:14px;color:#64748b;transition:.2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}
+.main-tab.active{background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.main-tab:hover:not(.active){background:#fff;color:var(--a)}
+.panel{display:none}
+.panel.active{display:block}
+
+.notice{background:linear-gradient(135deg,#fff9c4,#fef3c7);padding:12px 16px;border-radius:10px;border-left:5px solid var(--mid);color:#78350f;margin-bottom:14px;font-size:12.5px}
+.toolbar{background:#fff;padding:14px 18px;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.06);margin-bottom:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.toolbar label{font-weight:700;color:#374151}
+.toolbar input,.toolbar select{padding:8px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;font-family:inherit}
+.toolbar input:focus{outline:none;border-color:var(--a)}
+.btn{padding:9px 18px;border-radius:8px;border:none;font-weight:700;cursor:pointer;font-size:13px;font-family:inherit;color:#fff}
+.btn-add{background:linear-gradient(135deg,#10b981,#059669)}
+.btn-print{background:linear-gradient(135deg,#3b82f6,#2563eb)}
+.btn-export{background:linear-gradient(135deg,var(--a),var(--a2))}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.stat{background:#fff;padding:14px;border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.05);border-left:4px solid var(--a);text-align:center}
+.stat .val{font-size:1.5em;font-weight:900;color:#0f172a}
+.stat .lbl{color:#64748b;font-size:11px;font-weight:600;margin-top:2px}
+
+.dom-bars{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:14px}
+.dom-card{background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 3px 10px rgba(0,0,0,.05);border-top:4px solid var(--dc)}
+.dom-card h4{font-size:12.5px;font-weight:800;color:var(--dc);margin-bottom:6px}
+.dom-card .bar{height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;margin:6px 0}
+.dom-card .fill{height:100%;background:var(--dc);border-radius:4px;transition:width .4s}
+.dom-card .pct{font-weight:800;color:var(--dc);font-size:13px}
+
+.assess-layout{display:grid;grid-template-columns:290px 1fr;gap:16px}
+@media (max-width:820px){.assess-layout{grid-template-columns:1fr}}
+.children-list{background:#fff;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.06);padding:14px;height:fit-content;max-height:78vh;overflow-y:auto}
+.children-list h3{color:var(--a);font-size:.95em;margin-bottom:10px;font-weight:800;padding-bottom:8px;border-bottom:2px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center}
+.child-item{padding:9px 12px;border-radius:8px;cursor:pointer;margin-bottom:6px;font-weight:700;color:#334155;transition:.15s;border:2px solid transparent;font-size:13px;display:flex;align-items:center;gap:8px}
+.child-item:hover{background:#f8fafc}
+.child-item.active{background:linear-gradient(135deg,var(--a),var(--a2));color:#fff}
+.child-item.active .ci-badge{background:rgba(255,255,255,.25);color:#fff}
+.child-item .ci-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.child-item .ci-badge{font-size:10.5px;padding:2px 7px;border-radius:10px;font-weight:800;background:#f1f5f9;color:#475569}
+.child-item.empty-msg{color:#94a3b8;font-style:italic;text-align:center;cursor:default;font-weight:400;display:block}
+.mini-del{background:transparent;border:none;cursor:pointer;color:inherit;opacity:.5;font-size:13px;padding:0 2px}
+.mini-del:hover{opacity:1}
+
+.detail-panel{background:#fff;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.06);overflow:hidden}
+.detail-head{background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;padding:16px 22px}
+.detail-head .dh-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.detail-head h3{font-size:1.2em;font-weight:800}
+.detail-head .g-badge{background:#fff;padding:6px 16px;border-radius:20px;font-weight:800;font-size:13px}
+.detail-head .overall{display:flex;align-items:center;gap:14px;margin-top:12px;flex-wrap:wrap}
+.detail-head .big-pct{font-size:2.1em;font-weight:900;line-height:1}
+.detail-head .mini-doms{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;opacity:.95}
+.detail-head .mini-doms b{font-size:1.15em}
+.cmp-line{margin-top:10px;background:rgba(255,255,255,.18);border-radius:10px;padding:8px 14px;font-size:12.5px;display:inline-block}
+
+.dom-section{padding:6px 22px 18px}
+.dom-title{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;margin:18px 0 10px;padding-bottom:8px;border-bottom:2px solid #f1f5f9;color:var(--dc)}
+.dom-title .dcount{margin-left:auto;font-size:11.5px;color:#94a3b8;font-weight:600}
+.crit{display:flex;align-items:flex-start;gap:12px;padding:9px 4px;border-bottom:1px solid #f4f4f5}
+.crit:last-child{border-bottom:none}
+.crit .cnum{width:26px;height:26px;flex-shrink:0;background:#f1f5f9;color:#475569;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11.5px;margin-top:1px}
+.crit .ctext{flex:1;font-size:12.8px;color:#334155;line-height:1.45}
+.rate-group{display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap}
+.rb{padding:5px 10px;border-radius:7px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;color:#64748b;transition:.12s;white-space:nowrap}
+.rb:hover{border-color:#cbd5e1}
+.rb2.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.rb1.on{background:var(--mid);border-color:var(--mid);color:#fff}
+.rb0.on{background:var(--low);border-color:var(--low);color:#fff}
+
+.no-child{text-align:center;padding:60px 20px;color:#94a3b8;font-style:italic}
+.no-child .big{font-size:3em;margin-bottom:12px}
+
+/* JOURNEY (Явц) */
+.sub-tabs{display:flex;background:#f8fafc;border-bottom:2px solid #e5e7eb}
+.sub-tab{flex:1;padding:12px;background:transparent;border:none;font-weight:700;cursor:pointer;color:#64748b;font-family:inherit;font-size:13px;border-bottom:3px solid transparent;transition:.15s}
+.sub-tab.active{color:var(--a);border-bottom-color:var(--a);background:#fff}
+.sub-content{display:none;padding:18px 20px}
+.sub-content.active{display:block}
+.entry-form{background:#f8fafc;border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.entry-form textarea{width:100%;min-height:80px;padding:10px 12px;border:2px solid #e5e7eb;border-radius:8px;font-family:inherit;font-size:13px;resize:vertical}
+.entry-form textarea:focus{outline:none;border-color:var(--a)}
+.attach-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.attach-btn{background:#fff;border:2px dashed #cbd5e1;color:#475569;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700;font-size:12.5px;font-family:inherit;display:flex;align-items:center;gap:6px}
+.attach-btn:hover{border-color:var(--a);color:var(--a)}
+.attach-btn input{display:none}
+.attached-preview{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.attached-preview .item{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:12px}
+.attached-preview .item .del-x{background:#fef2f2;color:#dc2626;border:none;border-radius:4px;padding:2px 6px;cursor:pointer;font-weight:700}
+.attached-preview img{max-height:60px;border-radius:6px;object-fit:cover}
+.save-entry{background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;border:none;padding:10px 20px;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px;margin-top:12px}
+.entries-list{margin-top:16px}
+.entries-list h4{color:var(--a);margin-bottom:10px;font-size:14px}
+.entry{background:#fff;border:1px solid #e5e7eb;border-left:4px solid var(--a);border-radius:10px;padding:12px 16px;margin-bottom:10px}
+.entry .meta{display:flex;justify-content:space-between;align-items:center;color:#64748b;font-size:11px;margin-bottom:8px;flex-wrap:wrap;gap:6px}
+.entry .text{color:#334155;font-size:13px;line-height:1.6;white-space:pre-wrap}
+.entry .attached{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.entry .attached .file-link{background:#eff6ff;color:#1d4ed8;padding:4px 10px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.entry .attached img{max-height:100px;border-radius:8px;object-fit:cover;cursor:pointer}
+.entry .attached audio{max-width:100%;height:36px}
+.entry .del-entry{background:transparent;color:#dc2626;border:1px solid #fecaca;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;font-weight:700}
+
+/* ӨДРИЙН ТЭМДЭГЛЭЛ */
+.jform .form-row{margin-bottom:14px;padding:0 22px}
+.jform .form-row:first-child{padding-top:16px}
+.jform label{display:block;font-weight:700;color:#374151;margin-bottom:6px;font-size:12.5px}
+.jform input,.jform textarea{width:100%;padding:10px 12px;border:2px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;background:#fafafa}
+.jform input:focus,.jform textarea:focus{outline:none;border-color:var(--a);background:#fff}
+.jform textarea{resize:vertical;min-height:70px}
+.jgrid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.jgrid2{grid-template-columns:1fr}}
+.jsect{color:var(--a);font-weight:800;font-size:13px;margin:6px 22px 4px;padding-top:12px;border-top:2px solid #f1f5f9}
+.mood{display:flex;gap:8px;flex-wrap:wrap}
+.mood-btn{padding:8px 14px;border:2px solid #e5e7eb;background:#fafafa;border-radius:10px;cursor:pointer;font-weight:700;font-size:12.5px;font-family:inherit;color:#475569}
+.mood-btn:hover{border-color:var(--a)}
+.mood-btn.on{background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;border-color:transparent}
+.jactions{display:flex;gap:10px;flex-wrap:wrap;padding:16px 22px 22px;margin-top:6px;border-top:2px solid #f5f5f5}
+.jitem{padding:10px 12px;border-radius:9px;cursor:pointer;margin-bottom:6px;background:#fafafa;border:2px solid transparent;transition:.15s}
+.jitem:hover{background:#f1f5f9}
+.jitem.active{background:linear-gradient(135deg,color-mix(in srgb,var(--a) 16%,#fff),#fff);border-color:var(--a)}
+.jitem .jd{font-size:11px;color:#94a3b8}
+.jitem .jt{font-weight:700;font-size:13px;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* COMPARISON TABLE (Үр дүн) */
+.cmp-wrap{background:#fff;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.06);overflow:hidden;margin-bottom:14px}
+.cmp-wrap .ch{background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;padding:12px 20px;font-weight:800}
+.cmp-wrap table{width:100%;border-collapse:collapse;font-size:12.5px}
+.cmp-wrap th,.cmp-wrap td{border-bottom:1px solid #eee;padding:8px 12px;text-align:center}
+.cmp-wrap th{background:#f8fafc;color:#334155;font-weight:800;font-size:11.5px}
+.cmp-wrap td.nm{text-align:left;font-weight:700}
+.up{color:#059669;font-weight:800}
+.down{color:#dc2626;font-weight:800}
+.flat{color:#64748b;font-weight:700}
+
+@media print{
+  header .back,.main-tabs,.toolbar,.sub-tabs,.entry-form,.del-entry,.attach-row,.mini-del,.btn,.children-list{display:none!important}
+  body{background:#fff;padding:0}
+  header,.group-card,.stat,.dom-card,.detail-panel,.cmp-wrap{box-shadow:none}
+  .assess-layout{grid-template-columns:1fr}
+  .panel:not(.active){display:none!important}
+  .rb:not(.on){display:none!important}
+  .rb.on{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .detail-head{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style></head><body>
+<div class="wrap">
+<header>
+  <h1>🌱 Хүүхдийн хөгжлийн үнэлгээ</h1>
+  <a href="index.html" class="back">🏠 Нүүр</a>
+</header>
+
+<div class="group-card">
+  <div class="info">
+    <h2>Бэлтгэл бүлэг</h2>
+    <small>IV түвшин · 5-6 нас · 2026-2027 оны хичээлийн жил</small>
+  </div>
+  <span class="badge" id="grpCount">0 хүүхэд</span>
+</div>
+
+<div class="law-note">
+  📘 <b>Боловсролын сайдын А/79 тушаал</b>-ын дагуу үнэлгээ 3 хүрээтэй: <b>Мэдлэг · Чадвар · Төлөвшил</b>.
+  Шалгуур бүрийг <b>Бүрэн (2) · Хэсэгчлэн (1) · Үгүй (0)</b> гэж үнэлж, эзэмшилтийн хувиар дүгнэнэ:
+  <div class="grade-legend">
+    <span><i class="gl-dot" style="background:var(--ok)"></i>80%+ — Хангалттай эзэмшиж байна</span>
+    <span><i class="gl-dot" style="background:var(--mid)"></i>50-79% — Ахиж байна</span>
+    <span><i class="gl-dot" style="background:var(--low)"></i>49%↓ — Хөгжиж байна</span>
+  </div>
+</div>
+
+<div class="main-tabs">
+  <button class="main-tab active" onclick="switchTab('start')">🎯 Гарааны үнэлгээ</button>
+  <button class="main-tab" onclick="switchTab('journey')">📈 Явцын үнэлгээ</button>
+  <button class="main-tab" onclick="switchTab('end')">🏁 Үр дүнгийн үнэлгээ</button>
+  <button class="main-tab" onclick="switchTab('journal')">📖 Өдрийн тэмдэглэл</button>
+</div>
+
+<!-- ГАРАА -->
+<div class="panel active" id="tab-start">
+  <div class="notice">💡 <b>Гарааны (оношлох) үнэлгээ</b> — хичээлийн жилийн эхэнд (9 сар) авна. Хүүхэд бүрийн суурь түвшинг тогтоож, сургалтаа төлөвлөнө.</div>
+  <div class="toolbar">
+    <label>➕ Хүүхэд нэмэх:</label>
+    <input type="text" id="newName_start" placeholder="Хүүхдийн нэр..." onkeydown="if(event.key==='Enter')addChild('start')" />
+    <button class="btn btn-add" onclick="addChild('start')">Нэмэх</button>
+    <button class="btn btn-print" onclick="window.print()">🖨 Хэвлэх</button>
+    <button class="btn btn-export" onclick="exportCSV('start')">📥 CSV</button>
+  </div>
+  <div class="stats-row" id="stats_start"></div>
+  <div class="dom-bars" id="doms_start"></div>
+  <div class="assess-layout">
+    <div class="children-list">
+      <h3>👥 Хүүхдүүд <span id="cnt_start" style="font-weight:600;color:#94a3b8;font-size:11px"></span></h3>
+      <div id="list_start"></div>
+    </div>
+    <div class="detail-panel" id="detail_start"></div>
+  </div>
+</div>
+
+<!-- ЯВЦ -->
+<div class="panel" id="tab-journey">
+  <div class="notice">💡 <b>Явцын үнэлгээ</b> (журмын 2.8) — хүүхэд бүрд <b>Ажиглалт</b>, <b>Ярилцлага</b>, <b>Тэмдэглэл</b> хөтөлж, зураг/аудио/файл хавсарган <b>хувийн хавтас</b> (баримт нотолгоо) бүрдүүлнэ.</div>
+  <div class="toolbar">
+    <label>➕ Хүүхэд нэмэх:</label>
+    <input type="text" id="newName_journey" placeholder="Хүүхдийн нэр..." onkeydown="if(event.key==='Enter')addChild('journey')" />
+    <button class="btn btn-add" onclick="addChild('journey')">Нэмэх</button>
+  </div>
+  <div class="assess-layout">
+    <div class="children-list">
+      <h3>👥 Хүүхдүүд</h3>
+      <div id="list_journey"></div>
+    </div>
+    <div class="detail-panel" id="detail_journey"></div>
+  </div>
+</div>
+
+<!-- ҮР ДҮН -->
+<div class="panel" id="tab-end">
+  <div class="notice">💡 <b>Үр дүнгийн үнэлгээ</b> — хичээлийн жилийн эцэст (5 сар) авна. Гарааны үнэлгээтэй харьцуулж <b>ахиц</b>-ыг тодорхойлно.</div>
+  <div class="toolbar">
+    <label>➕ Хүүхэд нэмэх:</label>
+    <input type="text" id="newName_end" placeholder="Хүүхдийн нэр..." onkeydown="if(event.key==='Enter')addChild('end')" />
+    <button class="btn btn-add" onclick="addChild('end')">Нэмэх</button>
+    <button class="btn btn-print" onclick="window.print()">🖨 Хэвлэх</button>
+    <button class="btn btn-export" onclick="exportCSV('end')">📥 CSV</button>
+  </div>
+  <div class="stats-row" id="stats_end"></div>
+  <div class="dom-bars" id="doms_end"></div>
+  <div class="cmp-wrap" id="cmp_end" style="display:none">
+    <div class="ch">📊 Гараа → Үр дүн ахицын харьцуулалт</div>
+    <div style="overflow-x:auto"><table id="cmpTable"></table></div>
+  </div>
+  <div class="assess-layout">
+    <div class="children-list">
+      <h3>👥 Хүүхдүүд <span id="cnt_end" style="font-weight:600;color:#94a3b8;font-size:11px"></span></h3>
+      <div id="list_end"></div>
+    </div>
+    <div class="detail-panel" id="detail_end"></div>
+  </div>
+</div>
+
+<!-- ӨДРИЙН ТЭМДЭГЛЭЛ -->
+<div class="panel" id="tab-journal">
+  <div class="notice">💡 <b>Багшийн өдрийн тэмдэглэл, эргэцүүлэл</b> — өдөр бүр 5 минут: юу ажиглав, юу сайн болов, юуг сайжруулах, дараагийн алхам. Жилийн эцэст мэргэжлийн онцлох баримт болно.</div>
+  <div class="assess-layout">
+    <div class="children-list">
+      <h3 style="justify-content:flex-start">📋 Тэмдэглэлүүд</h3>
+      <button class="btn btn-add" style="width:100%;margin-bottom:10px" onclick="newJournal()">✏️ Шинэ тэмдэглэл</button>
+      <div id="jlist"></div>
+    </div>
+    <div class="detail-panel" id="jdetail"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const PKG='BELTGEL';
+const LEVEL={roman:'IV',name:'Бэлтгэл',age:'5-6'};
+const DOMAINS=[
+  {k:'M',name:'Мэдлэг',icon:'📚',color:'#3b82f6'},
+  {k:'C',name:'Чадвар',icon:'🤸',color:'#10b981'},
+  {k:'T',name:'Төлөвшил',icon:'❤',color:'#ec4899'}
+];
+const CRITERIA={"M":[{"id":"M1","d":"M","text":"Аюултай нөхцөлд (галаас хол байх, шатаар болгоомжтой явах гэх мэт) юу хийхийг мэддэг."},{"id":"M2","d":"M","text":"Хүмүүсийн хоорондын харилцаа хэрхэн өрнөж байгааг ойлгодог."},{"id":"M3","d":"M","text":"20 хүртэл цээжээр тоолдог."},{"id":"M4","d":"M","text":"Долоо хоногийн гарагийг дарааллаар нь нэрлэдэг."},{"id":"M5","d":"M","text":"Тоглоом, юмсын ижил ба ялгаатай шинжийг нэрлэдэг."},{"id":"M6","d":"M","text":"Ургамлын ургалтад хэрэгтэй зүйлийг нэрлэдэг."},{"id":"M7","d":"M","text":"Улирлын онцлог хүмүүсийн амьдралд хэрхэн нөлөөлж байгааг тайлбарладаг."},{"id":"M8","d":"M","text":"Уран зураг, уран баримлын бүтээлийг хайрлан хамгаалахыг мэддэг."}],"C":[{"id":"C1","d":"C","text":"Вандан сандал дээгүүр алхахдаа гарын хөдөлгөөн (гараа алдлах, өргөх гэх мэт)-ийг хослуулдаг."},{"id":"C2","d":"C","text":"7-8 саадыг сүлжиж гүйдэг (10 метр зайд)."},{"id":"C3","d":"C","text":"Вандан сандал дээр элгээр гулсаж мөлхдөг."},{"id":"C4","d":"C","text":"30 см өндөртэй тавцан дээрээс техникийн дагуу үсэрч буудаг."},{"id":"C5","d":"C","text":"1.5-2 метр зайд байгаа хүүхдэд бөмбөгийг газарт ойлгож өгөх, газарт ойлгож өгсөн бөмбөгийг барьж авдаг."},{"id":"C6","d":"C","text":"Сургалт, үйл ажиллагааны явцад тодорхой үйл, үйлдлийг хийж чадах, чадахгүй шалтгаанаа тайлбарладаг."},{"id":"C7","d":"C","text":"Өөрийн хэрэгцээгээ илэрхийлдэг."},{"id":"C8","d":"C","text":"Гэр бүлийн гишүүдээ танилцуулж, ажил хөдөлмөрт нь хэрхэн тусалдаг талаар тайлбарлан ярьдаг."},{"id":"C9","d":"C","text":"Тайвшрахад туслах аргуудыг багшийн тусламжтай хэрэглэдэг."},{"id":"C10","d":"C","text":"Нэрлэсэн үгийн эхэнд ба төгсгөлд орсон авиаг ялгадаг."},{"id":"C11","d":"C","text":"Ном болон үлгэр, зохиол, болсон үйл явдлыг дэс дараатай тайлбарладаг."},{"id":"C12","d":"C","text":"Үлгэр зохиолын төгсгөлийг өөрийн төсөөллөөр үргэлжлүүлэн зохиож ярьдаг."},{"id":"C13","d":"C","text":"Өөрийн нэрийн дармал үсгийг дагуулж бичдэг."},{"id":"C14","d":"C","text":"Ном болон үлгэр, зохиол, болсон үйл явдлыг дэс дараатай тайлбарладаг."},{"id":"C15","d":"C","text":"10 хүртэлх эд юмсыг оноож тоолдог."},{"id":"C16","d":"C","text":"Өгөгдсөн тооноос 20 дотор нэгээр нэмэгдүүлж, хорогдуулж тоолдог."},{"id":"C17","d":"C","text":"10 хүртэлх тооны дарааллаас орхигдсон 1-2 тоог олдог."},{"id":"C18","d":"C","text":"Нэг юмсын байрлалаар нөгөө юмсын байрлалыг тодорхойлдог."},{"id":"C19","d":"C","text":"Юмсын хэмжээ (урт, хүнд, багтаамж)-гээр нь таамаглан харьцуулдаг."},{"id":"C20","d":"C","text":"Юмсыг шинж чанараар нь бүлэглэн учрыг тайлбарладаг."},{"id":"C21","d":"C","text":"Сэдвийн хүрээнд үйл явдал (байгалийн үзэгдэл, үлгэр гэх мэт)-ыг бүтээлчээр зохиомжлон зурдаг."},{"id":"C22","d":"C","text":"Баримлын шавар, байгалийн материал зэргээр сэдэвт баримал барьдаг."},{"id":"C23","d":"C","text":"Өгөгдсөн сэдвийн хүрээнд наамал хийдэг."},{"id":"C24","d":"C","text":"Эд зүйлсээр юмсыг зохиомжлон бүтээж, дүрслэлийг баяжуулдаг."},{"id":"C25","d":"C","text":"Хөгжмийн энгийн зэмсгийг дуугаралтаар нь ялгаж нэрлэдэг"},{"id":"C26","d":"C","text":"Гарын дохионы дагуу дууны өндөрлөг, хурдыг зохицуулан дуулдаг."},{"id":"C27","d":"C","text":"Хөгжмийн энгийн зэмсгээр аялгууны хэмнэлд нийцүүлэн хөгжимддөг."},{"id":"C28","d":"C","text":"Хөгжмийн аялгуунд нийцсэн хөдөлгөөн хийдэг."}],"T":[{"id":"T1","d":"T","text":"Хувийн ариун цэвэр сахихын ач холбогдлыг ойлгож, тогтмол дагаж мөрддөг."},{"id":"T2","d":"T","text":"Хоол хүнс, зууш бэлтгэхэд өөрийн хэмжээнд оролцож тусалдаг."},{"id":"T3","d":"T","text":"Бохирдсон хоолны хэрэгслийг насанд хүрэгчидтэй хамтран цэвэрлэдэг."},{"id":"T4","d":"T","text":"Ухаалаг төхөөрөмжийг хэрэглэх үедээ бусдын заавар, дүрмийг мөрддөг."},{"id":"T5","d":"T","text":"Тоглоомын дүрэм баримтлан хамтран тоглодог."},{"id":"T6","d":"T","text":"Гэр бүл, цэцэрлэг, анги, олон нийтийн газарт тогтсон дүрмийг баримталдаг."},{"id":"T7","d":"T","text":"Өөрийнх нь үйлдэл бусдын сэтгэлийн хөдөлгөөнд нөлөөлж буйг мэдэж зохицон харилцдаг."},{"id":"T8","d":"T","text":"Харилцан ярианд идэвх санаачилга (асуулт асуух гэх мэт)-тай оролцдог."},{"id":"T9","d":"T","text":"Амьтдыг хайрлан хамгаалдаг."},{"id":"T10","d":"T","text":"Бусдын сонирхол, ялгаатай байдалд хүндэтгэлтэй ханддаг."},{"id":"T11","d":"T","text":"Орчиндоо хариуцлагатай байж, хог ангилж, байгаль бохирдуулахгүй байх үйлийг хийдэг."},{"id":"T12","d":"T","text":"Үндэсний соёл, зан заншлын зарим үйлийг бие даан болон найз нөхөдтэйгээ хамтран хийдэг."},{"id":"T13","d":"T","text":"Дүрийн зан чанарын талаар харилцан ярилцдаг."}]};
+const ALL_CRIT=[...CRITERIA.M,...CRITERIA.C,...CRITERIA.T];
+
+const KEY={roster:'assess_roster_'+PKG,start:'assess_start_'+PKG,end:'assess_end_'+PKG,journey:'assess_journey_'+PKG,journal:'assess_journal_'+PKG};
+const MOODS=['😊 Гайхалтай','🙂 Сайн','😐 Дундаж','😔 Ядарсан','🤔 Бодолхийлсэн'];
+function load(k,def){try{return JSON.parse(localStorage.getItem(k))??def}catch(e){return def}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){alert('⚠ Хадгалах хүчин чадал дүүрсэн. Аудио/зургийн хэмжээг багасгана уу.')}}
+
+let roster=load(KEY.roster,[]);              // [{id,name}]
+let score={start:load(KEY.start,{}),end:load(KEY.end,{})}; // {childId:{critId:0|1|2}}
+let journey=load(KEY.journey,{});            // {childId:{observe:[],interview:[],note:[]}}
+let jlog=load(KEY.journal,[]);               // [{id,date,theme,mood,...}]
+let cur={start:null,journey:null,end:null};
+let curSub='observe';
+let curJ=null;
+let pendingAttach={observe:[],interview:[],note:[]};
+
+function uid(){return 'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function esc(s){return String(s).replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]))}
+function grade(p){if(p>=80)return{l:'Хангалттай эзэмшиж байна',c:'var(--ok)'};if(p>=50)return{l:'Ахиж байна',c:'var(--mid)'};return{l:'Хөгжиж байна',c:'var(--low)'}}
+
+function childPct(phase,childId,domKey){
+  const crits=domKey?CRITERIA[domKey]:ALL_CRIT;
+  const sc=score[phase][childId]||{};
+  let sum=0;crits.forEach(c=>{sum+=(sc[c.id]||0)});
+  return Math.round(sum/(crits.length*2||1)*1000)/10;
+}
+function assessedCount(phase,childId){
+  const sc=score[phase][childId]||{};return ALL_CRIT.filter(c=>sc[c.id]!==undefined).length;
+}
+function isAssessed(phase,childId){return assessedCount(phase,childId)>0}
+
+// ─── ROSTER ───
+function addChild(phase){
+  const inp=document.getElementById('newName_'+phase);
+  const name=inp.value.trim();if(!name){inp.focus();return}
+  const id=uid();
+  roster.push({id,name});save(KEY.roster,roster);
+  journey[id]={observe:[],interview:[],note:[]};save(KEY.journey,journey);
+  inp.value='';
+  cur[phase]=id;
+  renderAll();selectChild(phase,id);
+  inp.focus();
+}
+function removeChild(phase,id){
+  const ch=roster.find(c=>c.id===id);if(!ch)return;
+  if(!confirm('«'+ch.name+'»-г бүх үнэлгээнээс устгах уу?'))return;
+  roster=roster.filter(c=>c.id!==id);save(KEY.roster,roster);
+  delete score.start[id];delete score.end[id];delete journey[id];
+  save(KEY.start,score.start);save(KEY.end,score.end);save(KEY.journey,journey);
+  if(cur[phase]===id)cur[phase]=null;
+  renderAll();
+  const dp=document.getElementById('detail_'+phase);if(cur[phase]===null)dp.innerHTML=emptyDetail();
+}
+function renameChild(id,val){
+  const ch=roster.find(c=>c.id===id);if(ch){ch.name=val.trim()||ch.name;save(KEY.roster,roster);renderLists()}
+}
+
+// ─── TABS ───
+function switchTab(t){
+  document.querySelectorAll('.main-tab').forEach((b,i)=>b.classList.toggle('active',['start','journey','end','journal'][i]===t));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+}
+
+// ─── RENDER LISTS ───
+function badgeFor(phase,id){
+  if(phase==='journey'){const j=journey[id]||{observe:[],interview:[],note:[]};const n=j.observe.length+j.interview.length+j.note.length;return n?n+' бичлэг':''}
+  if(!isAssessed(phase,id))return '—';
+  return childPct(phase,id)+'%';
+}
+function renderList(phase){
+  const el=document.getElementById('list_'+phase);
+  if(!roster.length){el.innerHTML='<div class="child-item empty-msg">Хүүхэд нэмнэ үү</div>';return}
+  el.innerHTML=roster.map(c=>{
+    const g=(phase!=='journey'&&isAssessed(phase,c.id))?grade(childPct(phase,c.id)):null;
+    const dot=g?`<span style="width:9px;height:9px;border-radius:50%;background:${g.c};flex-shrink:0"></span>`:'';
+    return `<div class="child-item ${cur[phase]===c.id?'active':''}" onclick="selectChild('${phase}','${c.id}')">
+      ${dot}<span class="ci-name">${esc(c.name)}</span>
+      <span class="ci-badge">${badgeFor(phase,c.id)}</span>
+      <button class="mini-del" title="Устгах" onclick="event.stopPropagation();removeChild('${phase}','${c.id}')">🗑</button>
+    </div>`;
+  }).join('');
+  const cnt=document.getElementById('cnt_'+phase);if(cnt)cnt.textContent='('+roster.length+')';
+}
+function renderLists(){['start','journey','end'].forEach(renderList)}
+
+// ─── ASSESSMENT DETAIL (start/end) ───
+function emptyDetail(){return `<div class="no-child"><div class="big">👈</div><div>Зүүн талаас хүүхэд сонгоно уу,<br>эсвэл шинээр нэмнэ үү</div></div>`}
+function selectChild(phase,id){
+  cur[phase]=id;
+  if(phase==='journey'){renderList('journey');renderJourneyDetail(id);return}
+  renderList(phase);renderAssessDetail(phase,id);
+}
+function renderAssessDetail(phase,id){
+  const ch=roster.find(c=>c.id===id);const dp=document.getElementById('detail_'+phase);
+  if(!ch){dp.innerHTML=emptyDetail();return}
+  const total=childPct(phase,id);const g=grade(total);
+  const done=assessedCount(phase,id);
+  let cmp='';
+  if(phase==='end'&&isAssessed('start',id)){
+    const s=childPct('start',id);const d=Math.round((total-s)*10)/10;
+    const sym=d>0?'▲':d<0?'▼':'▶';const cl=d>0?'up':d<0?'down':'flat';
+    cmp=`<div class="cmp-line">Гараа: <b>${s}%</b> → Үр дүн: <b>${total}%</b> · Ахиц: <span class="${cl}" style="color:#fff">${sym} ${d>0?'+':''}${d}%</span></div>`;
+  }
+  const doms=DOMAINS.map(d=>{const p=childPct(phase,id,d.k);return `<span>${d.icon} ${d.name}: <b>${p}%</b></span>`}).join('');
+  let html=`<div class="detail-head">
+    <div class="dh-top">
+      <h3>👤 ${esc(ch.name)}</h3>
+      <span class="g-badge" style="color:${g.c}">${g.l}</span>
+    </div>
+    <div class="overall">
+      <div class="big-pct">${total}%</div>
+      <div class="mini-doms">${doms}</div>
+    </div>
+    ${cmp}
+    <div style="margin-top:8px;font-size:11.5px;opacity:.9">Үнэлсэн: ${done}/${ALL_CRIT.length} шалгуур</div>
+  </div>`;
+  DOMAINS.forEach(d=>{
+    const crits=CRITERIA[d.k];const sc=score[phase][id]||{};
+    html+=`<div class="dom-section" style="--dc:${d.color}">
+      <div class="dom-title">${d.icon} ${d.name}<span class="dcount">${crits.length} шалгуур · ${childPct(phase,id,d.k)}%</span></div>`;
+    crits.forEach((c,i)=>{
+      const v=sc[c.id];
+      html+=`<div class="crit">
+        <div class="cnum">${i+1}</div>
+        <div class="ctext">${esc(c.text)}</div>
+        <div class="rate-group">
+          <button class="rb rb2 ${v===2?'on':''}" onclick="setScore('${phase}','${id}','${c.id}',2)">✓ Бүрэн</button>
+          <button class="rb rb1 ${v===1?'on':''}" onclick="setScore('${phase}','${id}','${c.id}',1)">± Хэсэгчлэн</button>
+          <button class="rb rb0 ${v===0?'on':''}" onclick="setScore('${phase}','${id}','${c.id}',0)">✗ Үгүй</button>
+        </div>
+      </div>`;
+    });
+    html+=`</div>`;
+  });
+  dp.innerHTML=html;
+}
+function setScore(phase,id,critId,val){
+  if(!score[phase][id])score[phase][id]={};
+  if(score[phase][id][critId]===val)delete score[phase][id][critId]; // toggle off
+  else score[phase][id][critId]=val;
+  save(KEY[phase],score[phase]);
+  renderAssessDetail(phase,id);renderList(phase);renderSummary(phase);
+}
+
+// ─── SUMMARY ───
+function renderSummary(phase){
+  const assessed=roster.filter(c=>isAssessed(phase,c.id));
+  const avg=assessed.length?Math.round(assessed.reduce((s,c)=>s+childPct(phase,c.id),0)/assessed.length*10)/10:0;
+  let ok=0,mid=0,low=0;assessed.forEach(c=>{const p=childPct(phase,c.id);if(p>=80)ok++;else if(p>=50)mid++;else low++});
+  document.getElementById('stats_'+phase).innerHTML=`
+    <div class="stat"><div class="val">${roster.length}</div><div class="lbl">👶 Нийт хүүхэд</div></div>
+    <div class="stat"><div class="val">${assessed.length}</div><div class="lbl">✍ Үнэлсэн</div></div>
+    <div class="stat"><div class="val">${assessed.length?avg+'%':'—'}</div><div class="lbl">📈 Бүлгийн дундаж</div></div>
+    <div class="stat" style="border-left-color:var(--ok)"><div class="val" style="color:var(--ok)">${ok}</div><div class="lbl">Хангалттай</div></div>
+    <div class="stat" style="border-left-color:var(--mid)"><div class="val" style="color:var(--mid)">${mid}</div><div class="lbl">Ахиж байна</div></div>
+    <div class="stat" style="border-left-color:var(--low)"><div class="val" style="color:var(--low)">${low}</div><div class="lbl">Хөгжиж байна</div></div>`;
+  document.getElementById('doms_'+phase).innerHTML=DOMAINS.map(d=>{
+    const p=assessed.length?Math.round(assessed.reduce((s,c)=>s+childPct(phase,c.id,d.k),0)/assessed.length*10)/10:0;
+    return `<div class="dom-card" style="--dc:${d.color}"><h4>${d.icon} ${d.name}</h4><div class="bar"><div class="fill" style="width:${p}%"></div></div><div class="pct">${assessed.length?p+'%':'—'}</div></div>`;
+  }).join('');
+  document.getElementById('grpCount').textContent=roster.length+' хүүхэд';
+  if(phase==='end')renderComparison();
+}
+function renderComparison(){
+  const rows=roster.filter(c=>isAssessed('end',c.id)||isAssessed('start',c.id));
+  const wrap=document.getElementById('cmp_end');
+  if(!rows.length){wrap.style.display='none';return}
+  wrap.style.display='block';
+  let h=`<thead><tr><th style="text-align:left">Хүүхэд</th><th>Гараа</th><th>Үр дүн</th><th>Ахиц</th><th>Дүгнэлт</th></tr></thead><tbody>`;
+  rows.forEach(c=>{
+    const s=isAssessed('start',c.id)?childPct('start',c.id):null;
+    const e=isAssessed('end',c.id)?childPct('end',c.id):null;
+    const d=(s!==null&&e!==null)?Math.round((e-s)*10)/10:null;
+    const dcell=d===null?'—':`<span class="${d>0?'up':d<0?'down':'flat'}">${d>0?'▲ +':d<0?'▼ ':'▶ '}${d}%</span>`;
+    const g=e!==null?grade(e):null;
+    h+=`<tr><td class="nm">${esc(c.name)}</td><td>${s===null?'—':s+'%'}</td><td>${e===null?'—':e+'%'}</td><td>${dcell}</td>
+      <td>${g?`<b style="color:${g.c}">${g.l}</b>`:'—'}</td></tr>`;
+  });
+  h+=`</tbody>`;document.getElementById('cmpTable').innerHTML=h;
+}
+
+// ─── CSV ───
+function exportCSV(phase){
+  const head=['№','Нэр',...ALL_CRIT.map((c,i)=>{const dn=DOMAINS.find(d=>d.k===c.d).name;return dn+' '+c.text.slice(0,40)}),'Мэдлэг%','Чадвар%','Төлөвшил%','Нийт%','Дүгнэлт'];
+  const rows=[head];
+  roster.forEach((c,i)=>{
+    const sc=score[phase][c.id]||{};
+    const row=[i+1,c.name,...ALL_CRIT.map(cr=>sc[cr.id]===undefined?'':sc[cr.id]),
+      childPct(phase,c.id,'M'),childPct(phase,c.id,'C'),childPct(phase,c.id,'T'),childPct(phase,c.id),
+      isAssessed(phase,c.id)?grade(childPct(phase,c.id)).l:''];
+    rows.push(row);
+  });
+  const csv='﻿'+rows.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=(phase==='start'?'Гараа':'Үр_дүн')+'_үнэлгээ_'+LEVEL.name+'_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+// ─── JOURNEY (Явц) ───
+function renderJourneyDetail(id){
+  const ch=roster.find(c=>c.id===id);const dp=document.getElementById('detail_journey');
+  if(!ch){dp.innerHTML=emptyDetail();return}
+  if(!journey[id])journey[id]={observe:[],interview:[],note:[]};
+  const j=journey[id];
+  pendingAttach={observe:[],interview:[],note:[]};
+  dp.innerHTML=`<div class="detail-head"><div class="dh-top"><h3>👤 ${esc(ch.name)}</h3></div>
+    <div style="margin-top:6px;font-size:12px;opacity:.95">Ажиглалт: ${j.observe.length} · Ярилцлага: ${j.interview.length} · Тэмдэглэл: ${j.note.length}</div></div>
+    <div class="sub-tabs">
+      <button class="sub-tab ${curSub==='observe'?'active':''}" onclick="switchSub('observe')">👁 Ажиглалт</button>
+      <button class="sub-tab ${curSub==='interview'?'active':''}" onclick="switchSub('interview')">💬 Ярилцлага</button>
+      <button class="sub-tab ${curSub==='note'?'active':''}" onclick="switchSub('note')">📝 Тэмдэглэл</button>
+    </div>
+    ${['observe','interview','note'].map(t=>subContent(t)).join('')}`;
+  ['observe','interview','note'].forEach(renderEntries);
+}
+function subContent(t){
+  const ph={observe:'Юу ажигласнаа бичнэ үү...',interview:'Хүүхэдтэй ярилцсанаа тэмдэглэнэ үү...',note:'Чөлөөт тэмдэглэл, санамж...'}[t];
+  return `<div class="sub-content ${curSub===t?'active':''}" id="sub-${t}">
+    <div class="entry-form">
+      <textarea id="txt-${t}" placeholder="${ph}"></textarea>
+      <div class="attach-row">
+        <label class="attach-btn">📷 Зураг<input type="file" accept="image/*" onchange="attachFile(event,'${t}','image')"></label>
+        <label class="attach-btn">🎤 Аудио<input type="file" accept="audio/*" onchange="attachFile(event,'${t}','audio')"></label>
+        <label class="attach-btn">📎 Файл<input type="file" onchange="attachFile(event,'${t}','file')"></label>
+      </div>
+      <div class="attached-preview" id="attached-${t}"></div>
+      <button class="save-entry" onclick="saveEntry('${t}')">💾 Хадгалах</button>
+    </div>
+    <div class="entries-list"><h4>📋 Өмнөх бичлэгүүд</h4><div id="entries-${t}"></div></div>
+  </div>`;
+}
+function switchSub(t){curSub=t;
+  document.querySelectorAll('.sub-tab').forEach((b,i)=>b.classList.toggle('active',['observe','interview','note'][i]===t));
+  document.querySelectorAll('.sub-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('sub-'+t).classList.add('active');
+}
+function attachFile(e,type,kind){
+  const file=e.target.files[0];if(!file)return;
+  if(file.size>3*1024*1024&&!confirm('Файл хэт том ('+Math.round(file.size/1024/1024)+'MB). Үргэлжлүүлэх үү?')){e.target.value='';return}
+  const r=new FileReader();
+  r.onload=()=>{pendingAttach[type].push({name:file.name,type:kind,mime:file.type,dataUrl:r.result});renderPending(type)};
+  r.readAsDataURL(file);e.target.value='';
+}
+function renderPending(type){
+  document.getElementById('attached-'+type).innerHTML=pendingAttach[type].map((a,i)=>{
+    const pv=a.type==='image'?`<img src="${a.dataUrl}" style="max-height:40px">`:a.type==='audio'?'🎤':'📎';
+    return `<div class="item">${pv} ${esc(a.name)} <button class="del-x" onclick="removePending('${type}',${i})">×</button></div>`;
+  }).join('');
+}
+function removePending(type,i){pendingAttach[type].splice(i,1);renderPending(type)}
+function saveEntry(type){
+  const id=cur.journey;if(!id)return;
+  const txt=document.getElementById('txt-'+type).value.trim();
+  if(!txt&&pendingAttach[type].length===0){alert('Текст эсвэл файл оруулна уу');return}
+  journey[id][type].unshift({ts:new Date().toISOString(),text:txt,attachments:pendingAttach[type].slice()});
+  save(KEY.journey,journey);
+  document.getElementById('txt-'+type).value='';pendingAttach[type]=[];renderPending(type);
+  renderEntries(type);renderJourneyMeta(id);renderList('journey');
+}
+function renderJourneyMeta(id){
+  const j=journey[id];const dh=document.querySelector('#detail_journey .detail-head div:last-child');
+  if(dh)dh.textContent=`Ажиглалт: ${j.observe.length} · Ярилцлага: ${j.interview.length} · Тэмдэглэл: ${j.note.length}`;
+}
+function renderEntries(type){
+  const id=cur.journey;if(!id)return;
+  const arr=(journey[id]&&journey[id][type])||[];
+  const el=document.getElementById('entries-'+type);if(!el)return;
+  if(!arr.length){el.innerHTML='<div style="color:#94a3b8;font-style:italic;padding:12px;text-align:center">Бичлэг байхгүй</div>';return}
+  el.innerHTML=arr.map((e,i)=>{
+    const date=new Date(e.ts).toLocaleString('mn-MN');
+    const atts=(e.attachments||[]).map(a=>{
+      if(a.type==='image')return `<img src="${a.dataUrl}" onclick="window.open(this.src,'_blank')">`;
+      if(a.type==='audio')return `<audio controls src="${a.dataUrl}"></audio>`;
+      return `<a class="file-link" href="${a.dataUrl}" download="${esc(a.name)}">📎 ${esc(a.name)}</a>`;
+    }).join('');
+    return `<div class="entry"><div class="meta"><span>📅 ${date}</span><button class="del-entry" onclick="removeEntry('${type}',${i})">🗑 Устгах</button></div>
+      ${e.text?'<div class="text">'+esc(e.text)+'</div>':''}${atts?'<div class="attached">'+atts+'</div>':''}</div>`;
+  }).join('');
+}
+function removeEntry(type,i){
+  const id=cur.journey;if(!id)return;
+  if(!confirm('Устгах уу?'))return;
+  journey[id][type].splice(i,1);save(KEY.journey,journey);
+  renderEntries(type);renderJourneyMeta(id);renderList('journey');
+}
+
+// ─── ӨДРИЙН ТЭМДЭГЛЭЛ ───
+function renderJournalList(){
+  const el=document.getElementById('jlist');
+  if(!jlog.length){el.innerHTML='<div style="text-align:center;color:#94a3b8;font-style:italic;padding:16px;font-size:12.5px">Тэмдэглэл алга.<br>«✏️ Шинэ тэмдэглэл» дар.</div>';return}
+  el.innerHTML=jlog.map(e=>{
+    const d=new Date(e.date||Date.now());
+    const ds=d.toLocaleDateString('mn-MN',{month:'short',day:'numeric',weekday:'short'});
+    return `<div class="jitem ${curJ===e.id?'active':''}" onclick="openJournal('${e.id}')"><div class="jd">📅 ${ds}</div><div class="jt">${esc(e.theme||'Тэмдэглэл')}</div></div>`;
+  }).join('');
+}
+function jEmpty(){return `<div class="no-child"><div class="big">📖</div><div><b>«✏️ Шинэ тэмдэглэл»</b> дараад эхэл,<br>эсвэл зүүнээс сонго.</div></div>`}
+function newJournal(){curJ=null;renderJournalList();document.getElementById('jdetail').innerHTML=journalEditor({})}
+function openJournal(id){const e=jlog.find(x=>x.id===id);if(!e)return;curJ=id;renderJournalList();document.getElementById('jdetail').innerHTML=journalEditor(e)}
+function journalEditor(e){
+  e=e||{};const today=new Date().toISOString().slice(0,10);
+  return `<div class="detail-head"><div class="dh-top"><h3>📖 ${curJ?'Тэмдэглэл засах':'Шинэ тэмдэглэл'}</h3></div></div>
+  <div class="jform">
+    <div class="form-row jgrid2">
+      <div><label>📅 Огноо</label><input type="date" id="jDate" value="${e.date||today}"></div>
+      <div><label>🎯 Гарчиг / Сэдэв</label><input type="text" id="jTheme" value="${esc(e.theme||'')}" placeholder="Ж: Ээлжит үйл ажиллагаа"></div>
+    </div>
+    <div class="form-row"><label>😊 Өнөөдрийн сэтгэл санаа</label>
+      <div class="mood" id="jMood">${MOODS.map(m=>`<button type="button" class="mood-btn ${e.mood===m?'on':''}" onclick="pickMood(this,'${m}')">${m}</button>`).join('')}</div>
+      <input type="hidden" id="jMoodV" value="${esc(e.mood||'')}"></div>
+    <div class="jsect">👁 Ажиглалт</div>
+    <div class="form-row"><textarea id="jObs" placeholder="Өнөөдөр хүүхдүүд ямар байв, ямар үйл ажиллагаа хийв, юу зорьсон...">${esc(e.observation||'')}</textarea></div>
+    <div class="jsect">💭 Эргэцүүлэл</div>
+    <div class="form-row jgrid2">
+      <div><label>✨ Юу сайн болов?</label><textarea id="jGood" placeholder="...">${esc(e.good||'')}</textarea></div>
+      <div><label>🎯 Юуг сайжруулах вэ?</label><textarea id="jImp" placeholder="...">${esc(e.improve||'')}</textarea></div>
+    </div>
+    <div class="form-row"><label>📝 Дэлгэрэнгүй эргэцүүлэл</label><textarea id="jRef" style="min-height:110px" placeholder="Юу мэдэрсэн бэ? Мэргэжилдээ ямар шинэ зүйл олсон бэ?...">${esc(e.reflection||'')}</textarea></div>
+    <div class="form-row"><label>➡️ Дараагийн алхам</label><textarea id="jNext" placeholder="Маргааш юуг өөрчлөх, юуг сорих...">${esc(e.next||'')}</textarea></div>
+    <div class="jactions">
+      <button class="btn btn-add" onclick="saveJournal()">💾 Хадгалах</button>
+      <button class="btn btn-print" onclick="window.print()">🖨 Хэвлэх</button>
+      ${curJ?'<button class="btn" style="background:linear-gradient(135deg,#ef4444,#dc2626)" onclick="deleteJournal()">🗑 Устгах</button>':''}
+    </div>
+  </div>`;
+}
+function pickMood(btn,m){document.querySelectorAll('#jMood .mood-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');document.getElementById('jMoodV').value=m}
+function saveJournal(){
+  const e={id:curJ||('j'+Date.now().toString(36)),date:document.getElementById('jDate').value||new Date().toISOString().slice(0,10),
+    theme:document.getElementById('jTheme').value.trim()||'Тэмдэглэл',mood:document.getElementById('jMoodV').value,
+    observation:document.getElementById('jObs').value,good:document.getElementById('jGood').value,
+    improve:document.getElementById('jImp').value,reflection:document.getElementById('jRef').value,next:document.getElementById('jNext').value};
+  if(curJ){const i=jlog.findIndex(x=>x.id===curJ);if(i>=0)jlog[i]=e}else{jlog.push(e);curJ=e.id}
+  jlog.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  save(KEY.journal,jlog);renderJournalList();openJournal(curJ);alert('✅ Хадгалагдлаа');
+}
+function deleteJournal(){
+  if(!curJ)return;if(!confirm('Энэ тэмдэглэлийг устгах уу?'))return;
+  jlog=jlog.filter(x=>x.id!==curJ);curJ=null;save(KEY.journal,jlog);
+  renderJournalList();document.getElementById('jdetail').innerHTML=jEmpty();
+}
+
+// ─── INIT ───
+function renderAll(){renderLists();['start','end'].forEach(renderSummary)}
+function init(){
+  renderAll();
+  document.getElementById('detail_start').innerHTML=emptyDetail();
+  document.getElementById('detail_journey').innerHTML=emptyDetail();
+  document.getElementById('detail_end').innerHTML=emptyDetail();
+  renderJournalList();
+  document.getElementById('jdetail').innerHTML=jEmpty();
+  const _p=(location.search+location.hash).toLowerCase();
+  if(_p.includes('journal'))switchTab('journal');
+  else if(_p.includes('end'))switchTab('end');
+  else if(_p.includes('journey'))switchTab('journey');
+}
+init();
+</script>
+<script src="protection.js"></script>
+</body></html>

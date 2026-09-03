@@ -1,0 +1,209 @@
+<meta charset="UTF-8">
+<title>Г.Өлзийбаяр — Багш угтах бүрэн заавар</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Roboto, sans-serif; background: #fff; color: #1e293b; padding: 24px; line-height: 1.6; max-width: 820px; margin: 0 auto; }
+  .cover { background: linear-gradient(135deg,#7c3aed,#be185d); color: white; padding: 32px; border-radius: 20px; text-align: center; margin-bottom: 24px; }
+  .cover h1 { font-size: 26px; margin-bottom: 4px; }
+  .cover .sub { opacity: 0.9; font-size: 14px; }
+  h2 { color: #be185d; font-size: 20px; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #fce7f3; }
+  h3 { color: #7c3aed; font-size: 17px; margin: 18px 0 8px; }
+  ol, ul { margin: 8px 0 12px 24px; }
+  li { margin: 5px 0; }
+  code { background: #f3f4f6; padding: 2px 8px; border-radius: 6px; font-family: Consolas, monospace; color: #be185d; font-weight: 600; font-size: 13px; }
+  .step { background: #fdf4ff; border-left: 4px solid #be185d; padding: 14px 18px; border-radius: 8px; margin: 10px 0; }
+  .warn { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 14px; border-radius: 8px; margin: 10px 0; }
+  .success { background: #d1fae5; border-left: 4px solid #10b981; padding: 12px 14px; border-radius: 8px; margin: 10px 0; }
+  .info { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 12px 14px; border-radius: 8px; margin: 10px 0; }
+  pre { background: #1e293b; color: #e0e7ff; padding: 14px; border-radius: 8px; overflow-x: auto; font-size: 13px; font-family: Consolas, monospace; }
+  .flow { background: #f9fafb; border: 2px dashed #d1d5db; padding: 18px; border-radius: 12px; margin: 16px 0; font-family: Consolas, monospace; font-size: 13px; white-space: pre; overflow-x: auto; }
+  .highlight { background: #fef3c7; padding: 2px 6px; border-radius: 4px; }
+  .print { position: fixed; top: 16px; right: 16px; background: #be185d; color: white; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+  @media print { .print { display: none; } body { padding: 0; } }
+</style>
+
+<button class="print" onclick="window.print()">🖨️ PDF болгож татах</button>
+
+<div class="cover">
+  <h1>👑 Багш угтах бүрэн заавар</h1>
+  <div class="sub">Г.Өлзийбаяр — Хөгжим Өлзий системийн Admin гарын авлага · v1.0</div>
+</div>
+
+<h2>🎯 Ерөнхий үзэл</h2>
+<div class="flow">
+БАГШ ИРЛЭЭ
+    ↓
+1) БАГШИД ЗУРВАС + PDF ЗААВАР ИЛГЭЭ (5 мин)
+    ↓
+2) БАГШ ӨӨРИЙН SUPABASE ҮҮСГЭЖ URL/KEY ИЛГЭЭ (10 мин)
+    ↓
+3) БАГШ SETUP.SQL-ЫГ SUPABASE-Т АЖИЛЛУУЛНА (2 мин)
+    ↓
+4) ТА CONFIG.JS БЭЛДЭЖ ИЛГЭЭ (2 мин)
+    ↓
+5) БАГШ GITHUB-Т ФАЙЛУУДЫГ UPLOAD ХИЙНЭ (5 мин)
+    ↓
+6) БАГШ САЙТ НЭЭЖ АЖИЛЛАЖ ЭХЭЛНЭ ✅ (нийт 30 мин)
+</div>
+
+<h2>📞 АЛХАМ 1: Багшид анхны зурвас</h2>
+<p>Багш төлбөр төлсний дараа Messenger-ээр илгээ:</p>
+<pre>Сайн байна уу, Багшаа!
+
+Хөгжим Өлзий систем таны ажлыг хөнгөвчлөх юм.
+
+Суурилуулах ерөнхийдөө 3 хэсэгтэй:
+1) GitHub бүртгэл (10 мин)
+2) Supabase бүртгэл (10 мин)
+3) Тохиргоо (10 мин)
+
+Хавсаргасан 2 PDF-ыг унших:
+📎 GitHub_заавар.pdf
+📎 Supabase_заавар.pdf
+
+Уншаад асуултаа шууд бичээрэй. Тусалж явна.</pre>
+
+<div class="info">
+  💡 <b>Илгээх файлууд:</b>
+  <ul>
+    <li><code>БАГШИД_ЗААВАР_v3.html</code> — PDF болгоод илгээ</li>
+    <li><code>БАГШ_SUPABASE_ЗААВАР.html</code> — PDF болгоод илгээ</li>
+  </ul>
+</div>
+
+<h2>📥 АЛХАМ 2: Багшаас юу авах вэ</h2>
+<p>Багш дараах 3 зүйлийг илгээнэ:</p>
+<div class="step">
+  <b>1. Supabase Project URL:</b><br>
+  <code>https://xxxxxxxxxx.supabase.co</code><br><br>
+  <b>2. anon / publishable KEY:</b><br>
+  <code>sb_publishable_xxxxxxxxxxx</code><br><br>
+  <b>3. GitHub username-репо:</b><br>
+  <code>bagsh-name/hugjim-bagsh</code>
+</div>
+
+<div class="warn">
+  ⚠️ Багш <b>service_role</b> key илгээвэл ХЭРЭГЛЭХГҮЙ. Зөвхөн <b>publishable</b> ашиглана.
+</div>
+
+<h2>📝 АЛХАМ 3: config.js файл үүсгэх</h2>
+
+<h3>Хэрхэн үүсгэх вэ:</h3>
+<div class="step">
+  <ol>
+    <li>Windows-т <b>Notepad</b> нээ</li>
+    <li>Дараах 4 мөрийг хуулж буулгах:</li>
+  </ol>
+  <pre>window.SUPABASE_URL = "https://БАГШИЙН-URL.supabase.co";
+window.SUPABASE_KEY = "sb_publishable_БАГШИЙН-KEY";
+window.TEACHER_NAME = "Б.Багш нэр";
+window.SCHOOL_NAME = "Цэцэрлэгийн нэр";</pre>
+  <ol start="3">
+    <li>Багшийн нэр, URL, KEY, цэцэрлэгийн нэрийг оруулах</li>
+    <li><code>Ctrl + S</code> дар</li>
+    <li><b>File name:</b> <code>config.js</code> бичих</li>
+    <li><b>Save as type:</b> <span class="highlight">All Files (*.*)</span> сонго — заавал!</li>
+    <li><b>Save</b> дар</li>
+  </ol>
+</div>
+
+<h3>💡 Илүү хурдан арга:</h3>
+<div class="success">
+  <b>Загвар config.js:</b> <code>_TEACHER_PACKAGE/CONFIG_ЗАГВАР.js</code>
+  <p>Загварыг хуулаад, дундах утгыг л сольж хадгална.</p>
+</div>
+
+<h2>📦 АЛХАМ 4: Багшид илгээх файлууд</h2>
+<p>Багшид дараах <b>1 фолдер</b> илгээ:</p>
+<ul>
+  <li>📄 <code>index.html</code></li>
+  <li>📄 <code>plan.html</code></li>
+  <li>📄 <code>monthly.html</code></li>
+  <li>📄 <code>certificate.html</code></li>
+  <li>📄 <code>plan-data.js</code></li>
+  <li>📄 <code>research_survey.html</code></li>
+  <li>📄 <code>research_sync.js</code></li>
+  <li>📄 <code>setup.sql</code> ← Supabase-т ажиллуулна</li>
+  <li>📄 <code>config.js</code> ← ТА ҮҮСГЭНЭ</li>
+</ul>
+
+<div class="info">
+  💡 <b>Google Drive-т фолдер болгож нэг линк илгээх нь хамгийн хялбар.</b><br>
+  Фолдер: <code>_TEACHER_PACKAGE</code><br>
+  Уг фолдерт зөвхөн <code>config.js</code>-ыг багш болгоны бэлдэж нэмнэ.
+</div>
+
+<h2>🔍 АЛХАМ 5: Багшийг шалгах</h2>
+<p>Багш бүх зүйлийг хийсний дараа шалгах:</p>
+<div class="step">
+  <ol>
+    <li>Багшийн систем нээх: <code>https://БАГШ-USERNAME.github.io/hugjim-bagsh/</code></li>
+    <li>Нэвтрэх нууц: <code>Suwdaa1113</code> (стандарт)</li>
+    <li>Систем дотор орох</li>
+    <li>Ямар нэг хүүхэд, ямар нэг үнэлгээ нэмэх</li>
+    <li>Танайх Supabase-т орох (dehxrmupnbilwlxsovpi)</li>
+    <li>Table Editor → <code>children</code> хүснэгт үзэх</li>
+    <li>Багшийн нэмсэн хүүхэд <b>ХАРАГДАХГҮЙ</b> байх ёстой ✅</li>
+    <li>Хэрэв харагдвал — config.js буруу тохирсон!</li>
+  </ol>
+</div>
+
+<h2>🔬 АЛХАМ 6: Судалгааны sync шалгах</h2>
+<div class="step">
+  <ol>
+    <li>Багш системд <b>🔬 Судалгааны асуулт</b> цэс дар</li>
+    <li>"Судалгаанд оролцох" checkbox идэвхжүүл</li>
+    <li>Ямар нэг асуултад хариулах</li>
+    <li>Дараа өөр өдөр өөрийн <code>research.html</code> нээ</li>
+    <li>Нийт багш: <b>1</b> болно ✅</li>
+    <li>Хариултууд харагдана</li>
+  </ol>
+</div>
+
+<h2>💰 Бизнесийн стратеги</h2>
+<h3>1 багш = 30 минутын ажил</h3>
+<ul>
+  <li>5 мин — зурвас + PDF илгээх</li>
+  <li>10 мин — багш өөрөө хийх (Supabase, GitHub)</li>
+  <li>2 мин — config.js бэлдэх (та)</li>
+  <li>5 мин — багш файл upload</li>
+  <li>8 мин — асуудал шийдэх, шалгах</li>
+</ul>
+
+<h3>Санхүү</h3>
+<ul>
+  <li>Багш төлбөр: <b>150,000₮</b> (санал болгож буй)</li>
+  <li>Үйлчилгээний зардал: <b>0₮</b> (бүх нь үнэгүй plan)</li>
+  <li>1 багшийн орлого = 150,000₮</li>
+  <li>Тухайн багш: 30 мин × 5000₮/мин = <b>150,000₮/цаг</b> ✅</li>
+</ul>
+
+<h3>Хэдэн багш татах вэ?</h3>
+<ul>
+  <li>🥇 <b>Эхний 10 багш:</b> найз хамтрагч, зөвлөмж</li>
+  <li>🥈 <b>10-30 багш:</b> Facebook групп, сурталчилгаа</li>
+  <li>🥉 <b>30+ багш:</b> vidео заавар үүсгэх, өөрөө хийх боломж</li>
+</ul>
+
+<h2>🚨 Түгээмэл асуудал шийдвэрлэх</h2>
+<h3>Багш "Invalid path" гэж алдаа өгвөл?</h3>
+<p>Supabase URL-ын араас <code>/rest/v1/</code> хойш хэсгийг устгах</p>
+
+<h3>Багш "syntax error near backtick" гэвэл?</h3>
+<p>setup.sql-т backtick <code>`</code> тэмдэгт байгаа. Notepad-т Ctrl+H — Find <code>`</code> Replace нь хоосон.</p>
+
+<h3>Багшийн сайт цагаан гарвал?</h3>
+<p>config.js алдаатай. Notepad-т нээж 4 мөрийг шалгах.</p>
+
+<h3>Багш GitHub Pages ажилахгүй бол?</h3>
+<p>Settings → Pages → Branch: main → Save (5 минут хүлээх)</p>
+
+<h2>📊 Бүх багш нарын жагсаалт удирдах</h2>
+<p>Excel файлд тэмдэглэ:</p>
+<pre>Дугаар | Багшийн нэр | Утас | GitHub | Supabase URL | Огноо | Төлбөр
+1      | Ө.Улзийцэцэг | 99xxxxxx | ulziitsetseg602 | https://xxxxx.supabase.co | 2026-08-02 | Төлсөн</pre>
+
+<div style="background:linear-gradient(135deg,#fce7f3,#ddd6fe);padding:24px;border-radius:16px;margin-top:32px;text-align:center">
+  <h2 style="border:none;margin:0 0 12px">💪 Амжилт хүсье!</h2>
+  <p>Ямар нэг зүйл ойлгохгүй бол Claude-ыг ашигла — үргэлж энд байна.</p>
+</div>
