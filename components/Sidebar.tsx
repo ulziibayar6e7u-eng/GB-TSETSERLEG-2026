@@ -91,10 +91,9 @@ function tuslahMenu(me: Me): MenuSection[] {
       ],
     },
     {
-      title: 'Бүлгийн ажил',
+      title: 'Цэвэрлэгээ, үйлчилгээ',
       items: [
-        ...(primaryGroup ? [{ href: `/uil-ajilgaa`, label: `${primaryGroup.name} · үйл ажиллагаа`, icon: '📸' }] : []),
-        { href: '/hutulbur', label: 'Хөтөлбөрийн хэрэгжилт', icon: '📚' },
+        { href: '/busad/tsevrlgee', label: 'Цэвэрлэгээ, үйлчилгээ', icon: '🧹' },
       ],
     },
     {

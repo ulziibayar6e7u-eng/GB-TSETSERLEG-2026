@@ -7,7 +7,7 @@ import { useMe } from '@/lib/useMe'
 type Schedule = {
   id: string
   date: string
-  category: 'general' | 'deep' | 'kitchen' | 'disinfection' | 'sanitary' | 'other'
+  category: 'daily' | 'deep' | 'kitchen' | 'disinfection' | 'ventilation' | 'sanitary' | 'general' | 'other'
   location: string | null
   description: string | null
   status: 'planned' | 'done' | 'postponed'
@@ -21,12 +21,14 @@ type Schedule = {
 }
 
 const CATS = {
-  general:      { icon: '🧹', label: 'Ердийн цэвэрлэгээ' },
-  deep:         { icon: '🧽', label: 'Их цэвэрлэгээ' },
+  deep:         { icon: '🧽', label: 'Их цэвэрлэгээний хуваарь' },
+  daily:        { icon: '🧹', label: 'Өдөр тутмын цэвэрлэгээ' },
+  disinfection: { icon: '🧴', label: 'Ариутгал, халдваргүйтгэл' },
+  ventilation:  { icon: '💨', label: 'Агааржуулалт' },
   kitchen:      { icon: '🍳', label: 'Гал тогоо' },
-  disinfection: { icon: '🧴', label: 'Ариутгал' },
   sanitary:     { icon: '🚻', label: 'Ариун цэвэр' },
-  other:        { icon: '📋', label: 'Бусад' },
+  general:      { icon: '📋', label: 'Ердийн цэвэрлэгээ' },
+  other:        { icon: '📝', label: 'Бусад' },
 } as const
 
 const STATUS = {
@@ -47,7 +49,7 @@ export default function TsevrlgeePage() {
   const [tab, setTab] = useState<'all' | 'planned' | 'done'>('planned')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Schedule | null>(null)
-  const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], category: 'general' as Cat, location: '', description: '', file: null as File | null, extraLinks: '' })
+  const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], category: 'deep' as Cat, location: '', description: '', file: null as File | null, extraLinks: '' })
   const [saving, setSaving] = useState(false)
 
   async function load() {
@@ -64,7 +66,7 @@ export default function TsevrlgeePage() {
 
   function openAdd() {
     setEditing(null)
-    setForm({ date: new Date().toISOString().split('T')[0], category: 'general', location: '', description: '', file: null, extraLinks: '' })
+    setForm({ date: new Date().toISOString().split('T')[0], category: 'deep', location: '', description: '', file: null, extraLinks: '' })
     setShowForm(true)
   }
   function openEdit(s: Schedule) {
