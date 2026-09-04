@@ -51,7 +51,9 @@ export default function HutulburPage() {
       setGroups(gs)
       setAreas((a.data as Area[]) || [])
       if (me) {
-        if (canSeeAllChildren(me.role, me.is_admin)) setGroupId((prev) => prev ?? gs[0]?.id ?? null)
+        const isMusic = me.first_name === 'Өлзийбаяр' || me.groups.some((g) => g.code === 'hogjim')
+        const firstReal = gs.find((g) => !['hogjim'].includes(g.code))
+        if (canSeeAllChildren(me.role, me.is_admin) || isMusic) setGroupId((prev) => prev ?? firstReal?.id ?? gs[0]?.id ?? null)
         else if (me.groups.length > 0) setGroupId((prev) => prev ?? me.groups[0].id)
       }
     })()
@@ -83,9 +85,12 @@ export default function HutulburPage() {
     })()
   }, [currentGroup, supabase])
 
-  const availableGroups = me && !canSeeAllChildren(me.role, me.is_admin)
-    ? groups.filter((g) => me.groups.some((mg) => mg.id === g.id))
-    : groups
+  const isMusicTeacher = me && (me.first_name === 'Өлзийбаяр' || me.groups.some((g) => g.code === 'hogjim'))
+  const availableGroups = !me
+    ? []
+    : (canSeeAllChildren(me.role, me.is_admin) || isMusicTeacher)
+    ? groups.filter((g) => !['hogjim'].includes(g.code))
+    : groups.filter((g) => me.groups.some((mg) => mg.id === g.id))
 
   const areasInGroup = useMemo(() => {
     const set = new Set(outcomes.map((o) => o.area_code))
