@@ -94,13 +94,14 @@ export default function HutulburPage() {
 
   const areasInGroup = useMemo(() => {
     const set = new Set(outcomes.map((o) => o.area_code))
-    return areas.filter((a) => set.has(a.code) && a.code !== 'aa_uhaan')
-  }, [outcomes, areas])
+    return areas.filter((a) => set.has(a.code) && a.code !== 'aa_uhaan' && (!isMusicTeacher || a.code === 'hogjim'))
+  }, [outcomes, areas, isMusicTeacher])
 
   useEffect(() => {
+    if (isMusicTeacher) { if (areaCode !== 'hogjim' && areasInGroup.some((a) => a.code === 'hogjim')) setAreaCode('hogjim'); return }
     if (!areaCode && areasInGroup.length > 0) setAreaCode(areasInGroup[0].code)
     if (areaCode === 'aa_uhaan') setAreaCode(areasInGroup[0]?.code || '')
-  }, [areasInGroup, areaCode])
+  }, [areasInGroup, areaCode, isMusicTeacher])
 
   // Хүүхэд бүрийн хамгийн сүүлийн ажиглалт болон бүх түүх
   const checksByOutcome = useMemo(() => {
