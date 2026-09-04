@@ -65,10 +65,10 @@ export default function HutulburPage() {
     if (!currentGroup) return
     (async () => {
       setLoading(true)
-      // Хувилбарт бүлэг = 3-4 нас = dund
-      const ageCode = currentGroup.code === 'huvilbart' ? 'dund' : currentGroup.code
+      // Хувилбарт сургалт = 3-4 насны холимог → dund + ahlah 2-уланг харна
+      const ageCodes = currentGroup.code === 'huvilbart' ? ['dund', 'ahlah'] : [currentGroup.code]
       const [o, c] = await Promise.all([
-        supabase.from('outcomes').select('*').eq('age_group', ageCode).eq('active', true).order('area_code').order('sort_order'),
+        supabase.from('outcomes').select('*').in('age_group', ageCodes).eq('active', true).order('area_code').order('sort_order'),
         supabase.from('children').select('id, last_name, first_name, group_id').eq('group_id', currentGroup.id).eq('status', 'active').order('last_name'),
       ])
       const outs = (o.data as Outcome[]) || []
@@ -88,7 +88,9 @@ export default function HutulburPage() {
   const isMusicTeacher = me && (me.first_name === 'Өлзийбаяр' || me.groups.some((g) => g.code === 'hogjim'))
   const availableGroups = !me
     ? []
-    : (canSeeAllChildren(me.role, me.is_admin) || isMusicTeacher)
+    : isMusicTeacher
+    ? groups.filter((g) => !['hogjim', 'huvilbart'].includes(g.code))
+    : canSeeAllChildren(me.role, me.is_admin)
     ? groups.filter((g) => !['hogjim'].includes(g.code))
     : groups.filter((g) => me.groups.some((mg) => mg.id === g.id))
 
