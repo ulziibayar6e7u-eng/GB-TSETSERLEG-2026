@@ -7,7 +7,7 @@ import { useMe } from '@/lib/useMe'
 type Schedule = {
   id: string
   date: string
-  category: 'daily' | 'deep' | 'kitchen' | 'disinfection' | 'ventilation' | 'sanitary' | 'general' | 'other'
+  category: 'deep' | 'daily' | 'disinfection' | 'ventilation' | 'toys' | 'chairs' | 'toilet_room' | 'other'
   location: string | null
   description: string | null
   status: 'planned' | 'done' | 'postponed'
@@ -25,9 +25,9 @@ const CATS = {
   daily:        { icon: '🧹', label: 'Өдөр тутмын цэвэрлэгээ' },
   disinfection: { icon: '🧴', label: 'Ариутгал, халдваргүйтгэл' },
   ventilation:  { icon: '💨', label: 'Агааржуулалт' },
-  kitchen:      { icon: '🍳', label: 'Гал тогоо' },
-  sanitary:     { icon: '🚻', label: 'Ариун цэвэр' },
-  general:      { icon: '📋', label: 'Ердийн цэвэрлэгээ' },
+  toys:         { icon: '🧸', label: 'Тоглоом' },
+  chairs:       { icon: '💺', label: 'Сандал' },
+  toilet_room:  { icon: '🚻', label: 'Ариун цэврийн өрөө' },
   other:        { icon: '📝', label: 'Бусад' },
 } as const
 
@@ -120,7 +120,7 @@ export default function TsevrlgeePage() {
             <div className="flex items-center gap-4">
               <div className="text-5xl">🧹</div>
               <div>
-                <h1 className="text-2xl font-bold">Их цэвэрлэгээний хуваарь</h1>
+                <h1 className="text-2xl font-bold">Цэвэрлэгээ, үйлчилгээ</h1>
                 <p className="text-sm opacity-90">Өдөр тутмын үйл ажиллагаа, цэвэрлэгээ, ариутгал</p>
               </div>
             </div>
