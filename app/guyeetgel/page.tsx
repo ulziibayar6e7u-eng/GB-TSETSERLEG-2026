@@ -15,8 +15,12 @@ type StaffScore = {
   plansApproved: number
   tasksTotal: number
   tasksDone: number
+  initiativesMonth: number
+  initiativesYear: number
   score: number
 }
+
+type InitiativeRow = { author_id: string; date: string; title: string; rating: number | null }
 
 type MonthStat = { month: string; obs: number; plans: number }
 
@@ -39,6 +43,7 @@ export default function GuyeetgelPage() {
   const [monthStats, setMonthStats] = useState<MonthStat[]>([])
   const [groupDev, setGroupDev] = useState<{ group: Group; children: number; avgProgress: number; observations: number }[]>([])
   const [alerts, setAlerts] = useState<{ icon: string; label: string; count: number; link: string; color: string }[]>([])
+  const [initSummary, setInitSummary] = useState<{ emp: Employee; month: { count: number; avgRating: number; titles: string[] }; year: number }[]>([])
 
   const canView = me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich')
 
@@ -53,7 +58,7 @@ export default function GuyeetgelPage() {
       const yearStart = new Date(); yearStart.setMonth(yearStart.getMonth() - 11); yearStart.setDate(1)
       const yearStartStr = yearStart.toISOString().split('T')[0]
 
-      const [emps, kids, groups, attToday, obsMonth, plansAll, tasks, plans12, obs12, outcomeChecks, leaves] = await Promise.all([
+      const [emps, kids, groups, attToday, obsMonth, plansAll, tasks, plans12, obs12, outcomeChecks, leaves, initiatives] = await Promise.all([
         supabase.from('employees').select('id, last_name, first_name, role, positions(name)'),
         supabase.from('children').select('id, group_id').eq('status', 'active'),
         supabase.from('groups').select('*').order('id'),
@@ -65,6 +70,7 @@ export default function GuyeetgelPage() {
         supabase.from('observations').select('id, date').gte('date', yearStartStr),
         supabase.from('outcome_checks').select('id, status'),
         supabase.from('leave_requests').select('employee_id, days_count, leave_type').eq('status', 'approved').gte('start_date', yearStartStr),
+        supabase.from('initiative_works').select('author_id, date, title, rating').gte('date', yearStartStr),
       ])
       const leavesList = (leaves.data as { employee_id: string; days_count: number | null; leave_type: string }[]) || []
       const leaveByEmp = new Map<string, { days: number; paid: number; unpaid: number }>()
@@ -109,6 +115,7 @@ export default function GuyeetgelPage() {
         return { status: parts[2] || 'pending', recipients: payload.recipients || [], responses: (payload.responses || []).length }
       })
 
+      const initiativeList = (initiatives.data as InitiativeRow[]) || []
       const scores: StaffScore[] = employees
         .filter((e) => e.role === 'bagsh' || e.role === 'bagsh_tuslah' || e.role === 'busad')
         .map((e) => {
@@ -119,17 +126,38 @@ export default function GuyeetgelPage() {
           const myTasks = parsedTasks.filter((t) => t.recipients.includes(e.id))
           const tasksT = myTasks.length
           const tasksD = myTasks.filter((t) => t.status === 'done').length
+          const myInit = initiativeList.filter((i) => i.author_id === e.id)
+          const initMonth = myInit.filter((i) => (i.date || '').slice(0, 7) === today.slice(0, 7)).length
+          const initYear = myInit.length
 
-          // Score: weighted (обс 30%, плана 30%, үүрэг 40%)
-          const obsScore = Math.min(100, obs * 5) // 20 обс = 100%
+          // Score: обс 25%, плана 25%, үүрэг 30%, санаачилга 20%
+          const obsScore = Math.min(100, obs * 5)
           const planScore = plansT > 0 ? (plansA / plansT) * 100 : 50
           const taskScore = tasksT > 0 ? (tasksD / tasksT) * 100 : 50
-          const score = Math.round(obsScore * 0.3 + planScore * 0.3 + taskScore * 0.4)
+          const initScore = Math.min(100, initMonth * 33)
+          const score = Math.round(obsScore * 0.25 + planScore * 0.25 + taskScore * 0.3 + initScore * 0.2)
 
-          return { emp: e, observationsMonth: obs, plansTotal: plansT, plansApproved: plansA, tasksTotal: tasksT, tasksDone: tasksD, score }
+          return { emp: e, observationsMonth: obs, plansTotal: plansT, plansApproved: plansA, tasksTotal: tasksT, tasksDone: tasksD, initiativesMonth: initMonth, initiativesYear: initYear, score }
         })
         .sort((a, b) => b.score - a.score)
       setStaffScores(scores)
+
+      // Санаачилсан ажлын нэгтгэл (тухайн сар)
+      const initByStaff = new Map<string, { count: number; avgRating: number; titles: string[] }>()
+      initiativeList.filter((i) => (i.date || '').slice(0, 7) === today.slice(0, 7)).forEach((i) => {
+        const cur = initByStaff.get(i.author_id) || { count: 0, avgRating: 0, titles: [] }
+        cur.count++
+        cur.avgRating += i.rating || 0
+        cur.titles.push(i.title)
+        initByStaff.set(i.author_id, cur)
+      })
+      initByStaff.forEach((v) => { v.avgRating = v.count > 0 ? Math.round(v.avgRating / v.count) : 0 })
+      const initSummary = employees.map((e) => ({
+        emp: e,
+        month: initByStaff.get(e.id) || { count: 0, avgRating: 0, titles: [] },
+        year: initiativeList.filter((i) => i.author_id === e.id).length,
+      })).filter((r) => r.month.count > 0 || r.year > 0).sort((a, b) => b.month.count - a.month.count || b.year - a.year)
+      setInitSummary(initSummary)
 
       // Monthly stats (12 months)
       const monthMap = new Map<string, MonthStat>()
@@ -226,6 +254,50 @@ export default function GuyeetgelPage() {
               </div>
             </Link>
           ))}
+        </div>
+
+        {/* Санаачилсан ажлын нэгтгэл (тухайн сар) */}
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h2 className="font-semibold text-slate-800">🌟 Санаачилсан ажлын нэгтгэл</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Тухайн сарын албан хаагч бүрийн санаачилга · Хагас/бүтэн жилээр нэгтгэсэн</p>
+            </div>
+            <div className="text-xs text-slate-500">💫 3+ = <span className="text-emerald-600 font-semibold">Маш сайн</span> · 2 = <span className="text-blue-600 font-semibold">Сайн</span> · 1 = <span className="text-amber-600 font-semibold">Хангалттай</span></div>
+          </div>
+          {initSummary.length === 0 ? (
+            <div className="p-8 text-center text-slate-500 text-sm">Энэ сард санаачилсан ажил бүртгэгдээгүй байна</div>
+          ) : (
+            <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+              {initSummary.map((r) => {
+                const rating = r.month.count >= 3 ? { icon: '🏆', label: 'Маш сайн', color: 'from-emerald-500 to-teal-500' }
+                             : r.month.count === 2 ? { icon: '⭐', label: 'Сайн',      color: 'from-blue-500 to-indigo-500' }
+                             : r.month.count === 1 ? { icon: '✅', label: 'Хангалттай', color: 'from-amber-500 to-orange-500' }
+                             : { icon: '·', label: '—', color: 'from-slate-300 to-slate-400' }
+                return (
+                  <div key={r.emp.id} className="flex items-center gap-3 p-4 hover:bg-slate-50">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${rating.color} flex items-center justify-center text-white text-xl font-bold flex-shrink-0`}>{rating.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-slate-800 truncate">{r.emp.last_name}.{r.emp.first_name}</div>
+                      <div className="text-xs text-slate-500 truncate">{r.emp.positions?.name || r.emp.role}</div>
+                      {r.month.titles.length > 0 && (
+                        <div className="text-[11px] text-slate-500 mt-1 truncate">🔹 {r.month.titles.join(' · ')}</div>
+                      )}
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-2xl font-bold text-slate-800">{r.month.count}</div>
+                      <div className="text-[11px] text-slate-500">энэ сард · {rating.label}</div>
+                      {r.month.avgRating > 0 && <div className="text-[10px] text-emerald-700 font-semibold">⭐ {r.month.avgRating}%</div>}
+                    </div>
+                    <div className="text-right flex-shrink-0 border-l border-slate-200 pl-3 ml-1">
+                      <div className="text-lg font-bold text-slate-600">{r.year}</div>
+                      <div className="text-[11px] text-slate-500">жилд нийт</div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Staff performance */}

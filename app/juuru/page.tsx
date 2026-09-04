@@ -35,26 +35,58 @@ export default function JuuruPage() {
   const [schedForm, setSchedForm] = useState({ date: today(), teacher_id: '', note: '' })
   const [showRepForm, setShowRepForm] = useState(false)
   const [repForm, setRepForm] = useState({ date: today(), category: 'training' as Cat, title: '', description: '', file: null as File | null, extraLinks: '' })
+  const [weekForm, setWeekForm] = useState<Record<Cat, { text: string; file: File | null }>>({
+    training: { text: '', file: null },
+    regime: { text: '', file: null },
+    child_protection: { text: '', file: null },
+    other: { text: '', file: null },
+  })
   const [groups, setGroups] = useState<{ id: number; code: string; name: string; icon: string; color: string }[]>([])
   const [dgaRows, setDgaRows] = useState<Record<number, { present: number; absent: number; note: string; id?: string }>>({})
   const [saving, setSaving] = useState(false)
 
   async function load() {
     setLoading(true)
-    const [d, r, t, g, dga] = await Promise.all([
+    const [d, r, t, g, dga, kidsAll, attToday] = await Promise.all([
       supabase.from('duty_schedules').select('*, employees:teacher_id(last_name, first_name)').order('date', { ascending: false }).limit(120),
       supabase.from('duty_reports').select('*, employees:teacher_id(last_name, first_name)').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(200),
       supabase.from('employees').select('id, last_name, first_name, role, is_duty_teacher').eq('is_duty_teacher', true).order('first_name'),
       supabase.from('groups').select('id, code, name, icon, color').order('id'),
       supabase.from('duty_group_attendance').select('*').eq('date', today()),
+      supabase.from('children').select('id, group_id').eq('status', 'active'),
+      supabase.from('attendance').select('child_id, status').eq('date', today()),
     ])
     setDuties((d.data as unknown as Duty[]) || [])
     setReports((r.data as unknown as Report[]) || [])
     setTeachers((t.data as Emp[]) || [])
     setGroups((g.data as { id: number; code: string; name: string; icon: string; color: string }[]) || [])
+    // Багш нарын оруулсан ирцээс автоматаар тоолол гаргах
+    const kidsList = (kidsAll.data as { id: string; group_id: number | null }[]) || []
+    const attList = (attToday.data as { child_id: string; status: string }[]) || []
+    const kidGroup = new Map<string, number | null>()
+    kidsList.forEach((k) => kidGroup.set(k.id, k.group_id))
+    const autoTotals = new Map<number, { present: number; absent: number }>()
+    attList.forEach((a) => {
+      const gid = kidGroup.get(a.child_id)
+      if (!gid) return
+      const cur = autoTotals.get(gid) || { present: 0, absent: 0 }
+      if (a.status === 'irsen') cur.present++
+      else if (['iree_gui', 'chuluutei', 'uvchtei'].includes(a.status)) cur.absent++
+      autoTotals.set(gid, cur)
+    })
+
     const map: Record<number, { present: number; absent: number; note: string; id?: string }> = {}
     ;((dga.data as { id: string; group_id: number; present: number; absent: number | null; note: string | null }[]) || []).forEach((r) => {
       map[r.group_id] = { id: r.id, present: r.present || 0, absent: r.absent || 0, note: r.note || '' }
+    })
+    // Багш ирц оруулсан бол давамгайлж, дгa-д хадгална
+    autoTotals.forEach((v, gid) => {
+      const existing = map[gid]
+      if (v.present > 0 || v.absent > 0) {
+        map[gid] = { id: existing?.id, present: v.present, absent: v.absent, note: existing?.note || '' }
+      } else if (!existing) {
+        map[gid] = { present: 0, absent: 0, note: '' }
+      }
     })
     setDgaRows(map)
     setLoading(false)
@@ -104,6 +136,45 @@ export default function JuuruPage() {
     load()
   }
 
+  async function saveWeekReport() {
+    if (!me) return
+    const filled = (Object.keys(weekForm) as Cat[]).filter((c) => weekForm[c].text.trim() || weekForm[c].file)
+    if (filled.length === 0) { alert('Нэг ч хэсэгт мэдээлэл оруулаагүй байна'); return }
+    setSaving(true)
+    const monday = mondayOfDate(today())
+    const rowsToInsert: Array<{ date: string; teacher_id: string; category: Cat; title: string; description: string | null; file_url: string | null; week_start: string }> = []
+    for (const c of filled) {
+      const f = weekForm[c].file
+      let file_url: string | null = null
+      if (f) {
+        const path = `juuru/${Date.now()}_${c}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
+        const { error: upErr } = await supabase.storage.from('org-plans').upload(path, f)
+        if (upErr) { alert('Файл алдаа: ' + upErr.message); setSaving(false); return }
+        const { data: pub } = supabase.storage.from('org-plans').getPublicUrl(path)
+        file_url = pub?.publicUrl || null
+      }
+      rowsToInsert.push({
+        date: today(),
+        teacher_id: me.id,
+        category: c,
+        title: `7 хоногийн тайлан (${monday})`,
+        description: weekForm[c].text || null,
+        file_url,
+        week_start: monday,
+      })
+    }
+    const { error } = await supabase.from('duty_reports').insert(rowsToInsert)
+    setSaving(false)
+    if (error) { alert('Алдаа: ' + error.message); return }
+    setShowRepForm(false)
+    setWeekForm({
+      training: { text: '', file: null },
+      regime: { text: '', file: null },
+      child_protection: { text: '', file: null },
+      other: { text: '', file: null },
+    })
+    load()
+  }
   async function saveReport() {
     if (!me) return
     setSaving(true)
@@ -164,27 +235,30 @@ export default function JuuruPage() {
 
         {iAmOnDutyToday && (
           <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
-            <div className="text-sm font-semibold text-slate-700 mb-3">🎯 Бүлгийн ирц (өнөөдөр {today()})</div>
+            <div className="text-sm font-semibold text-slate-700 mb-1">🎯 Бүлгийн ирц (өнөөдөр {today()})</div>
+            <div className="text-xs text-slate-500 mb-3">📥 Бүлгийн багш нарын оруулсан ирцээс автоматаар татагдана. Тэмдэглэл нэмэх боломжтой.</div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {groups.filter((g) => !['hogjim', 'huvilbart'].includes(g.code)).map((g) => {
                 const r = dgaRows[g.id] || { present: 0, absent: 0, note: '' }
+                const total = r.present + r.absent
                 return (
                   <div key={g.id} className="border border-slate-200 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xl">{g.icon}</span>
                       <span className="font-medium text-slate-800 flex-1">{g.name}</span>
+                      {total === 0 && <span className="text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Бүртгээгүй</span>}
                     </div>
                     <div className="grid grid-cols-2 gap-2 mb-2">
-                      <div>
-                        <label className="text-[11px] text-emerald-700">Ирсэн</label>
-                        <input type="number" min="0" value={r.present || ''} onFocus={(e) => e.target.select()} onChange={(e) => setDgaRows({ ...dgaRows, [g.id]: { ...r, present: parseInt(e.target.value) || 0 } })} onBlur={() => saveDga(g.id)} className="w-full border border-emerald-300 bg-emerald-50 rounded px-2 py-1 text-sm font-semibold text-emerald-800" />
+                      <div className="bg-emerald-50 border border-emerald-200 rounded px-2 py-1.5 text-center">
+                        <div className="text-lg font-bold text-emerald-700">{r.present}</div>
+                        <div className="text-[10px] text-emerald-600">Ирсэн</div>
                       </div>
-                      <div>
-                        <label className="text-[11px] text-red-700">Ирээгүй</label>
-                        <input type="number" min="0" value={r.absent || ''} onFocus={(e) => e.target.select()} onChange={(e) => setDgaRows({ ...dgaRows, [g.id]: { ...r, absent: parseInt(e.target.value) || 0 } })} onBlur={() => saveDga(g.id)} className="w-full border border-red-300 bg-red-50 rounded px-2 py-1 text-sm font-semibold text-red-800" />
+                      <div className="bg-red-50 border border-red-200 rounded px-2 py-1.5 text-center">
+                        <div className="text-lg font-bold text-red-700">{r.absent}</div>
+                        <div className="text-[10px] text-red-600">Ирээгүй</div>
                       </div>
                     </div>
-                    <input value={r.note} onChange={(e) => setDgaRows({ ...dgaRows, [g.id]: { ...r, note: e.target.value } })} onBlur={() => saveDga(g.id)} placeholder="Тэмдэглэл" className="w-full border border-slate-300 rounded px-2 py-1 text-xs" />
+                    <input value={r.note} onChange={(e) => setDgaRows({ ...dgaRows, [g.id]: { ...r, note: e.target.value } })} onBlur={() => saveDga(g.id)} placeholder="Тэмдэглэл (заавал биш)" className="w-full border border-slate-300 rounded px-2 py-1 text-xs" />
                   </div>
                 )
               })}
@@ -295,24 +369,29 @@ export default function JuuruPage() {
 
       {showRepForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-            <div className="p-5 border-b border-slate-200"><h2 className="text-lg font-semibold text-slate-800">Өдрийн тайлан</h2></div>
-            <div className="p-5 space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div><label className="block text-sm text-slate-700 mb-1">Огноо</label><input type="date" value={repForm.date} onChange={(e) => setRepForm({ ...repForm, date: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-                <div><label className="block text-sm text-slate-700 mb-1">Ангилал</label>
-                  <select value={repForm.category} onChange={(e) => setRepForm({ ...repForm, category: e.target.value as Cat })} className="w-full border border-slate-300 rounded-lg px-3 py-2">
-                    {(Object.keys(CATS) as Cat[]).map((c) => (<option key={c} value={c}>{CATS[c].icon} {CATS[c].label}</option>))}
-                  </select>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b border-slate-200 sticky top-0 bg-white z-10">
+              <h2 className="text-lg font-semibold text-slate-800">🛎 7 хоногийн жижүүрийн тайлан</h2>
+              <p className="text-xs text-slate-500 mt-1">Долоо хоногийн эцэст 1 удаа — бүх чиглэлийг хамарсан нэгдсэн тайлан</p>
+            </div>
+            <div className="p-5 space-y-4">
+              {(Object.keys(CATS) as Cat[]).map((c) => (
+                <div key={c} className="border border-slate-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">{CATS[c].icon}</span>
+                    <span className="font-semibold text-slate-800">{CATS[c].label}</span>
+                  </div>
+                  <textarea rows={3} value={weekForm[c].text} onChange={(e) => setWeekForm({ ...weekForm, [c]: { ...weekForm[c], text: e.target.value } })} placeholder={`${CATS[c].label} талаар...`} className="w-full border border-slate-300 rounded px-3 py-2 text-sm mb-2" />
+                  <div>
+                    <label className="text-xs text-slate-500 block mb-1">📎 Нотлох баримт (зураг/бичлэг/файл)</label>
+                    <input type="file" accept="image/*,video/*,.pdf,.doc,.docx" onChange={(e) => setWeekForm({ ...weekForm, [c]: { ...weekForm[c], file: e.target.files?.[0] || null } })} className="w-full text-xs" />
+                    {weekForm[c].file && <div className="text-[11px] text-blue-600 mt-1">✓ {weekForm[c].file!.name}</div>}
+                  </div>
                 </div>
-              </div>
-              <div><label className="block text-sm text-slate-700 mb-1">Гарчиг</label><input value={repForm.title} onChange={(e) => setRepForm({ ...repForm, title: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-              <div><label className="block text-sm text-slate-700 mb-1">Тайлбар</label><textarea rows={4} value={repForm.description} onChange={(e) => setRepForm({ ...repForm, description: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-              <div><label className="block text-sm text-slate-700 mb-1">📎 Нотлох баримт (зураг/бичлэг/файл)</label><input type="file" accept="image/*,video/*,.pdf,.doc,.docx" onChange={(e) => setRepForm({ ...repForm, file: e.target.files?.[0] || null })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-              <div><label className="block text-sm text-slate-700 mb-1">🔗 Линкүүд</label><textarea rows={2} value={repForm.extraLinks} onChange={(e) => setRepForm({ ...repForm, extraLinks: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-              <div className="flex gap-2 pt-2">
+              ))}
+              <div className="flex gap-2 pt-2 border-t border-slate-200">
                 <button onClick={() => setShowRepForm(false)} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg">Болих</button>
-                <button onClick={saveReport} disabled={saving} className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 text-white rounded-lg font-medium">{saving ? '...' : 'Хадгалах'}</button>
+                <button onClick={saveWeekReport} disabled={saving} className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 text-white rounded-lg font-medium">{saving ? '⏳ Хадгалж байна...' : '📤 7 хоногийн тайлан илгээх'}</button>
               </div>
             </div>
           </div>
@@ -320,6 +399,14 @@ export default function JuuruPage() {
       )}
     </div>
   )
+}
+
+function mondayOfDate(d: string): string {
+  const dt = new Date(d + 'T00:00:00')
+  const dow = dt.getDay()
+  const off = dow === 0 ? -6 : 1 - dow
+  dt.setDate(dt.getDate() + off)
+  return dt.toISOString().split('T')[0]
 }
 
 const MONTHS_MN = ['1-р сар','2-р сар','3-р сар','4-р сар','5-р сар','6-р сар','7-р сар','8-р сар','9-р сар','10-р сар','11-р сар','12-р сар']

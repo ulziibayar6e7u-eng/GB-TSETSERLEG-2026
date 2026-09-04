@@ -49,6 +49,7 @@ function bagshMenu(me: Me): MenuSection[] {
       title: 'Өдөр тутам',
       items: [
         { href: '/irts', label: 'Ирц', icon: '⏰' },
+        { href: '/huuhed-bulk', label: 'Хүүхэд бөөнөөр нэмэх', icon: '👧' },
         { href: '/juuru', label: 'Жижүүр багш', icon: '🛎' },
         { href: '/uil-ajilgaa', label: 'Сургалт, үйл ажиллагаа', icon: '📸' },
         { href: '/dugilan', label: 'Дугуйлан', icon: '🎨' },
@@ -171,10 +172,8 @@ function erhlegchMenu(): MenuSection[] {
         { href: '/bagsh', label: 'Ажилтан бүрээр', icon: '👩‍🏫' },
         { href: '/guyeetgel', label: 'Гүйцэтгэлийн анализ', icon: '📈' },
         { href: '/uil-ajilgaa', label: 'Сургалт, үйл ажиллагаа', icon: '📸' },
-        { href: '/hugjil', label: 'Хүүхдийн хөгжил', icon: '📊' },
         { href: '/hamgaalal', label: 'Хүүхэд хамгаалал', icon: '🛡' },
         { href: '/hutulbur', label: 'Хөтөлбөрийн хэрэгжилт', icon: '📚' },
-        { href: '/bagts', label: 'Хөтөлбөрийн бэлэн багц', icon: '📦' },
         { href: '/heregleg', label: 'Хэрэглэгдэхүүн, хөтөлбөр', icon: '📎' },
         { href: '/irts-staff', label: 'Ажилтны ирц', icon: '⏰' },
         { href: '/juuru', label: 'Жижүүр багшийн тайлан', icon: '🛎' },
@@ -184,8 +183,6 @@ function erhlegchMenu(): MenuSection[] {
       title: 'Байгууллагын төлөвлөлт',
       items: [
         { href: '/tulvluguu-bail', label: 'Байгууллагын төлөвлөгөө', icon: '📆' },
-        { href: '/tailan-batlgaajuulalt', label: 'Тайлан баталгаажуулалт', icon: '📋' },
-        { href: '/gerea-huvluv', label: 'Хөдөлмөрийн гэрээ', icon: '📄' },
       ],
     },
     {
@@ -194,7 +191,6 @@ function erhlegchMenu(): MenuSection[] {
         { href: '/ajiltan', label: 'Ажилтны удирдлага', icon: '👥' },
         { href: '/dugilan', label: 'Дугуйлангийн үйл ажиллагаа', icon: '🎨' },
         { href: '/huuhed', label: 'Хүүхдийн бүртгэл', icon: '👧' },
-        { href: '/hogjim', label: 'Хөгжмийн модуль', icon: '🎵' },
         { href: '/busad', label: 'Бусад ажилтан', icon: '👤' },
       ],
     },
@@ -204,7 +200,6 @@ function erhlegchMenu(): MenuSection[] {
         { href: '/uureg', label: 'Үүрэг даалгавар', icon: '📌' },
         { href: '/sanaachlaga', label: 'Санаачилсан ажил', icon: '💡' },
         { href: '/chuluu', label: 'Чөлөө', icon: '📅' },
-        { href: '/barimt', label: 'Баримт бичиг', icon: '📂' },
         { href: '/zar', label: 'Зар мэдээ', icon: '📢' },
       ],
     },

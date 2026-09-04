@@ -27,7 +27,7 @@ type Item = {
   extraLinks?: string[]
 }
 
-type Comment = { id: string; plan_kind: string; plan_id: string; author_id: string; text: string; created_at: string; employees?: { last_name: string; first_name: string } | null }
+type Comment = { id: string; plan_kind: string; plan_id: string; author_id: string; text: string; created_at: string; evidence_url: string | null; evidence_note: string | null; resolved: boolean; resolved_at: string | null; employees?: { last_name: string; first_name: string } | null }
 
 const KIND_META: Record<Kind, { icon: string; label: string; color: string }> = {
   weekly:  { icon: '🎁', label: '7 хоногийн', color: 'from-emerald-500 to-teal-500' },
@@ -44,6 +44,66 @@ const STAMP_STYLES = [
   { color: '#059669', text: '★ APPROVED ★', font: 'font-bold' },
   { color: '#7c3aed', text: '✿ ЗӨВШӨӨРСӨН ✿', font: 'font-bold' },
 ]
+
+function CommentCard({ c, onChange, meId }: { c: Comment; onChange: () => void; meId: string }) {
+  const supabase = useMemo(() => createClient(), [])
+  const [showForm, setShowForm] = useState(false)
+  const [note, setNote] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  async function submit() {
+    setSaving(true)
+    let evidence_url: string | null = c.evidence_url
+    if (file) {
+      const path = `comments/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
+      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, file)
+      if (upErr) { alert('Файл алдаа: ' + upErr.message); setSaving(false); return }
+      const { data: pub } = supabase.storage.from('org-plans').getPublicUrl(path)
+      evidence_url = pub?.publicUrl || null
+    }
+    await supabase.from('approval_comments').update({
+      evidence_url, evidence_note: note || null, resolved: true, resolved_by: meId, resolved_at: new Date().toISOString(),
+    }).eq('id', c.id)
+    setSaving(false)
+    setShowForm(false); setNote(''); setFile(null)
+    onChange()
+  }
+
+  return (
+    <div className={`rounded-lg p-3 border ${c.resolved ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'}`}>
+      <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
+        <span className="font-medium text-slate-700">{c.employees ? `${c.employees.last_name}.${c.employees.first_name}` : 'Хэрэглэгч'}</span>
+        <span>· {new Date(c.created_at).toLocaleString('mn-MN')}</span>
+        {c.resolved && <span className="ml-auto text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded-full font-semibold">✓ БИЕЛҮҮЛСЭН</span>}
+      </div>
+      <div className="text-sm text-slate-800 whitespace-pre-wrap">💬 {c.text}</div>
+      {c.evidence_note && (
+        <div className="mt-2 pl-3 border-l-2 border-emerald-400">
+          <div className="text-[11px] text-emerald-700 font-semibold mb-0.5">📎 БИЕЛЭЛТ:</div>
+          <div className="text-sm text-slate-700 whitespace-pre-wrap">{c.evidence_note}</div>
+          {c.evidence_url && <a href={c.evidence_url} target="_blank" rel="noopener" className="inline-block mt-1 text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2 py-1 rounded">📎 Нотлох баримт</a>}
+        </div>
+      )}
+      {!c.resolved && (
+        <div className="mt-2 pt-2 border-t border-slate-100">
+          {!showForm ? (
+            <button onClick={() => setShowForm(true)} className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-1 rounded font-medium">✓ Биелүүлсэн (нотлох баримт нэмэх)</button>
+          ) : (
+            <div className="space-y-2 mt-2">
+              <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Юу хийсэн тухай тайлбар..." className="w-full border border-slate-300 rounded px-2 py-1 text-sm" />
+              <input type="file" accept="image/*,video/*,.pdf,.doc,.docx" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full text-xs" />
+              <div className="flex gap-2">
+                <button onClick={() => { setShowForm(false); setNote(''); setFile(null) }} className="text-xs px-3 py-1 border border-slate-300 rounded">Болих</button>
+                <button onClick={submit} disabled={saving} className="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white rounded font-medium">{saving ? '...' : 'Илгээх'}</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function Stamp({ note, name, date }: { note?: string; name?: string; date?: string }) {
   const style = STAMP_STYLES[0]
@@ -172,7 +232,7 @@ export default function BatlamjPage() {
   useEffect(() => { load() }, [])
 
   async function loadComments(itemKey: string, kind: Kind, planId: string) {
-    const { data } = await supabase.from('approval_comments').select('*, employees:author_id(last_name, first_name)').eq('plan_kind', kind).eq('plan_id', planId).order('created_at')
+    const { data } = await supabase.from('approval_comments').select('id, plan_kind, plan_id, author_id, text, created_at, evidence_url, evidence_note, resolved, resolved_at, employees:author_id(last_name, first_name)').eq('plan_kind', kind).eq('plan_id', planId).order('created_at')
     setComments((prev) => ({ ...prev, [itemKey]: (data as unknown as Comment[]) || [] }))
   }
   async function addComment(itemKey: string, kind: Kind, planId: string) {
@@ -381,13 +441,7 @@ export default function BatlamjPage() {
                         ) : (
                           <div className="space-y-2 mb-3">
                             {cs.map((c) => (
-                              <div key={c.id} className="bg-white rounded-lg p-3 border border-slate-200">
-                                <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-                                  <span className="font-medium text-slate-700">{c.employees ? `${c.employees.last_name}.${c.employees.first_name}` : 'Хэрэглэгч'}</span>
-                                  <span>· {new Date(c.created_at).toLocaleString('mn-MN')}</span>
-                                </div>
-                                <div className="text-sm text-slate-800 whitespace-pre-wrap">{c.text}</div>
-                              </div>
+                              <CommentCard key={c.id} c={c} onChange={() => loadComments(i.key, i.kind, i.planId)} meId={me.id} />
                             ))}
                           </div>
                         )}
