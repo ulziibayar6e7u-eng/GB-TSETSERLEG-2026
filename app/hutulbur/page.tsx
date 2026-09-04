@@ -63,7 +63,8 @@ export default function HutulburPage() {
     if (!currentGroup) return
     (async () => {
       setLoading(true)
-      const ageCode = currentGroup.code
+      // Хувилбарт бүлэг = 3-4 нас = dund
+      const ageCode = currentGroup.code === 'huvilbart' ? 'dund' : currentGroup.code
       const [o, c] = await Promise.all([
         supabase.from('outcomes').select('*').eq('age_group', ageCode).eq('active', true).order('area_code').order('sort_order'),
         supabase.from('children').select('id, last_name, first_name, group_id').eq('group_id', currentGroup.id).eq('status', 'active').order('last_name'),
