@@ -34,6 +34,35 @@ const CATS = {
 
 type CatKey = keyof typeof CATS
 
+const DADAL_HABITS = [
+  { icon: '🧼', label: 'Гар угаах' },
+  { icon: '💧', label: 'Ам зайлах' },
+  { icon: '🦷', label: 'Шүд угаах' },
+  { icon: '💦', label: 'Царай угаах' },
+  { icon: '💇', label: 'Үс самнах' },
+  { icon: '👕', label: 'Хувцас эвхэх' },
+  { icon: '🎽', label: 'Бие даан хувцаслах' },
+  { icon: '🧦', label: 'Оймс өмсөх' },
+  { icon: '👟', label: 'Гутал засах, солих' },
+  { icon: '🧣', label: 'Ороолт зөв ороох' },
+  { icon: '🚽', label: 'Ариун цэвэрийн өрөө ашиглах' },
+  { icon: '🤧', label: 'Алчуур хэрэглэх' },
+  { icon: '🍽', label: 'Ширээ бэлдэх, цэвэрлэх' },
+  { icon: '🥄', label: 'Хоолны хэрэгсэл зөв барих' },
+  { icon: '🍚', label: 'Бие даан хооллох' },
+  { icon: '💺', label: 'Сандал засах' },
+  { icon: '🛏', label: 'Ор дэвсэх, хураах' },
+  { icon: '🧸', label: 'Тоглоомоо хураах' },
+  { icon: '🎒', label: 'Хувийн зүйлээ хариуцах' },
+  { icon: '🚰', label: 'Ус тогтмол ууж дадах' },
+  { icon: '🤝', label: 'Мэндлэх, эмтэн эмтэн' },
+  { icon: '🙏', label: 'Талархах, уучлал гуйх' },
+  { icon: '🤲', label: 'Бусадтай хуваалцах' },
+  { icon: '🚶', label: 'Дараалалдаа зогсох' },
+  { icon: '🌱', label: 'Ургамал усалж арчлах' },
+  { icon: '🧹', label: 'Бүлгээ цэвэрлэх' },
+] as const
+
 function Inner({ id }: { id: string }) {
   const supabase = useMemo(() => createClient(), [])
   const { me, loading: meLoading } = useMe()
@@ -273,9 +302,25 @@ function Inner({ id }: { id: string }) {
                   </select>
                 </div>
               </div>
+              {tab === 'dadal' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">🌱 Дадал сонгох (эсвэл гарчигт өөрөө бич)</label>
+                  <div className="flex flex-wrap gap-2 max-h-56 overflow-y-auto p-2 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    {DADAL_HABITS.map((h) => {
+                      const active = form.title === h.label
+                      return (
+                        <button key={h.label} type="button" onClick={() => setForm({ ...form, title: h.label })}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${active ? 'bg-emerald-600 text-white shadow' : 'bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100'}`}>
+                          {h.icon} {h.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Гарчиг</label>
-                <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={tab === 'dadal' ? 'Дадлыг сонго эсвэл өөрөө бич' : ''} className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Тайлбар</label>
