@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-browser'
 import { useMe } from '@/lib/useMe'
 import { detectRole, ROLE_META } from '@/lib/staffRoles'
 
+type ChecklistItem = { label: string; ok: boolean }
 type Log = {
   id: string
   author_id: string | null
@@ -12,12 +13,37 @@ type Log = {
   shift: string | null
   title: string | null
   description: string | null
+  category: string | null
+  checklist: ChecklistItem[]
   file_url: string | null
   extra_links: string[]
   reviewer_id: string | null
   reviewer_note: string | null
   created_at: string
   employees?: { last_name: string; first_name: string; positions?: { name: string } } | null
+}
+
+const CATS_BY_ROLE: Record<string, { key: string; icon: string; label: string; checklist?: string[] }[]> = {
+  haruul: [
+    { key: 'entry_log',  icon: '🚪', label: 'Гарц-орцны бүртгэл' },
+    { key: 'safety',     icon: '🛡', label: 'Аюулгүй байдал шалгах', checklist: ['Гадаа хаалга', 'Цонх', 'Гэрэлтүүлэг', 'Галын хамгаалалт', 'Ус, дулаан', 'Бусад'] },
+    { key: 'incident',   icon: '⚠️', label: 'Онцгой тохиолдол' },
+    { key: 'shift_end',  icon: '📋', label: 'Ээлж хүлээлцэх' },
+    { key: 'general',    icon: '📝', label: 'Ерөнхий тэмдэглэл' },
+  ],
+  uilchleg: [
+    { key: 'clean_report', icon: '🧹', label: 'Цэвэрлэгээний тайлан' },
+    { key: 'service',      icon: '🔧', label: 'Засвар үйлчилгээ' },
+    { key: 'incident',     icon: '⚠️', label: 'Онцгой тохиолдол' },
+    { key: 'general',      icon: '📝', label: 'Ерөнхий тэмдэглэл' },
+  ],
+  other: [
+    { key: 'general',      icon: '📝', label: 'Ерөнхий тайлан' },
+    { key: 'service',      icon: '🔧', label: 'Засвар үйлчилгээ' },
+    { key: 'transport',    icon: '🚗', label: 'Тээвэрлэлт' },
+    { key: 'purchase',     icon: '🛒', label: 'Худалдан авалт' },
+    { key: 'incident',     icon: '⚠️', label: 'Онцгой тохиолдол' },
+  ],
 }
 
 const SHIFTS = [
@@ -37,7 +63,8 @@ export default function DailyLogPage() {
   const [logs, setLogs] = useState<Log[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], shift: '', title: '', description: '', file: null as File | null, extraLinks: '' })
+  const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], shift: '', title: '', description: '', category: '', checklist: [] as ChecklistItem[], file: null as File | null, extraLinks: '' })
+  const cats = CATS_BY_ROLE[role] || CATS_BY_ROLE.other
   const [saving, setSaving] = useState(false)
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [reviewNote, setReviewNote] = useState('')
@@ -69,13 +96,15 @@ export default function DailyLogPage() {
       shift: form.shift || null,
       title: form.title || null,
       description: form.description || null,
+      category: form.category || null,
+      checklist: form.checklist,
       file_url,
       extra_links: form.extraLinks.split(/\r?\n/).map(s=>s.trim()).filter(Boolean),
     })
     setSaving(false)
     if (error) { alert('Алдаа: ' + error.message); return }
     setShowForm(false)
-    setForm({ date: new Date().toISOString().split('T')[0], shift: '', title: '', description: '', file: null, extraLinks: '' })
+    setForm({ date: new Date().toISOString().split('T')[0], shift: '', title: '', description: '', category: '', checklist: [], file: null, extraLinks: '' })
     load()
   }
   async function remove(l: Log) {
@@ -126,10 +155,23 @@ export default function DailyLogPage() {
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <span className="text-xs text-slate-500">🗓 {l.date}</span>
                       {l.shift && <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">{SHIFTS.find(s=>s.key===l.shift)?.label || l.shift}</span>}
+                      {l.category && (() => {
+                        const c = cats.find((x) => x.key === l.category)
+                        return c ? <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">{c.icon} {c.label}</span> : null
+                      })()}
                       {canSeeAll && l.employees && <span className="text-xs text-slate-500">— {l.employees.last_name}.{l.employees.first_name}{l.employees.positions && ` · ${l.employees.positions.name}`}</span>}
                     </div>
                     {l.title && <h3 className="font-semibold text-slate-800">{l.title}</h3>}
                     {l.description && <div className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">{l.description}</div>}
+                    {l.checklist && l.checklist.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {l.checklist.map((it, i) => (
+                          <span key={i} className={`text-xs px-2 py-1 rounded-full ${it.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                            {it.ok ? '✅' : '❌'} {it.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div className="mt-2 flex flex-wrap gap-2">
                       {l.file_url && <a href={l.file_url} target="_blank" rel="noopener" className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg">📎 Файл</a>}
                       {(l.extra_links || []).map((url, i) => (<a key={i} href={url} target="_blank" rel="noopener" className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg">🔗 Линк {i + 1}</a>))}
@@ -175,6 +217,35 @@ export default function DailyLogPage() {
                   </select>
                 </div>
               </div>
+              <div>
+                <label className="block text-sm text-slate-700 mb-2">Тайлангийн төрөл</label>
+                <div className="flex flex-wrap gap-2">
+                  {cats.map((c) => {
+                    const active = form.category === c.key
+                    return (
+                      <button key={c.key} type="button" onClick={() => setForm({ ...form, category: c.key, title: active ? form.title : c.label, checklist: c.checklist ? c.checklist.map((l) => ({ label: l, ok: false })) : [] })}
+                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${active ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
+                        {c.icon} {c.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              {form.checklist.length > 0 && (
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <div className="text-xs font-semibold text-slate-600 mb-2">✅ Шалгах жагсаалт</div>
+                  <div className="space-y-1.5">
+                    {form.checklist.map((it, idx) => (
+                      <label key={idx} className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={it.ok} onChange={(e) => {
+                          const copy = [...form.checklist]; copy[idx] = { ...it, ok: e.target.checked }; setForm({ ...form, checklist: copy })
+                        }} className="w-4 h-4" />
+                        <span className={it.ok ? 'text-emerald-700 line-through' : 'text-slate-700'}>{it.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div><label className="block text-sm text-slate-700 mb-1">Гарчиг</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
               <div><label className="block text-sm text-slate-700 mb-1">Тайлбар</label><textarea rows={5} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
               <div><label className="block text-sm text-slate-700 mb-1">📎 Файл</label><input type="file" accept="image/*,video/*,.pdf" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
