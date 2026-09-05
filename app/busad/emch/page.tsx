@@ -51,11 +51,15 @@ const TYPES = {
 type RType = keyof typeof TYPES
 
 const INSP_CAT = {
+  daily_clean:  { icon: '🧹', label: 'Өдөр тутмын цэвэрлэгээ' },
+  deep_clean:   { icon: '🧽', label: 'Их цэвэрлэгээ' },
+  disinfection: { icon: '🧴', label: 'Ариутгал, халдваргүйтгэл' },
+  ventilation:  { icon: '💨', label: 'Агааржуулалт' },
   kitchen:      { icon: '🍳', label: 'Гал тогоо' },
-  cleaning:     { icon: '🧹', label: 'Цэвэрлэгээ' },
-  food_quality: { icon: '🍽', label: 'Хоолны чанар' },
-  disinfection: { icon: '🧴', label: 'Ариутгал' },
+  food_prod:    { icon: '🍲', label: 'Хоол үйлдвэрлэл' },
+  food_quality: { icon: '🍽', label: 'Хоолны чанар, амталгаа' },
   serving:      { icon: '👔', label: 'Үйлчилгээ' },
+  toilet_room:  { icon: '🚻', label: 'Ариун цэврийн өрөө' },
   other:        { icon: '📋', label: 'Бусад' },
 } as const
 type ICat = keyof typeof INSP_CAT
@@ -69,7 +73,15 @@ const INSP_STATUS = {
 export default function EmchPage() {
   const supabase = useMemo(() => createClient(), [])
   const { me } = useMe()
-  const [tab, setTab] = useState<'children' | 'staff' | 'inspection'>('children')
+  const [tab, setTab] = useState<'children' | 'staff' | 'inspection' | 'cleaning_review'>('children')
+  const [cleaningRows, setCleaningRows] = useState<{
+    id: string; date: string; category: string; location: string | null; description: string | null;
+    status: string; photo_url: string | null; extra_links: string[];
+    doctor_status: 'ok' | 'warning' | 'critical' | null; doctor_note: string | null; doctor_reviewed_at: string | null;
+    employees?: { last_name: string; first_name: string } | null;
+    doctor_reviewer?: { last_name: string; first_name: string } | null;
+  }[]>([])
+  const [crReview, setCrReview] = useState<{ id: string; status: 'ok'|'warning'|'critical'; note: string } | null>(null)
   const [records, setRecords] = useState<Record[]>([])
   const [inspections, setInspections] = useState<Inspection[]>([])
   const [children, setChildren] = useState<Child[]>([])
@@ -97,17 +109,29 @@ export default function EmchPage() {
 
   async function load() {
     setLoading(true)
-    const [r, c, s, ins] = await Promise.all([
+    const [r, c, s, ins, cln] = await Promise.all([
       supabase.from('health_records').select('*, children(id, last_name, first_name, birth_date, groups(name, icon, color)), employees:staff_id(id, last_name, first_name, positions(name))').order('date', { ascending: false }).limit(200),
       supabase.from('children').select('id, last_name, first_name, birth_date, groups(name, icon, color)').eq('status', 'active').order('last_name'),
       supabase.from('employees').select('id, last_name, first_name, positions(name)').order('first_name'),
       supabase.from('doctor_inspections').select('*, employees:inspector_id(last_name, first_name), reviewer:reviewer_id(last_name, first_name)').order('date', { ascending: false }).limit(200),
+      supabase.from('cleaning_schedules').select('id, date, category, location, description, status, photo_url, extra_links, doctor_status, doctor_note, doctor_reviewed_at, employees:assignee_id(last_name, first_name), doctor_reviewer:doctor_reviewer_id(last_name, first_name)').order('date', { ascending: false }).limit(200),
     ])
     setRecords((r.data as unknown as Record[]) || [])
     setChildren((c.data as unknown as Child[]) || [])
     setStaff((s.data as unknown as Employee[]) || [])
     setInspections((ins.data as unknown as Inspection[]) || [])
+    setCleaningRows((cln.data as unknown as typeof cleaningRows) || [])
     setLoading(false)
+  }
+  async function saveCrReview() {
+    if (!crReview || !me) return
+    await supabase.from('cleaning_schedules').update({
+      doctor_status: crReview.status,
+      doctor_note: crReview.note || null,
+      doctor_reviewer_id: me.id,
+      doctor_reviewed_at: new Date().toISOString(),
+    }).eq('id', crReview.id)
+    setCrReview(null); load()
   }
   useEffect(() => { load() }, [])
 
@@ -246,6 +270,7 @@ export default function EmchPage() {
           <button onClick={() => setTab('children')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'children' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>👧 Хүүхэд ({stats.child})</button>
           <button onClick={() => setTab('staff')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'staff' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>👨‍🏫 Багш ажилтан ({stats.staff})</button>
           <button onClick={() => setTab('inspection')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'inspection' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>🔍 Эмчийн хяналт ({stats.insp}){stats.warnings > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{stats.warnings}</span>}</button>
+          <button onClick={() => setTab('cleaning_review')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'cleaning_review' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>🧹 Туслах цэвэрлэгээ хянах ({cleaningRows.length}){cleaningRows.filter((c) => !c.doctor_status).length > 0 && <span className="ml-1 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">{cleaningRows.filter((c) => !c.doctor_status).length}</span>}</button>
           <div className="ml-auto">
             {tab === 'children' && <button onClick={() => openAdd('child')} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Хүүхдийн бүртгэл</button>}
             {tab === 'staff' && <button onClick={() => openAdd('staff')} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Ажилтны бүртгэл</button>}
@@ -292,6 +317,70 @@ export default function EmchPage() {
                         <button onClick={() => openInsp(i)} className="text-blue-600 hover:text-blue-800 text-xs px-2 py-1">Засах</button>
                         <button onClick={() => removeInsp(i)} className="text-red-600 hover:text-red-800 text-xs px-2 py-1">Устгах</button>
                       </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        ) : tab === 'cleaning_review' ? (
+          cleaningRows.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500">
+              <div className="text-5xl mb-3">🧹</div>
+              <div>Багшийн туслах нар цэвэрлэгээ оруулаагүй байна</div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {cleaningRows.map((c) => {
+                const isRev = crReview?.id === c.id
+                const emchSt = c.doctor_status ? INSP_STATUS[c.doctor_status] : null
+                return (
+                  <div key={c.id} className="bg-white rounded-xl border border-slate-200 p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="text-2xl">🧹</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="text-xs text-slate-500">🗓 {c.date}</span>
+                          <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">{c.category}</span>
+                          {c.location && <span className="text-xs text-slate-500">📍 {c.location}</span>}
+                          {emchSt ? (
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${emchSt.color}`}>{emchSt.icon} Эмчийн үнэлгээ: {emchSt.label}</span>
+                          ) : (
+                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">⏳ Хянаагүй</span>
+                          )}
+                        </div>
+                        {c.description && <div className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">{c.description}</div>}
+                        {c.photo_url && <a href={c.photo_url} target="_blank" rel="noopener" className="inline-block mt-2 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg">📷 Зураг</a>}
+                        {c.employees && <div className="text-xs text-slate-400 mt-2">— {c.employees.last_name}.{c.employees.first_name}</div>}
+                        {c.doctor_note && (
+                          <div className="mt-3 p-3 rounded-lg bg-red-50 border-l-4 border-red-400 text-sm">
+                            <div className="text-xs font-semibold text-red-700 mb-1">🩺 Эмчийн тэмдэглэл{c.doctor_reviewer ? ` — ${c.doctor_reviewer.last_name}.${c.doctor_reviewer.first_name}` : ''}</div>
+                            {c.doctor_note}
+                          </div>
+                        )}
+                        {isRev && (
+                          <div className="mt-3 border-t border-slate-200 pt-3">
+                            <div className="text-xs font-semibold text-slate-600 mb-2">🩺 ЭМЧИЙН ҮНЭЛГЭЭ</div>
+                            <div className="flex gap-2 mb-2">
+                              {(['ok','warning','critical'] as const).map((s) => (
+                                <button key={s} onClick={() => setCrReview({ ...crReview!, status: s })} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${crReview!.status === s ? INSP_STATUS[s].color : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
+                                  {INSP_STATUS[s].icon} {INSP_STATUS[s].label}
+                                </button>
+                              ))}
+                            </div>
+                            <textarea rows={2} value={crReview!.note} onChange={(e) => setCrReview({ ...crReview!, note: e.target.value })} placeholder="Тэмдэглэл, зөвлөгөө..." className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-2" />
+                            <div className="flex gap-2">
+                              <button onClick={() => setCrReview(null)} className="px-3 py-1.5 text-sm text-slate-600">Болих</button>
+                              <button onClick={saveCrReview} className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium">💾 Үнэлгээ хадгалах</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {!isRev && (
+                        <button onClick={() => setCrReview({ id: c.id, status: c.doctor_status || 'ok', note: c.doctor_note || '' })} className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium">
+                          {c.doctor_status ? '🔄 Дахин' : '🩺 Үнэлэх'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 )

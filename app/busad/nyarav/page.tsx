@@ -4,7 +4,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useMe } from '@/lib/useMe'
 
-type Item = { id: string; name: string; category: string | null; unit: string; quantity: number; min_quantity: number; location: string | null; note: string | null }
+type Item = { id: string; name: string; category: string | null; unit: string; quantity: number; min_quantity: number; location: string | null; note: string | null; expiry_date: string | null; supplier: string | null }
+
+const CATS = [
+  { key: 'food',    label: '🍚 Хүнс' },
+  { key: 'hygiene', label: '🧴 Ариун цэвэр' },
+  { key: 'clean',   label: '🧹 Цэвэрлэгээ' },
+  { key: 'equipment', label: '🔧 Тоног төхөөрөмж' },
+  { key: 'office',  label: '📋 Оффис' },
+  { key: 'toy',     label: '🧸 Тоглоом, хэрэгсэл' },
+  { key: 'other',   label: '📦 Бусад' },
+]
 type Movement = {
   id: string
   item_id: string | null
@@ -30,12 +40,13 @@ const MTYPES = {
 export default function NyaravPage() {
   const supabase = useMemo(() => createClient(), [])
   const { me } = useMe()
-  const [tab, setTab] = useState<'items' | 'movements'>('items')
+  const [tab, setTab] = useState<'items' | 'movements' | 'lowstock' | 'expiring'>('items')
+  const [filterCat, setFilterCat] = useState<string>('')
   const [items, setItems] = useState<Item[]>([])
   const [movs, setMovs] = useState<Movement[]>([])
   const [showItem, setShowItem] = useState(false)
   const [editingItem, setEditingItem] = useState<Item | null>(null)
-  const [itemForm, setItemForm] = useState({ name: '', category: '', unit: 'ш', quantity: '0', min_quantity: '0', location: '', note: '' })
+  const [itemForm, setItemForm] = useState({ name: '', category: '', unit: 'ш', quantity: '0', min_quantity: '0', location: '', note: '', expiry_date: '', supplier: '' })
   const [showMov, setShowMov] = useState(false)
   const [movForm, setMovForm] = useState({ item_id: '', movement_type: 'purchase' as Movement['movement_type'], quantity: '', date: new Date().toISOString().split('T')[0], recipient: '', price: '', supplier: '', note: '', file: null as File | null })
   const [saving, setSaving] = useState(false)
@@ -59,6 +70,8 @@ export default function NyaravPage() {
       min_quantity: parseFloat(itemForm.min_quantity) || 0,
       location: itemForm.location || null,
       note: itemForm.note || null,
+      expiry_date: itemForm.expiry_date || null,
+      supplier: itemForm.supplier || null,
     }
     const { error } = editingItem
       ? await supabase.from('inventory_items').update({...payload, updated_at: new Date().toISOString()}).eq('id', editingItem.id)
@@ -136,8 +149,25 @@ export default function NyaravPage() {
           <button onClick={() => setTab('movements')} className={`px-3 py-2 rounded-lg text-sm font-medium ${tab === 'movements' ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
             🔄 Хөдөлгөөн ({movs.length})
           </button>
+          {(() => {
+            const lo = items.filter((i) => i.min_quantity > 0 && i.quantity <= i.min_quantity).length
+            const today = new Date().toISOString().split('T')[0]
+            const soon = new Date(); soon.setDate(soon.getDate() + 30)
+            const soonStr = soon.toISOString().split('T')[0]
+            const exp = items.filter((i) => i.expiry_date && i.expiry_date <= soonStr && i.expiry_date >= today).length
+            return (
+              <>
+                <button onClick={() => setTab('lowstock')} className={`px-3 py-2 rounded-lg text-sm font-medium ${tab === 'lowstock' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
+                  ⚠️ Дуусаж буй ({lo})
+                </button>
+                <button onClick={() => setTab('expiring')} className={`px-3 py-2 rounded-lg text-sm font-medium ${tab === 'expiring' ? 'bg-amber-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
+                  🗓 Хугацаа ({exp})
+                </button>
+              </>
+            )
+          })()}
           <div className="ml-auto flex gap-2">
-            {tab === 'items' && <button onClick={() => { setEditingItem(null); setItemForm({ name: '', category: '', unit: 'ш', quantity: '0', min_quantity: '0', location: '', note: '' }); setShowItem(true) }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Нэр төрөл</button>}
+            {tab === 'items' && <button onClick={() => { setEditingItem(null); setItemForm({ name: '', category: '', unit: 'ш', quantity: '0', min_quantity: '0', location: '', note: '', expiry_date: '', supplier: '' }); setShowItem(true) }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Нэр төрөл</button>}
             {tab === 'movements' && items.length > 0 && <button onClick={() => setShowMov(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Хөдөлгөөн бүртгэх</button>}
           </div>
         </div>
@@ -173,7 +203,7 @@ export default function NyaravPage() {
                       </td>
                       <td className="px-4 py-3 text-slate-600">{i.location || '-'}</td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <button onClick={() => { setEditingItem(i); setItemForm({ name: i.name, category: i.category || '', unit: i.unit, quantity: String(i.quantity), min_quantity: String(i.min_quantity), location: i.location || '', note: i.note || '' }); setShowItem(true) }} className="text-blue-600 hover:text-blue-800 text-xs mr-3">Засах</button>
+                        <button onClick={() => { setEditingItem(i); setItemForm({ name: i.name, category: i.category || '', unit: i.unit, quantity: String(i.quantity), min_quantity: String(i.min_quantity), location: i.location || '', note: i.note || '', expiry_date: i.expiry_date || '', supplier: i.supplier || '' }); setShowItem(true) }} className="text-blue-600 hover:text-blue-800 text-xs mr-3">Засах</button>
                         <button onClick={() => removeItem(i)} className="text-red-600 hover:text-red-800 text-xs">Устгах</button>
                       </td>
                     </tr>
@@ -183,6 +213,54 @@ export default function NyaravPage() {
             </div>
           )
         )}
+
+        {(tab === 'lowstock' || tab === 'expiring') && (() => {
+          const today = new Date().toISOString().split('T')[0]
+          const soon = new Date(); soon.setDate(soon.getDate() + 30)
+          const soonStr = soon.toISOString().split('T')[0]
+          const list = tab === 'lowstock'
+            ? items.filter((i) => i.min_quantity > 0 && i.quantity <= i.min_quantity)
+            : items.filter((i) => i.expiry_date && i.expiry_date <= soonStr).sort((a, b) => (a.expiry_date! < b.expiry_date! ? -1 : 1))
+          if (list.length === 0) return (
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500">
+              <div className="text-5xl mb-3">{tab === 'lowstock' ? '✅' : '🗓'}</div>
+              <div>{tab === 'lowstock' ? 'Дуусаж буй нэр төрөл алга' : 'Хугацаа дуусах бүтээгдэхүүн алга'}</div>
+            </div>
+          )
+          return (
+            <div className="space-y-2">
+              {list.map((i) => {
+                const isExpired = i.expiry_date && i.expiry_date < today
+                return (
+                  <div key={i.id} className={`bg-white rounded-xl border p-4 flex items-center gap-3 ${isExpired ? 'border-red-300 bg-red-50' : tab === 'lowstock' ? 'border-red-200' : 'border-amber-200'}`}>
+                    <div className="text-2xl">{tab === 'lowstock' ? '⚠️' : (isExpired ? '🚫' : '⏰')}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-slate-800">{i.name}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        {i.category && <span className="mr-2">{CATS.find((c) => c.key === i.category)?.label || i.category}</span>}
+                        {i.location && <span className="mr-2">📍 {i.location}</span>}
+                        {i.supplier && <span className="mr-2">🏭 {i.supplier}</span>}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      {tab === 'lowstock' ? (
+                        <>
+                          <div className="text-lg font-bold text-red-700">{i.quantity} <span className="text-xs text-slate-400 font-normal">{i.unit}</span></div>
+                          <div className="text-xs text-slate-500">Мин: {i.min_quantity}</div>
+                        </>
+                      ) : (
+                        <>
+                          <div className={`text-sm font-semibold ${isExpired ? 'text-red-700' : 'text-amber-700'}`}>🗓 {i.expiry_date}</div>
+                          <div className="text-xs text-slate-500">{isExpired ? 'Хугацаа хэтэрсэн' : 'Удахгүй дуусна'}</div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
 
         {tab === 'movements' && (
           movs.length === 0 ? (
@@ -223,15 +301,27 @@ export default function NyaravPage() {
             <div className="p-5 border-b border-slate-200"><h2 className="text-lg font-semibold text-slate-800">{editingItem ? 'Засах' : 'Шинэ нэр төрөл'}</h2></div>
             <div className="p-5 space-y-3">
               <div><label className="block text-sm text-slate-700 mb-1">Нэр</label><input value={itemForm.name} onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-              <div className="grid grid-cols-2 gap-2">
-                <div><label className="block text-sm text-slate-700 mb-1">Ангилал</label><input value={itemForm.category} onChange={(e) => setItemForm({ ...itemForm, category: e.target.value })} placeholder="Хүнс, тавилга..." className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-                <div><label className="block text-sm text-slate-700 mb-1">Нэгж</label><input value={itemForm.unit} onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <div>
+                <label className="block text-sm text-slate-700 mb-1">Ангилал</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {CATS.map((c) => (
+                    <button key={c.key} type="button" onClick={() => setItemForm({ ...itemForm, category: c.key })}
+                      className={`px-2 py-1 rounded-full text-xs ${itemForm.category === c.key ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
+                <div><label className="block text-sm text-slate-700 mb-1">Нэгж</label><input value={itemForm.unit} onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
                 <div><label className="block text-sm text-slate-700 mb-1">Тоо</label><input type="number" step="0.01" value={itemForm.quantity} onChange={(e) => setItemForm({ ...itemForm, quantity: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
                 <div><label className="block text-sm text-slate-700 mb-1">Мин үлдэгдэл</label><input type="number" step="0.01" value={itemForm.min_quantity} onChange={(e) => setItemForm({ ...itemForm, min_quantity: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
               </div>
-              <div><label className="block text-sm text-slate-700 mb-1">Байршил</label><input value={itemForm.location} onChange={(e) => setItemForm({ ...itemForm, location: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className="block text-sm text-slate-700 mb-1">Байршил</label><input value={itemForm.location} onChange={(e) => setItemForm({ ...itemForm, location: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+                <div><label className="block text-sm text-slate-700 mb-1">🗓 Хугацаа дуусах</label><input type="date" value={itemForm.expiry_date} onChange={(e) => setItemForm({ ...itemForm, expiry_date: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              </div>
+              <div><label className="block text-sm text-slate-700 mb-1">🏭 Нийлүүлэгч</label><input value={itemForm.supplier} onChange={(e) => setItemForm({ ...itemForm, supplier: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
               <div className="flex gap-2 pt-2">
                 <button onClick={() => setShowItem(false)} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg">Болих</button>
                 <button onClick={saveItem} disabled={!itemForm.name.trim()} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg font-medium">Хадгалах</button>

@@ -48,7 +48,11 @@ function currentWeek() {
 export default function TogoochPage() {
   const supabase = useMemo(() => createClient(), [])
   const { me } = useMe()
-  const [tab, setTab] = useState<'menu' | 'tasting'>('menu')
+  const [tab, setTab] = useState<'menu' | 'daily' | 'tasting'>('menu')
+  const [dailyMeals, setDailyMeals] = useState<{ id: string; date: string; meal_type: string; meal_name: string; age_group: string; servings: number | null; ingredients: string | null; process_note: string | null; hygiene_check: boolean; photo_url: string | null; employees?: { last_name: string; first_name: string } | null }[]>([])
+  const [showDaily, setShowDaily] = useState(false)
+  const [dailyForm, setDailyForm] = useState({ date: new Date().toISOString().split('T')[0], meal_type: 'lunch', meal_name: '', age_group: 'all', servings: '', ingredients: '', process_note: '', hygiene_check: true, file: null as File | null })
+  const [savingDaily, setSavingDaily] = useState(false)
   const [menus, setMenus] = useState<Menu[]>([])
   const [tastings, setTastings] = useState<Tasting[]>([])
   const [loading, setLoading] = useState(true)
@@ -69,13 +73,41 @@ export default function TogoochPage() {
 
   async function load() {
     setLoading(true)
-    const [m, t] = await Promise.all([
+    const [m, t, d] = await Promise.all([
       supabase.from('weekly_menus').select('*, employees:author_id(last_name, first_name)').order('year', { ascending: false }).order('week_num', { ascending: false }).order('age_group').limit(60),
       supabase.from('food_tastings').select('*, employees:author_id(last_name, first_name)').order('date', { ascending: false }).limit(50),
+      supabase.from('daily_meals').select('*, employees:author_id(last_name, first_name)').order('date', { ascending: false }).limit(100),
     ])
     setMenus((m.data as unknown as Menu[]) || [])
     setTastings((t.data as unknown as Tasting[]) || [])
+    setDailyMeals((d.data as unknown as typeof dailyMeals) || [])
     setLoading(false)
+  }
+  async function saveDaily() {
+    if (!me || !dailyForm.meal_name.trim()) { alert('Хоолны нэр заавал бөглөнө'); return }
+    setSavingDaily(true)
+    let photo_url: string | null = null
+    if (dailyForm.file) {
+      const path = `dailymeal/${Date.now()}_${dailyForm.file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
+      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, dailyForm.file)
+      if (upErr) { alert('Файл алдаа: ' + upErr.message); setSavingDaily(false); return }
+      const { data: pub } = supabase.storage.from('org-plans').getPublicUrl(path)
+      photo_url = pub?.publicUrl || null
+    }
+    const { error } = await supabase.from('daily_meals').insert({
+      date: dailyForm.date, meal_type: dailyForm.meal_type, meal_name: dailyForm.meal_name.trim(),
+      age_group: dailyForm.age_group,
+      servings: dailyForm.servings ? parseInt(dailyForm.servings) : null,
+      ingredients: dailyForm.ingredients || null,
+      process_note: dailyForm.process_note || null,
+      hygiene_check: dailyForm.hygiene_check,
+      photo_url, author_id: me.id,
+    })
+    setSavingDaily(false)
+    if (error) { alert('Алдаа: ' + error.message); return }
+    setShowDaily(false)
+    setDailyForm({ date: new Date().toISOString().split('T')[0], meal_type: 'lunch', meal_name: '', age_group: 'all', servings: '', ingredients: '', process_note: '', hygiene_check: true, file: null })
+    load()
   }
   useEffect(() => { load() }, [])
 
@@ -176,11 +208,15 @@ export default function TogoochPage() {
           <button onClick={() => setTab('menu')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'menu' ? 'bg-orange-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
             🍽 Хоолны цэс ({menus.length})
           </button>
+          <button onClick={() => setTab('daily')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'daily' ? 'bg-orange-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
+            🥘 Өдрийн бэлдэлт ({dailyMeals.length})
+          </button>
           <button onClick={() => setTab('tasting')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'tasting' ? 'bg-orange-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
             ⭐ Хоолны амталгаа ({tastings.length})
           </button>
           <div className="ml-auto">
             {tab === 'menu' && <button onClick={() => setShowMenu(true)} className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Цэс оруулах</button>}
+            {tab === 'daily' && <button onClick={() => setShowDaily(true)} className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Өдрийн хоол</button>}
             {tab === 'tasting' && <button onClick={() => setShowTasting(true)} className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Амталгаа</button>}
           </div>
         </div>
@@ -215,6 +251,36 @@ export default function TogoochPage() {
                     )}
                     {m.notes && <div className="text-xs text-slate-600 mt-2 whitespace-pre-wrap">{m.notes}</div>}
                     {m.employees && <div className="text-xs text-slate-400 mt-2">— {m.employees.last_name}.{m.employees.first_name}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        ) : tab === 'daily' ? (
+          dailyMeals.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500">
+              <div className="text-5xl mb-3">🥘</div>
+              <div>Өдрийн хоолны бэлдэлт бүртгэгдээгүй</div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {dailyMeals.map((d) => (
+                <div key={d.id} className="bg-white rounded-xl border border-slate-200 p-5">
+                  <div className="flex items-start gap-3">
+                    {d.photo_url ? <img src={d.photo_url} alt="" className="w-20 h-20 rounded-lg object-cover" /> : <div className="w-20 h-20 rounded-lg bg-orange-50 flex items-center justify-center text-3xl">🥘</div>}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="text-xs text-slate-500">🗓 {d.date}</span>
+                        <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">{MEAL_TYPES.find((m) => m.key === d.meal_type)?.label || d.meal_type}</span>
+                        <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">{AGE_LABEL[d.age_group as keyof typeof AGE_LABEL] || d.age_group}</span>
+                        {d.hygiene_check && <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">✅ Ариун цэвэр</span>}
+                      </div>
+                      <h3 className="font-semibold text-slate-800">{d.meal_name}</h3>
+                      {d.servings && <div className="text-xs text-slate-500 mt-0.5">🍽 {d.servings} хүн</div>}
+                      {d.ingredients && <div className="text-sm text-slate-700 mt-2"><b className="text-xs text-slate-500">Найрлага:</b> {d.ingredients}</div>}
+                      {d.process_note && <div className="text-sm text-slate-700 mt-1"><b className="text-xs text-slate-500">Технологи:</b> {d.process_note}</div>}
+                      {d.employees && <div className="text-xs text-slate-400 mt-2">— {d.employees.last_name}.{d.employees.first_name}</div>}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -318,6 +384,44 @@ export default function TogoochPage() {
       )}
 
       {/* Tasting create modal */}
+      {showDaily && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b border-slate-200"><h2 className="text-lg font-semibold text-slate-800">🥘 Өдрийн хоолны бэлдэлт</h2></div>
+            <div className="p-5 space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className="block text-sm text-slate-700 mb-1">Огноо</label><input type="date" value={dailyForm.date} onChange={(e) => setDailyForm({ ...dailyForm, date: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+                <div><label className="block text-sm text-slate-700 mb-1">Хоолны төрөл</label>
+                  <select value={dailyForm.meal_type} onChange={(e) => setDailyForm({ ...dailyForm, meal_type: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2">
+                    {MEAL_TYPES.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div><label className="block text-sm text-slate-700 mb-1">Хоолны нэр *</label><input value={dailyForm.meal_name} onChange={(e) => setDailyForm({ ...dailyForm, meal_name: e.target.value })} placeholder="Ямар хоол хийсэн" className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className="block text-sm text-slate-700 mb-1">Насны бүлэг</label>
+                  <select value={dailyForm.age_group} onChange={(e) => setDailyForm({ ...dailyForm, age_group: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2">
+                    <option value="all">🍽 Бүх нас</option>
+                    <option value="2_3">👶 2-3 нас</option>
+                    <option value="4_5">🧒 4-5 нас</option>
+                    <option value="other">🐰 Бусад</option>
+                  </select>
+                </div>
+                <div><label className="block text-sm text-slate-700 mb-1">Хүн (тоо)</label><input type="number" value={dailyForm.servings} onChange={(e) => setDailyForm({ ...dailyForm, servings: e.target.value })} placeholder="ж.нь: 60" className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              </div>
+              <div><label className="block text-sm text-slate-700 mb-1">🥕 Найрлага</label><textarea rows={2} value={dailyForm.ingredients} onChange={(e) => setDailyForm({ ...dailyForm, ingredients: e.target.value })} placeholder="Ямар бүтээгдэхүүн хэдэн грамм ашигласан" className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <div><label className="block text-sm text-slate-700 mb-1">📝 Технологийн тэмдэглэл</label><textarea rows={2} value={dailyForm.process_note} onChange={(e) => setDailyForm({ ...dailyForm, process_note: e.target.value })} placeholder="Хоол хийх явц, онцлог" className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={dailyForm.hygiene_check} onChange={(e) => setDailyForm({ ...dailyForm, hygiene_check: e.target.checked })} className="w-4 h-4" /> ✅ Ариун цэврийн шаардлагыг хангасан</label>
+              <div><label className="block text-sm text-slate-700 mb-1">📷 Зураг</label><input type="file" accept="image/*" onChange={(e) => setDailyForm({ ...dailyForm, file: e.target.files?.[0] || null })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <div className="flex gap-2 pt-2">
+                <button onClick={() => setShowDaily(false)} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg">Болих</button>
+                <button onClick={saveDaily} disabled={savingDaily} className="flex-1 px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-300 text-white rounded-lg font-medium">{savingDaily ? '...' : 'Хадгалах'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showTasting && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
