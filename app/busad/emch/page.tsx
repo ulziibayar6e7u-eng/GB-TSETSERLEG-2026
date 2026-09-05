@@ -21,6 +21,10 @@ type Record = {
   vaccine_name: string | null
   next_date: string | null
   note: string | null
+  blood_pressure: string | null
+  complaint: string | null
+  action_taken: string | null
+  service_provided: string | null
   file_url: string | null
   created_at: string
   children?: Child | null
@@ -97,6 +101,7 @@ export default function EmchPage() {
     record_type: 'checkup' as RType,
     height_cm: '', weight_kg: '', temperature: '',
     diagnosis: '', treatment: '', vaccine_name: '', next_date: '', note: '',
+    blood_pressure: '', complaint: '', action_taken: '', service_provided: '',
     file: null as File | null,
   })
   const [saving, setSaving] = useState(false)
@@ -137,7 +142,7 @@ export default function EmchPage() {
 
   function openAdd(subjectType: 'child' | 'staff') {
     setEditing(null)
-    setForm({ subject_type: subjectType, subject_id: '', date: new Date().toISOString().split('T')[0], record_type: 'checkup', height_cm: '', weight_kg: '', temperature: '', diagnosis: '', treatment: '', vaccine_name: '', next_date: '', note: '', file: null })
+    setForm({ subject_type: subjectType, subject_id: '', date: new Date().toISOString().split('T')[0], record_type: 'checkup', height_cm: '', weight_kg: '', temperature: '', diagnosis: '', treatment: '', vaccine_name: '', next_date: '', note: '', blood_pressure: '', complaint: '', action_taken: '', service_provided: '', file: null })
     setShowForm(true)
   }
   function openEdit(r: Record) {
@@ -152,6 +157,10 @@ export default function EmchPage() {
       diagnosis: r.diagnosis || '', treatment: r.treatment || '',
       vaccine_name: r.vaccine_name || '', next_date: r.next_date || '',
       note: r.note || '',
+      blood_pressure: (r as unknown as { blood_pressure?: string }).blood_pressure || '',
+      complaint: (r as unknown as { complaint?: string }).complaint || '',
+      action_taken: (r as unknown as { action_taken?: string }).action_taken || '',
+      service_provided: (r as unknown as { service_provided?: string }).service_provided || '',
       file: null,
     })
     setShowForm(true)
@@ -178,6 +187,10 @@ export default function EmchPage() {
       diagnosis: form.diagnosis || null, treatment: form.treatment || null,
       vaccine_name: form.vaccine_name || null, next_date: form.next_date || null,
       note: form.note || null, file_url, created_by: me.id,
+      blood_pressure: form.blood_pressure || null,
+      complaint: form.complaint || null,
+      action_taken: form.action_taken || null,
+      service_provided: form.service_provided || null,
     }
     const { error } = editing
       ? await supabase.from('health_records').update(payload).eq('id', editing.id)
@@ -465,21 +478,41 @@ export default function EmchPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-slate-700 mb-1">{form.subject_type === 'child' ? 'Хүүхэд' : 'Ажилтан'}</label>
+                <label className="block text-sm text-slate-700 mb-1">{form.subject_type === 'child' ? 'Хүүхэд (бүлгээр)' : 'Ажилтан'}</label>
                 <select required value={form.subject_id} onChange={(e) => setForm({ ...form, subject_id: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2">
                   <option value="">— Сонгох —</option>
-                  {form.subject_type === 'child'
-                    ? children.map((c) => (<option key={c.id} value={c.id}>{c.last_name}.{c.first_name}{c.groups ? ` (${c.groups.name})` : ''}</option>))
-                    : staff.map((s) => (<option key={s.id} value={s.id}>{s.last_name}.{s.first_name}{s.positions ? ` · ${s.positions.name}` : ''}</option>))
-                  }
+                  {form.subject_type === 'child' ? (() => {
+                    const grouped: Record<string, Child[]> = {}
+                    children.forEach((c) => {
+                      const key = c.groups ? `${c.groups.icon} ${c.groups.name}` : '📋 Бусад'
+                      if (!grouped[key]) grouped[key] = []
+                      grouped[key].push(c)
+                    })
+                    return Object.keys(grouped).sort().map((gname) => (
+                      <optgroup key={gname} label={gname}>
+                        {grouped[gname].map((c) => (<option key={c.id} value={c.id}>{c.last_name}.{c.first_name}</option>))}
+                      </optgroup>
+                    ))
+                  })() : staff.map((s) => (<option key={s.id} value={s.id}>{s.last_name}.{s.first_name}{s.positions ? ` · ${s.positions.name}` : ''}</option>))}
                 </select>
               </div>
-              {form.record_type === 'checkup' && (
+              {form.record_type === 'checkup' && form.subject_type === 'child' && (
                 <div className="grid grid-cols-3 gap-3">
                   <div><label className="block text-sm text-slate-700 mb-1">📏 Өндөр</label><input type="number" step="0.1" value={form.height_cm} onChange={(e) => setForm({ ...form, height_cm: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
                   <div><label className="block text-sm text-slate-700 mb-1">⚖️ Жин</label><input type="number" step="0.1" value={form.weight_kg} onChange={(e) => setForm({ ...form, weight_kg: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
                   <div><label className="block text-sm text-slate-700 mb-1">🌡 Халуун</label><input type="number" step="0.1" value={form.temperature} onChange={(e) => setForm({ ...form, temperature: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
                 </div>
+              )}
+              {form.subject_type === 'staff' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><label className="block text-sm text-slate-700 mb-1">💗 Даралт (мм.муб)</label><input value={form.blood_pressure} onChange={(e) => setForm({ ...form, blood_pressure: e.target.value })} placeholder="ж.нь: 120/80" className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+                    <div><label className="block text-sm text-slate-700 mb-1">🌡 Халуун</label><input type="number" step="0.1" value={form.temperature} onChange={(e) => setForm({ ...form, temperature: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+                  </div>
+                  <div><label className="block text-sm text-slate-700 mb-1">🩹 Зовиур</label><textarea rows={2} value={form.complaint} onChange={(e) => setForm({ ...form, complaint: e.target.value })} placeholder="Ямар шинж тэмдэгтэй, юу нь зовоож байгаа" className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+                  <div><label className="block text-sm text-slate-700 mb-1">💊 Хийгдсэн тусламж, үйлчилгээ</label><textarea rows={2} value={form.service_provided} onChange={(e) => setForm({ ...form, service_provided: e.target.value })} placeholder="Юу хийсэн, ямар эм өгсөн" className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+                  <div><label className="block text-sm text-slate-700 mb-1">📋 Авах арга хэмжээ</label><textarea rows={2} value={form.action_taken} onChange={(e) => setForm({ ...form, action_taken: e.target.value })} placeholder="Дараагийн үе шат, зөвлөгөө" className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+                </>
               )}
               {form.record_type === 'illness' && (
                 <>
