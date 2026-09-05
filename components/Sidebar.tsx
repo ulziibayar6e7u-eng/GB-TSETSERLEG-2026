@@ -277,6 +277,9 @@ function ecgehMenu(): MenuSection[] {
 
 function menuFor(me: Me | null): MenuSection[] {
   if (!me) return [{ items: [{ href: '/', label: 'Нүүр', icon: '🏠' }] }]
+  // Хөгжмийн багш is_admin эсэх нь хамаагүй — хөгжмийн багшийн цэсээ л хардаг
+  const isMusic = me.first_name === 'Өлзийбаяр' || me.groups?.some((g) => g.code === 'hogjim')
+  if (isMusic && me.role === 'bagsh') return bagshMenu(me)
   if (me.is_admin) return erhlegchMenu()
   switch (me.role) {
     case 'erhlegch':   return erhlegchMenu()
