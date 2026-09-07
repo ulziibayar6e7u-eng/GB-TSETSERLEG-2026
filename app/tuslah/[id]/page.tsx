@@ -82,6 +82,7 @@ function Inner({ id }: { id: string }) {
   const [viewMode, setViewMode] = useState<'list' | 'monthly'>('list')
 
   const [tuslahGroups, setTuslahGroups] = useState<number[]>([])
+  const [hygieneMonths, setHygieneMonths] = useState<{ month: string; rinse: number; wash: number; brush: number }[]>([])
   const isSameGroupBagsh = me && me.role === 'bagsh' && me.groups.some((g) => tuslahGroups.includes(g.id))
   const canReview = me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich' || (isSameGroupBagsh && tab === 'dadal'))
   const isOwner = me && emp && me.id === emp.id
@@ -94,7 +95,21 @@ function Inner({ id }: { id: string }) {
       supabase.from('children').select('id, last_name, first_name').eq('status', 'active').order('last_name'),
       supabase.from('group_teachers').select('group_id').eq('employee_id', id),
     ])
-    setTuslahGroups(((gt.data as { group_id: number }[]) || []).map((r) => r.group_id))
+    const groupIds = ((gt.data as { group_id: number }[]) || []).map((r) => r.group_id)
+    setTuslahGroups(groupIds)
+    // Ариун цэврийн журналын сарын нэгтгэл
+    if (tab === 'dadal' && groupIds.length > 0) {
+      const { data: hLogs } = await supabase.from('hygiene_log').select('date, routine').in('group_id', groupIds).order('date', { ascending: false })
+      const map = new Map<string, { rinse: number; wash: number; brush: number }>()
+      ;((hLogs as { date: string; routine: 'rinse' | 'wash' | 'brush' }[]) || []).forEach((h) => {
+        const m = h.date.slice(0, 7)
+        if (!map.has(m)) map.set(m, { rinse: 0, wash: 0, brush: 0 })
+        map.get(m)![h.routine]++
+      })
+      setHygieneMonths(Array.from(map.entries()).map(([month, v]) => ({ month, ...v })).sort((a, b) => (a.month < b.month ? 1 : -1)))
+    } else {
+      setHygieneMonths([])
+    }
     setEmp(e.data as unknown as Employee)
     setRecords((r.data as unknown as Record[]) || [])
     setChildren((c.data as Child[]) || [])
@@ -256,6 +271,46 @@ function Inner({ id }: { id: string }) {
             </div>
           )
         })()}
+
+        {tab === 'dadal' && hygieneMonths.length > 0 && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <div>
+                <div className="text-sm font-semibold text-slate-700">🧴 Ариун цэврийн журнал · сараар</div>
+                <div className="text-xs text-slate-500">Ам зайлсан, Гар угаасан, Шүд угаасан тэмдэглэлүүд сар сараар</div>
+              </div>
+              <Link href="/tuslah-hygiene" className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-lg font-medium">🧴 Журнал руу очих</Link>
+            </div>
+            <table className="w-full text-sm border-collapse">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="p-2 border border-slate-200 text-left text-xs font-semibold text-slate-600">Сар</th>
+                  <th className="p-2 border border-slate-200 text-center text-xs font-semibold text-blue-700">💧 Ам зайлах</th>
+                  <th className="p-2 border border-slate-200 text-center text-xs font-semibold text-emerald-700">🧼 Гар угаах</th>
+                  <th className="p-2 border border-slate-200 text-center text-xs font-semibold text-cyan-700">🦷 Шүд угаах</th>
+                  <th className="p-2 border border-slate-200 text-center text-xs font-semibold text-slate-600 print:hidden">Хэвлэх / Татах</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hygieneMonths.map((h) => (
+                  <tr key={h.month} className="hover:bg-slate-50">
+                    <td className="p-2 border border-slate-200 font-medium text-slate-800">📅 {h.month}</td>
+                    <td className="p-2 border border-slate-200 text-center"><span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${h.rinse > 0 ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'}`}>{h.rinse} өдөр</span></td>
+                    <td className="p-2 border border-slate-200 text-center"><span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${h.wash > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{h.wash} өдөр</span></td>
+                    <td className="p-2 border border-slate-200 text-center"><span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${h.brush > 0 ? 'bg-cyan-100 text-cyan-700' : 'bg-slate-100 text-slate-400'}`}>{h.brush} өдөр</span></td>
+                    <td className="p-2 border border-slate-200 text-center print:hidden">
+                      <div className="flex gap-1 justify-center flex-wrap">
+                        <Link href={`/tuslah-hygiene?routine=rinse&month=${h.month}`} className="text-[11px] bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded" title="Ам зайлах">💧</Link>
+                        <Link href={`/tuslah-hygiene?routine=wash&month=${h.month}`} className="text-[11px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2 py-1 rounded" title="Гар угаах">🧼</Link>
+                        <Link href={`/tuslah-hygiene?routine=brush&month=${h.month}`} className="text-[11px] bg-cyan-50 hover:bg-cyan-100 text-cyan-700 px-2 py-1 rounded" title="Шүд угаах">🦷</Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {viewMode === 'monthly' && records.length > 0 && (() => {
           // Хүүхэд бүрээр × сар бүрээр pivot

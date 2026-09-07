@@ -87,6 +87,7 @@ function tuslahMenu(me: Me): MenuSection[] {
       items: [
         { href: `/tuslah/${me.id}?tab=dadal`,       label: 'Хүүхдийн дадал хэвшил',   icon: '🌱' },
         { href: `/tuslah/${me.id}?tab=ahits`,       label: 'Хүүхдийн дадал хэвшлийн судалгаа', icon: '📊' },
+        { href: `/tuslah-hygiene`,                  label: 'Ариун цэврийн журнал',    icon: '🧴' },
         { href: `/tuslah/${me.id}?tab=sanaachlaga`, label: 'Санаачилсан ажил',         icon: '💡' },
       ],
     },
