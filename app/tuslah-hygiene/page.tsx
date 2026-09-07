@@ -35,8 +35,9 @@ function currentMonth() {
 export default function HygienePage() {
   const supabase = useMemo(() => createClient(), [])
   const { me, loading: meLoading } = useMe()
-  const [routine, setRoutine] = useState<Routine>('rinse')
-  const [month, setMonth] = useState(currentMonth())
+  const initial = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+  const [routine, setRoutine] = useState<Routine>((initial?.get('routine') as Routine) || 'rinse')
+  const [month, setMonth] = useState(initial?.get('month') || currentMonth())
   const [groups, setGroups] = useState<Group[]>([])
   const [groupId, setGroupId] = useState<number | null>(null)
   const [logs, setLogs] = useState<Log[]>([])

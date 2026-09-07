@@ -8,6 +8,7 @@ import { useMe } from '@/lib/useMe'
 
 type Employee = { id: string; last_name: string; first_name: string; positions?: { name: string } }
 type Child = { id: string; last_name: string; first_name: string }
+type MasteryLevel = 'not_yet' | 'in_progress' | 'achieved'
 type Record = {
   id: string
   employee_id: string
@@ -16,6 +17,7 @@ type Record = {
   description: string | null
   child_id: string | null
   date: string
+  mastery_level: MasteryLevel | null
   file_url: string | null
   extra_links: string[]
   reviewer_id: string | null
@@ -25,6 +27,12 @@ type Record = {
   children?: Child | null
   reviewer?: Employee | null
 }
+
+const MASTERY = {
+  not_yet:     { icon: '⚪', label: 'Хараахан эзэмшээгүй', color: 'bg-slate-100 text-slate-700 border-slate-300' },
+  in_progress: { icon: '🔄', label: 'Эзэмшиж байгаа',      color: 'bg-amber-100 text-amber-700 border-amber-300' },
+  achieved:    { icon: '✅', label: 'Эзэмшсэн',            color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
+} as const
 
 const CATS = {
   dadal:       { icon: '🌱', label: 'Дадал хэвшил олгож буй байдал', color: 'from-emerald-500 to-teal-600' },
@@ -75,7 +83,7 @@ function Inner({ id }: { id: string }) {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Record | null>(null)
-  const [form, setForm] = useState({ title: '', description: '', child_id: '', date: new Date().toISOString().split('T')[0], file: null as File | null, extraLinks: '' })
+  const [form, setForm] = useState({ title: '', description: '', child_id: '', date: new Date().toISOString().split('T')[0], mastery_level: '' as MasteryLevel | '', file: null as File | null, extraLinks: '' })
   const [saving, setSaving] = useState(false)
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [reviewNote, setReviewNote] = useState('')
@@ -119,7 +127,7 @@ function Inner({ id }: { id: string }) {
 
   function openAdd() {
     setEditing(null)
-    setForm({ title: '', description: '', child_id: '', date: new Date().toISOString().split('T')[0], file: null, extraLinks: '' })
+    setForm({ title: '', description: '', child_id: '', date: new Date().toISOString().split('T')[0], mastery_level: '', file: null, extraLinks: '' })
     setShowForm(true)
   }
   function openEdit(r: Record) {
@@ -129,6 +137,7 @@ function Inner({ id }: { id: string }) {
       description: r.description || '',
       child_id: r.child_id || '',
       date: r.date,
+      mastery_level: r.mastery_level || '',
       file: null,
       extraLinks: (r.extra_links || []).join('\n'),
     })
@@ -153,11 +162,30 @@ function Inner({ id }: { id: string }) {
       description: form.description || null,
       child_id: form.child_id || null,
       date: form.date,
+      mastery_level: form.mastery_level || null,
       file_url,
       extra_links: form.extraLinks.split(/\r?\n/).map(s=>s.trim()).filter(Boolean),
     }
     if (editing) await supabase.from('tuslah_records').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', editing.id)
     else await supabase.from('tuslah_records').insert(payload)
+
+    // Ариун цэврийн журналд автомат татах: Гар угаах / Ам зайлах / Шүд угаах
+    if (tab === 'dadal' && form.title) {
+      const routine: 'rinse' | 'wash' | 'brush' | null =
+        form.title.includes('Ам зайлах') ? 'rinse' :
+        form.title.includes('Гар угаах') ? 'wash' :
+        form.title.includes('Шүд угаах') ? 'brush' : null
+      if (routine && tuslahGroups.length > 0) {
+        await supabase.from('hygiene_log').upsert({
+          date: form.date,
+          routine,
+          group_id: tuslahGroups[0],
+          author_id: me.id,
+          monitor_name: `${me.last_name}.${me.first_name}`,
+          note: form.description || null,
+        }, { onConflict: 'date,routine,group_id' })
+      }
+    }
     setSaving(false)
     setShowForm(false)
     load()
@@ -319,11 +347,17 @@ function Inner({ id }: { id: string }) {
           const months = Array.from(monthSet).sort()
           const kids = children.filter((c) => childIds.has(c.id))
           const grid = new Map<string, Map<string, number>>()
-          records.forEach((r) => {
+          const gridLevel = new Map<string, Map<string, MasteryLevel>>() // сарын сүүлийн түвшин
+          const recordsSorted = [...records].sort((a, b) => (a.date > b.date ? 1 : -1))
+          recordsSorted.forEach((r) => {
             if (!r.child_id) return
             const m = r.date.slice(0, 7)
             if (!grid.has(r.child_id)) grid.set(r.child_id, new Map())
             grid.get(r.child_id)!.set(m, (grid.get(r.child_id)!.get(m) || 0) + 1)
+            if (r.mastery_level) {
+              if (!gridLevel.has(r.child_id)) gridLevel.set(r.child_id, new Map())
+              gridLevel.get(r.child_id)!.set(m, r.mastery_level)
+            }
           })
           function downloadMonthlyCsv() {
             const header = ['Хүүхэд', ...months, 'Нийт']
@@ -358,7 +392,15 @@ function Inner({ id }: { id: string }) {
           return (
             <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4 overflow-x-auto">
               <div className="flex items-center justify-between mb-3 flex-wrap gap-2 print:hidden">
-                <div className="text-sm font-semibold text-slate-700">📅 Хүүхэд бүрээр × Сараар</div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-700">📅 Хүүхэд бүрээр × Сараар</div>
+                  <div className="flex gap-3 mt-1 text-[11px] flex-wrap">
+                    <span className="text-slate-500">Тайлбар:</span>
+                    <span className="text-emerald-700">✅ Эзэмшсэн</span>
+                    <span className="text-amber-700">🔄 Эзэмшиж байгаа</span>
+                    <span className="text-slate-500">⚪ Хараахан эзэмшээгүй</span>
+                  </div>
+                </div>
                 <button onClick={downloadMonthlyCsv} className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg font-medium">📥 Сарын нэгтгэл CSV</button>
               </div>
               <table className="w-full text-sm border-collapse">
@@ -379,7 +421,17 @@ function Inner({ id }: { id: string }) {
                         {months.map((m) => {
                           const n = row.get(m) || 0
                           sum += n
-                          return <td key={m} className={`p-2 border border-slate-200 text-center ${n > 0 ? 'text-emerald-700 font-semibold' : 'text-slate-300'}`}>{n || ''}</td>
+                          const level = gridLevel.get(k.id)?.get(m)
+                          const bg = level === 'achieved' ? 'bg-emerald-50' : level === 'in_progress' ? 'bg-amber-50' : level === 'not_yet' ? 'bg-slate-50' : ''
+                          return (
+                            <td key={m} className={`p-2 border border-slate-200 text-center ${bg}`}>
+                              {level ? (
+                                <div className="text-lg" title={MASTERY[level].label}>{MASTERY[level].icon}</div>
+                              ) : n > 0 ? (
+                                <span className="text-emerald-700 font-semibold">{n}</span>
+                              ) : <span className="text-slate-300">·</span>}
+                            </td>
+                          )
                         })}
                         <td className="p-2 border border-slate-200 text-center font-bold text-slate-800 bg-slate-50">{sum}</td>
                       </tr>
@@ -422,6 +474,11 @@ function Inner({ id }: { id: string }) {
                       )}
                     </div>
                     {r.title && <h3 className="font-semibold text-slate-800">{r.title}</h3>}
+                    {r.mastery_level && (
+                      <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium border ${MASTERY[r.mastery_level].color}`}>
+                        {MASTERY[r.mastery_level].icon} {MASTERY[r.mastery_level].label}
+                      </span>
+                    )}
                     {r.description && <div className="text-sm text-slate-600 mt-1 whitespace-pre-wrap">{r.description}</div>}
                     <div className="mt-2 flex flex-wrap gap-2">
                       {r.file_url && (
@@ -518,6 +575,23 @@ function Inner({ id }: { id: string }) {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Гарчиг</label>
                 <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={tab === 'dadal' ? 'Дадлыг сонго эсвэл өөрөө бич' : ''} className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
+              {(tab === 'dadal' || tab === 'ahits') && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">🎯 Эзэмшилтийн түвшин</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(Object.keys(MASTERY) as MasteryLevel[]).map((m) => {
+                      const meta = MASTERY[m]
+                      const active = form.mastery_level === m
+                      return (
+                        <button key={m} type="button" onClick={() => setForm({ ...form, mastery_level: m })}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium border-2 transition text-left ${active ? meta.color : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700'}`}>
+                          {meta.icon} {meta.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Тайлбар</label>
                 <textarea rows={5} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
