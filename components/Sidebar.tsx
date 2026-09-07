@@ -86,7 +86,7 @@ function tuslahMenu(me: Me): MenuSection[] {
       title: 'Миний ажлын хэсэг',
       items: [
         { href: `/tuslah/${me.id}?tab=dadal`,       label: 'Хүүхдийн дадал хэвшил',   icon: '🌱' },
-        { href: `/tuslah/${me.id}?tab=ahits`,       label: 'Хүүхдийн ахиц, судалгаа', icon: '📈' },
+        { href: `/tuslah/${me.id}?tab=ahits`,       label: 'Хүүхдийн дадал хэвшлийн судалгаа', icon: '📊' },
         { href: `/tuslah/${me.id}?tab=sanaachlaga`, label: 'Санаачилсан ажил',         icon: '💡' },
       ],
     },

@@ -28,7 +28,7 @@ type Record = {
 
 const CATS = {
   dadal:       { icon: '🌱', label: 'Дадал хэвшил олгож буй байдал', color: 'from-emerald-500 to-teal-600' },
-  ahits:       { icon: '📈', label: 'Хүүхдийн ахиц, хэвшлийн судалгаа', color: 'from-blue-500 to-cyan-600' },
+  ahits:       { icon: '📊', label: 'Хүүхдийн дадал хэвшлийн судалгаа', color: 'from-blue-500 to-cyan-600' },
   sanaachlaga: { icon: '💡', label: 'Санаачилсан ажил, арга хэмжээ', color: 'from-amber-500 to-orange-600' },
 } as const
 
@@ -79,6 +79,7 @@ function Inner({ id }: { id: string }) {
   const [saving, setSaving] = useState(false)
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [reviewNote, setReviewNote] = useState('')
+  const [viewMode, setViewMode] = useState<'list' | 'monthly'>('list')
 
   const [tuslahGroups, setTuslahGroups] = useState<number[]>([])
   const isSameGroupBagsh = me && me.role === 'bagsh' && me.groups.some((g) => tuslahGroups.includes(g.id))
@@ -207,7 +208,143 @@ function Inner({ id }: { id: string }) {
           )}
         </div>
 
-        {loading ? (
+        {records.length > 0 && (() => {
+          const byMonth = new Map<string, number>()
+          records.forEach((r) => {
+            const m = r.date.slice(0, 7)
+            byMonth.set(m, (byMonth.get(m) || 0) + 1)
+          })
+          const months = Array.from(byMonth.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-12)
+          const max = Math.max(1, ...months.map(([, n]) => n))
+          function downloadCsv() {
+            const rows = [['Огноо','Гарчиг','Хүүхэд','Тайлбар','Файл']]
+            records.forEach((r) => rows.push([r.date, r.title || '', r.children ? `${r.children.last_name}.${r.children.first_name}` : '', (r.description || '').replace(/\n/g, ' '), r.file_url || '']))
+            const csv = '﻿' + rows.map((r) => r.map((c) => `"${c.replace(/"/g,'""')}"`).join(',')).join('\n')
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${emp?.last_name}.${emp?.first_name}_${cat.label}_${new Date().toISOString().split('T')[0]}.csv`
+            a.click()
+            URL.revokeObjectURL(url)
+          }
+          return (
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <div>
+                  <div className="text-sm font-semibold text-slate-700">📊 {cat.label} · Нэгтгэл</div>
+                  <div className="text-xs text-slate-500">Нийт {records.length} бүртгэл · Сүүлийн 12 сар</div>
+                </div>
+                <div className="flex gap-2 print:hidden items-center">
+                  <div className="flex bg-slate-100 rounded-lg p-0.5">
+                    <button onClick={() => setViewMode('list')} className={`text-xs px-2.5 py-1.5 rounded ${viewMode === 'list' ? 'bg-white shadow text-slate-800' : 'text-slate-600'}`}>📋 Жагсаалт</button>
+                    <button onClick={() => setViewMode('monthly')} className={`text-xs px-2.5 py-1.5 rounded ${viewMode === 'monthly' ? 'bg-white shadow text-slate-800' : 'text-slate-600'}`}>📅 Сараар</button>
+                  </div>
+                  <button onClick={() => window.print()} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium">🖨 Хэвлэх</button>
+                  <button onClick={downloadCsv} className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg font-medium">📥 CSV татах</button>
+                </div>
+              </div>
+              <div className="flex items-end gap-1 h-24 border-b border-slate-200 pt-2">
+                {months.map(([m, n]) => (
+                  <div key={m} className="flex-1 flex flex-col items-center">
+                    <div className="text-[10px] text-slate-500 mb-0.5">{n}</div>
+                    <div className="w-full bg-emerald-500 rounded-t" style={{ height: Math.max(4, Math.round((n / max) * 70)) }} />
+                    <div className="text-[10px] text-slate-500 mt-1">{m.slice(5)}/{m.slice(2, 4)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+
+        {viewMode === 'monthly' && records.length > 0 && (() => {
+          // Хүүхэд бүрээр × сар бүрээр pivot
+          const childIds = new Set(records.filter((r) => r.child_id).map((r) => r.child_id))
+          const monthSet = new Set(records.map((r) => r.date.slice(0, 7)))
+          const months = Array.from(monthSet).sort()
+          const kids = children.filter((c) => childIds.has(c.id))
+          const grid = new Map<string, Map<string, number>>()
+          records.forEach((r) => {
+            if (!r.child_id) return
+            const m = r.date.slice(0, 7)
+            if (!grid.has(r.child_id)) grid.set(r.child_id, new Map())
+            grid.get(r.child_id)!.set(m, (grid.get(r.child_id)!.get(m) || 0) + 1)
+          })
+          function downloadMonthlyCsv() {
+            const header = ['Хүүхэд', ...months, 'Нийт']
+            const rows: string[][] = [header]
+            kids.forEach((k) => {
+              const row = [`${k.last_name}.${k.first_name}`]
+              let sum = 0
+              months.forEach((m) => {
+                const n = grid.get(k.id)?.get(m) || 0
+                row.push(String(n)); sum += n
+              })
+              row.push(String(sum))
+              rows.push(row)
+            })
+            // Нийт мөр
+            const totals = ['НИЙТ']; let grand = 0
+            months.forEach((m) => { let s = 0; kids.forEach((k) => { s += grid.get(k.id)?.get(m) || 0 }); totals.push(String(s)); grand += s })
+            totals.push(String(grand))
+            rows.push(totals)
+            const csv = '﻿' + rows.map((r) => r.map((c) => `"${c.replace(/"/g,'""')}"`).join(',')).join('\n')
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${emp?.last_name}.${emp?.first_name}_${cat.label}_сараар_${new Date().toISOString().split('T')[0]}.csv`
+            a.click()
+            URL.revokeObjectURL(url)
+          }
+          if (kids.length === 0) return (
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500 text-sm">Хүүхэд бүрээр бүртгэсэн зүйл алга (record-т хүүхэд сонгоогүй)</div>
+          )
+          return (
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4 overflow-x-auto">
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2 print:hidden">
+                <div className="text-sm font-semibold text-slate-700">📅 Хүүхэд бүрээр × Сараар</div>
+                <button onClick={downloadMonthlyCsv} className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg font-medium">📥 Сарын нэгтгэл CSV</button>
+              </div>
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-slate-50">
+                    <th className="text-left p-2 border border-slate-200 font-semibold text-slate-600 sticky left-0 bg-slate-50">Хүүхэд</th>
+                    {months.map((m) => <th key={m} className="p-2 border border-slate-200 font-semibold text-slate-600 text-xs whitespace-nowrap">{m.slice(5)}/{m.slice(2, 4)}</th>)}
+                    <th className="p-2 border border-slate-200 font-semibold text-slate-800 text-xs">НИЙТ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {kids.map((k) => {
+                    const row = grid.get(k.id) || new Map()
+                    let sum = 0
+                    return (
+                      <tr key={k.id} className="hover:bg-slate-50">
+                        <td className="p-2 border border-slate-200 sticky left-0 bg-white font-medium text-slate-800">{k.last_name}.{k.first_name}</td>
+                        {months.map((m) => {
+                          const n = row.get(m) || 0
+                          sum += n
+                          return <td key={m} className={`p-2 border border-slate-200 text-center ${n > 0 ? 'text-emerald-700 font-semibold' : 'text-slate-300'}`}>{n || ''}</td>
+                        })}
+                        <td className="p-2 border border-slate-200 text-center font-bold text-slate-800 bg-slate-50">{sum}</td>
+                      </tr>
+                    )
+                  })}
+                  <tr className="bg-slate-100 font-bold">
+                    <td className="p-2 border border-slate-200 sticky left-0 bg-slate-100 text-slate-800">НИЙТ</td>
+                    {months.map((m) => {
+                      let s = 0; kids.forEach((k) => { s += grid.get(k.id)?.get(m) || 0 })
+                      return <td key={m} className="p-2 border border-slate-200 text-center text-slate-800">{s}</td>
+                    })}
+                    <td className="p-2 border border-slate-200 text-center text-slate-900">{records.filter((r) => r.child_id).length}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )
+        })()}
+
+        {viewMode === 'list' && (loading ? (
           <div className="p-12 text-center text-slate-500">Ачааллаж байна...</div>
         ) : records.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500">
@@ -282,7 +419,7 @@ function Inner({ id }: { id: string }) {
               </div>
             ))}
           </div>
-        )}
+        ))}
       </div>
 
       {showForm && (
