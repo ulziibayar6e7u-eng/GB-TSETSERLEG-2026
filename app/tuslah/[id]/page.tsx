@@ -80,16 +80,20 @@ function Inner({ id }: { id: string }) {
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [reviewNote, setReviewNote] = useState('')
 
-  const canReview = me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich')
+  const [tuslahGroups, setTuslahGroups] = useState<number[]>([])
+  const isSameGroupBagsh = me && me.role === 'bagsh' && me.groups.some((g) => tuslahGroups.includes(g.id))
+  const canReview = me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich' || (isSameGroupBagsh && tab === 'dadal'))
   const isOwner = me && emp && me.id === emp.id
 
   async function load() {
     setLoading(true)
-    const [e, r, c] = await Promise.all([
+    const [e, r, c, gt] = await Promise.all([
       supabase.from('employees').select('id, last_name, first_name, positions(name)').eq('id', id).maybeSingle(),
       supabase.from('tuslah_records').select('*, children(id, last_name, first_name), reviewer:reviewer_id(id, last_name, first_name)').eq('employee_id', id).eq('category', tab).order('date', { ascending: false }),
       supabase.from('children').select('id, last_name, first_name').eq('status', 'active').order('last_name'),
+      supabase.from('group_teachers').select('group_id').eq('employee_id', id),
     ])
+    setTuslahGroups(((gt.data as { group_id: number }[]) || []).map((r) => r.group_id))
     setEmp(e.data as unknown as Employee)
     setRecords((r.data as unknown as Record[]) || [])
     setChildren((c.data as Child[]) || [])

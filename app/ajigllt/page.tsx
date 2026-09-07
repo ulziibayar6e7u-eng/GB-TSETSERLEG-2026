@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useMe, canSeeAllChildren } from '@/lib/useMe'
 
-type Group = { id: number; name: string; icon: string; color: string }
+type Group = { id: number; code?: string; name: string; icon: string; color: string }
 type Child = { id: string; last_name: string; first_name: string; group_id: number | null; groups?: Group }
 type Area = { code: string; name: string; icon: string; color: string }
 type Level = 'demjleg' | 'hogjij' | 'nasandaa' | 'ahisan'
@@ -50,14 +50,17 @@ export default function AjiglltPage() {
     activity: '',
     observation: '',
     area_code: '',
+    outcome_id: '' as string | number,
     level: '' as Level | '',
+    file: null as File | null,
   })
+  const [outcomes, setOutcomes] = useState<{ id: number; code: string; text: string; area_code: string; age_group: string }[]>([])
   const [filterChild, setFilterChild] = useState('')
   const [filterArea, setFilterArea] = useState('')
 
   async function load() {
     setLoading(true)
-    const [a, ar, c, music, ass] = await Promise.all([
+    const [a, ar, c, o, music, ass] = await Promise.all([
       supabase
         .from('observations')
         .select('*, children(id, last_name, first_name, group_id, groups(id, name, icon, color)), employees(last_name, first_name), development_areas(code, name, icon, color)')
@@ -66,6 +69,7 @@ export default function AjiglltPage() {
         .limit(200),
       supabase.from('development_areas').select('*').order('sort_order'),
       supabase.from('children').select('*, groups(*)').eq('status', 'active').order('last_name'),
+      supabase.from('outcomes').select('id, code, text, area_code, age_group').eq('active', true).order('area_code').order('sort_order'),
       supabase
         .from('music_assessments')
         .select('id, child_id, section, subsection, date, title, text, created_at, children(id, last_name, first_name, group_id, groups(id, name, icon, color)), employees:observer_id(last_name, first_name)')
@@ -115,6 +119,7 @@ export default function AjiglltPage() {
     setObservations(combined)
     setAreas((ar.data as Area[]) || [])
     setChildren((c.data as Child[]) || [])
+    setOutcomes((o.data as typeof outcomes) || [])
     setLoading(false)
   }
 
@@ -148,7 +153,9 @@ export default function AjiglltPage() {
       activity: '',
       observation: '',
       area_code: '',
+      outcome_id: '',
       level: '',
+      file: null,
     })
     setShowForm(true)
   }
@@ -161,7 +168,9 @@ export default function AjiglltPage() {
       activity: o.activity || '',
       observation: o.observation,
       area_code: o.area_code || '',
+      outcome_id: (o as unknown as { outcome_id?: number }).outcome_id || '',
       level: (o.level as Level) || '',
+      file: null,
     })
     setShowForm(true)
   }
@@ -169,14 +178,24 @@ export default function AjiglltPage() {
   async function save(e: React.FormEvent) {
     e.preventDefault()
     if (!me) return
+    let photo_url: string | null = (editing as unknown as { photo_url?: string })?.photo_url || null
+    if (form.file) {
+      const path = `obs/${Date.now()}_${form.file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
+      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, form.file)
+      if (upErr) { alert('Файл алдаа: ' + upErr.message); return }
+      const { data: pub } = supabase.storage.from('org-plans').getPublicUrl(path)
+      photo_url = pub?.publicUrl || null
+    }
     const payload = {
       child_id: form.child_id,
       date: form.date,
       activity: form.activity || null,
       observation: form.observation.trim(),
       area_code: form.area_code || null,
+      outcome_id: form.outcome_id ? Number(form.outcome_id) : null,
       level: form.level || null,
       observer_id: me.id,
+      photo_url,
     }
     if (editing) {
       await supabase.from('observations').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', editing.id)
@@ -380,6 +399,25 @@ export default function AjiglltPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+              {form.area_code && (() => {
+                const selectedChild = children.find((c) => c.id === form.child_id)
+                const ageCode = selectedChild?.groups?.code === 'huvilbart' ? 'dund' : selectedChild?.groups?.code
+                const filtered = outcomes.filter((o) => o.area_code === form.area_code && (!ageCode || o.age_group === ageCode))
+                if (filtered.length === 0) return null
+                return (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">🎯 Суралцахуйн үр дүн (СҮД)</label>
+                    <select value={form.outcome_id} onChange={(e) => setForm({ ...form, outcome_id: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                      <option value="">— Сонгох —</option>
+                      {filtered.map((o) => (<option key={o.id} value={o.id}>{o.code} · {o.text.slice(0, 80)}</option>))}
+                    </select>
+                  </div>
+                )
+              })()}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">📷 Зураг / 🎥 Бичлэг</label>
+                <input type="file" accept="image/*,video/*" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Түвшин</label>
