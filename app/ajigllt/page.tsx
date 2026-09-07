@@ -381,9 +381,9 @@ export default function AjiglltPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Хөгжлийн чиглэл</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Судлагдахуун</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {areas.map((a) => (
+                  {areas.filter((a) => ['hel_yaria','bno','matematik','urlag','hodolgoon','niigem','aa_uhaan'].includes(a.code)).map((a) => (
                     <button
                       key={a.code}
                       type="button"
