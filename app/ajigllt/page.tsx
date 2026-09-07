@@ -248,8 +248,8 @@ export default function AjiglltPage() {
             onChange={(e) => setFilterArea(e.target.value)}
             className="flex-1 border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">Бүх чиглэл</option>
-            {areas.map((a) => (
+            <option value="">Бүх судлагдахуун</option>
+            {areas.filter((a) => ['hel_yaria','bno','matematik','urlag','hodolgoon','niigem','aa_uhaan'].includes(a.code)).map((a) => (
               <option key={a.code} value={a.code}>
                 {a.icon} {a.name}
               </option>
