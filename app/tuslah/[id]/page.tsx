@@ -91,6 +91,9 @@ function Inner({ id }: { id: string }) {
 
   const [tuslahGroups, setTuslahGroups] = useState<number[]>([])
   const [hygieneMonths, setHygieneMonths] = useState<{ month: string; rinse: number; wash: number; brush: number }[]>([])
+  const [groupChildren, setGroupChildren] = useState<{ id: string; last_name: string; first_name: string }[]>([])
+  const [survey, setSurvey] = useState<{ month: string; habit: 'wash' | 'brush' | 'rinse' }>({ month: new Date().toISOString().slice(0, 7), habit: 'wash' })
+  const [surveyMap, setSurveyMap] = useState<Map<string, MasteryLevel>>(new Map())
   const isSameGroupBagsh = me && me.role === 'bagsh' && me.groups.some((g) => tuslahGroups.includes(g.id))
   const canReview = me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich' || (isSameGroupBagsh && tab === 'dadal'))
   const isOwner = me && emp && me.id === emp.id
@@ -121,8 +124,33 @@ function Inner({ id }: { id: string }) {
     setEmp(e.data as unknown as Employee)
     setRecords((r.data as unknown as Record[]) || [])
     setChildren((c.data as Child[]) || [])
+
+    // Бүлгийн хүүхдүүд + сарын дадал үнэлгээ
+    if (tab === 'ahits' && groupIds.length > 0) {
+      const { data: gk } = await supabase.from('children').select('id, last_name, first_name').eq('status', 'active').in('group_id', groupIds).order('first_name')
+      setGroupChildren((gk as { id: string; last_name: string; first_name: string }[]) || [])
+    } else {
+      setGroupChildren([])
+    }
     setLoading(false)
   }
+  // Тухайн сар × дадал-д хүүхэд бүрийн хамгийн сүүлийн үнэлгээ
+  async function loadSurvey() {
+    if (tab !== 'ahits') return
+    const habitTitle = { wash: 'Гар угаах', brush: 'Шүд угаах', rinse: 'Ам зайлах' }[survey.habit]
+    const start = survey.month + '-01'
+    const end = survey.month + '-31'
+    const { data } = await supabase.from('tuslah_records').select('child_id, mastery_level, date')
+      .eq('employee_id', id).eq('category', 'ahits').eq('title', habitTitle)
+      .gte('date', start).lte('date', end)
+      .not('mastery_level', 'is', null).order('date', { ascending: false })
+    const map = new Map<string, MasteryLevel>()
+    ;((data as { child_id: string; mastery_level: MasteryLevel; date: string }[]) || []).forEach((r) => {
+      if (r.child_id && !map.has(r.child_id)) map.set(r.child_id, r.mastery_level)
+    })
+    setSurveyMap(map)
+  }
+  useEffect(() => { loadSurvey() }, [tab, survey.habit, survey.month, id])
   useEffect(() => { load() }, [id, tab])
 
   function openAdd() {
@@ -189,6 +217,48 @@ function Inner({ id }: { id: string }) {
     setSaving(false)
     setShowForm(false)
     load()
+  }
+
+  async function cycleMastery(childId: string) {
+    if (!me) return
+    const cur = surveyMap.get(childId)
+    const next: MasteryLevel = cur === 'achieved' ? 'not_yet' : cur === 'in_progress' ? 'achieved' : 'in_progress'
+    // Optimistic
+    const nm = new Map(surveyMap); nm.set(childId, next); setSurveyMap(nm)
+    const habitTitle = { wash: 'Гар угаах', brush: 'Шүд угаах', rinse: 'Ам зайлах' }[survey.habit]
+    // Тухайн сард аль хэдийн бичлэг байвал update, үгүй бол шинээр insert
+    const start = survey.month + '-01'
+    const end = survey.month + '-31'
+    const { data: exist } = await supabase.from('tuslah_records').select('id')
+      .eq('employee_id', id).eq('category', 'ahits').eq('title', habitTitle)
+      .eq('child_id', childId).gte('date', start).lte('date', end).order('date', { ascending: false }).limit(1)
+    const arr = (exist as { id: string }[]) || []
+    if (arr.length > 0) {
+      await supabase.from('tuslah_records').update({ mastery_level: next, date: new Date().toISOString().split('T')[0], updated_at: new Date().toISOString() }).eq('id', arr[0].id)
+    } else {
+      await supabase.from('tuslah_records').insert({
+        employee_id: id, category: 'ahits',
+        title: habitTitle, child_id: childId,
+        date: new Date().toISOString().split('T')[0], mastery_level: next,
+      })
+    }
+  }
+  function downloadSurveyCsv() {
+    const habitTitle = { wash: 'Гар угаах', brush: 'Шүд угаах', rinse: 'Ам зайлах' }[survey.habit]
+    const rows = [['№','Хүүхэд','Үнэлгээ']]
+    groupChildren.forEach((k, i) => {
+      const level = surveyMap.get(k.id)
+      const label = level ? MASTERY[level].label : ''
+      rows.push([String(i + 1), `${k.last_name}.${k.first_name}`, label])
+    })
+    const csv = '﻿' + rows.map((r) => r.map((c) => `"${c.replace(/"/g,'""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${habitTitle}_${survey.month}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   async function remove(r: Record) {
@@ -295,6 +365,91 @@ function Inner({ id }: { id: string }) {
                     <div className="text-[10px] text-slate-500 mt-1">{m.slice(5)}/{m.slice(2, 4)}</div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )
+        })()}
+
+        {tab === 'ahits' && groupChildren.length > 0 && (() => {
+          const habits = [
+            { key: 'wash' as const,  emoji: '🧼', label: 'Гар угаах',   grad: 'from-emerald-400 via-teal-400 to-cyan-400',   bg: 'bg-emerald-50' },
+            { key: 'brush' as const, emoji: '🦷', label: 'Шүд угаах',   grad: 'from-blue-400 via-indigo-400 to-purple-400',    bg: 'bg-blue-50' },
+            { key: 'rinse' as const, emoji: '💧', label: 'Ам зайлах',   grad: 'from-pink-400 via-rose-400 to-orange-400',      bg: 'bg-pink-50' },
+          ]
+          const curHabit = habits.find((h) => h.key === survey.habit)!
+          const total = groupChildren.length
+          const achieved = groupChildren.filter((k) => surveyMap.get(k.id) === 'achieved').length
+          const inProgress = groupChildren.filter((k) => surveyMap.get(k.id) === 'in_progress').length
+          const notYet = groupChildren.filter((k) => surveyMap.get(k.id) === 'not_yet').length
+          const untouched = total - achieved - inProgress - notYet
+          const pct = total > 0 ? Math.round((achieved / total) * 100) : 0
+          const emojis = ['🐰','🐻','🦊','🐨','🐼','🦁','🐯','🐸','🐮','🐷','🐵','🐔','🐤','🐧','🦉','🐢','🦄','🐙','🦋','🐝','🐌','🐞','🦖','🦕']
+          const emojiFor = (id: string) => {
+            let h = 0; for (let i = 0; i < id.length; i++) h = ((h << 5) - h) + id.charCodeAt(i) | 0
+            return emojis[Math.abs(h) % emojis.length]
+          }
+          return (
+            <div className={`rounded-2xl border border-slate-200 overflow-hidden mb-6 shadow-lg ${curHabit.bg}`}>
+              <div className={`bg-gradient-to-r ${curHabit.grad} p-5 text-white`}>
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="text-6xl">{curHabit.emoji}</div>
+                    <div>
+                      <div className="text-2xl font-bold">{curHabit.label}</div>
+                      <div className="text-sm opacity-90">Хүүхдийн дадал хэвшлийн үнэлгээ · {survey.month}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-5xl font-bold">{pct}%</div>
+                    <div className="text-xs opacity-90">✅ Эзэмшсэн</div>
+                  </div>
+                </div>
+                {/* Progress bar */}
+                <div className="mt-4 h-4 bg-white/20 rounded-full overflow-hidden flex">
+                  <div className="bg-emerald-500" style={{ width: `${(achieved / Math.max(1, total)) * 100}%` }} />
+                  <div className="bg-amber-400" style={{ width: `${(inProgress / Math.max(1, total)) * 100}%` }} />
+                  <div className="bg-slate-400" style={{ width: `${(notYet / Math.max(1, total)) * 100}%` }} />
+                </div>
+                <div className="mt-2 flex gap-3 text-xs flex-wrap">
+                  <span>✅ {achieved} эзэмшсэн</span>
+                  <span>🔄 {inProgress} эзэмшиж буй</span>
+                  <span>⚪ {notYet} эзэмшээгүй</span>
+                  {untouched > 0 && <span className="opacity-70">· {untouched} үнэлээгүй</span>}
+                </div>
+              </div>
+
+              <div className="p-4 flex flex-wrap gap-2 items-center border-b border-white/50 bg-white/50 print:hidden">
+                {habits.map((h) => (
+                  <button key={h.key} onClick={() => setSurvey({ ...survey, habit: h.key })}
+                    className={`px-3 py-2 rounded-full text-sm font-semibold transition ${survey.habit === h.key ? `bg-gradient-to-r ${h.grad} text-white shadow-md` : 'bg-white border border-slate-200 hover:border-slate-300'}`}>
+                    {h.emoji} {h.label}
+                  </button>
+                ))}
+                <input type="month" value={survey.month} onChange={(e) => setSurvey({ ...survey, month: e.target.value })} className="ml-auto border border-slate-300 rounded-lg px-3 py-1.5 text-sm bg-white" />
+                <button onClick={() => window.print()} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium">🖨</button>
+                <button onClick={downloadSurveyCsv} className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg font-medium">📥 CSV</button>
+              </div>
+
+              <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {groupChildren.map((k) => {
+                  const level = surveyMap.get(k.id)
+                  const bg = level === 'achieved' ? 'bg-gradient-to-br from-emerald-400 to-teal-500 text-white' :
+                             level === 'in_progress' ? 'bg-gradient-to-br from-amber-300 to-orange-400 text-white' :
+                             level === 'not_yet' ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-white' :
+                             'bg-white border-2 border-dashed border-slate-300 text-slate-500'
+                  const badge = level === 'achieved' ? '✅' : level === 'in_progress' ? '🔄' : level === 'not_yet' ? '⚪' : '❓'
+                  return (
+                    <button key={k.id} onClick={() => cycleMastery(k.id)} className={`${bg} rounded-2xl p-3 shadow hover:scale-105 transition-transform text-center relative`}>
+                      <div className="text-4xl mb-1">{emojiFor(k.id)}</div>
+                      <div className="text-xs font-semibold truncate">{k.first_name}</div>
+                      <div className="text-[10px] opacity-80 truncate">{k.last_name}</div>
+                      <div className="absolute top-1 right-1 text-2xl bg-white/30 rounded-full w-8 h-8 flex items-center justify-center">{badge}</div>
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="p-3 bg-white/60 text-xs text-slate-600 text-center border-t border-white/50">
+                💡 Хүүхэд бүр дээр дарж үнэлгээгээ солино: ⚪ → 🔄 → ✅ → ⚪
               </div>
             </div>
           )

@@ -16,6 +16,8 @@ type Log = {
   morning_time: string | null
   day_time: string | null
   evening_time: string | null
+  wash_duration: string | null
+  sequence_quality: string | null
   monitor_name: string | null
   note: string | null
 }
@@ -43,7 +45,7 @@ export default function HygienePage() {
   const [logs, setLogs] = useState<Log[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [row, setRow] = useState({ date: '', children_count: '', morning_time: '', day_time: '', evening_time: '', monitor_name: '' })
+  const [row, setRow] = useState({ date: '', children_count: '', morning_time: '', day_time: '', evening_time: '', wash_duration: '', sequence_quality: '', monitor_name: '' })
 
   useEffect(() => {
     (async () => {
@@ -62,8 +64,50 @@ export default function HygienePage() {
     setLoading(true)
     const start = month + '-01'
     const end = month + '-31'
-    const { data } = await supabase.from('hygiene_log').select('*').eq('routine', routine).eq('group_id', groupId).gte('date', start).lte('date', end).order('date')
-    setLogs((data as Log[]) || [])
+    const habitTitle = { rinse: 'Ам зайлах', wash: 'Гар угаах', brush: 'Шүд угаах' }[routine]
+    // 1. hygiene_log-с шууд оруулсан бичлэгүүд
+    const [hl, tr] = await Promise.all([
+      supabase.from('hygiene_log').select('*').eq('routine', routine).eq('group_id', groupId).gte('date', start).lte('date', end),
+      // 2. tuslah_records-с (Дадал хэвшил табнаас) татагдсан бичлэгүүд
+      supabase.from('tuslah_records')
+        .select('id, date, description, employees:employee_id(id, last_name, first_name), tuslah_group:employee_id(id)')
+        .eq('category', 'dadal').eq('title', habitTitle)
+        .gte('date', start).lte('date', end).order('date'),
+    ])
+    const merged = new Map<string, Log>()
+    ;((hl.data as Log[]) || []).forEach((h) => merged.set(h.date, h))
+    // Add tuslah records that don't already exist for that date
+    const trList = (tr.data as unknown as { id: string; date: string; description: string | null; employees?: { id: string; last_name: string; first_name: string } }[]) || []
+    // Filter tuslah records to this group by checking employee assignment
+    const empIds = Array.from(new Set(trList.map((t) => t.employees?.id).filter(Boolean) as string[]))
+    let empGroups = new Map<string, number[]>()
+    if (empIds.length > 0) {
+      const { data: gt } = await supabase.from('group_teachers').select('employee_id, group_id').in('employee_id', empIds)
+      ;((gt as { employee_id: string; group_id: number }[]) || []).forEach((r) => {
+        if (!empGroups.has(r.employee_id)) empGroups.set(r.employee_id, [])
+        empGroups.get(r.employee_id)!.push(r.group_id)
+      })
+    }
+    trList.forEach((t) => {
+      if (!t.employees?.id) return
+      const groups = empGroups.get(t.employees.id) || []
+      if (!groups.includes(groupId)) return
+      if (merged.has(t.date)) return
+      merged.set(t.date, {
+        id: 'tr-' + t.id,
+        date: t.date,
+        routine,
+        group_id: groupId,
+        author_id: t.employees.id,
+        children_count: null,
+        morning_time: null,
+        day_time: null,
+        evening_time: null,
+        monitor_name: `${t.employees.last_name}.${t.employees.first_name}`,
+        note: t.description,
+      })
+    })
+    setLogs(Array.from(merged.values()).sort((a, b) => (a.date < b.date ? -1 : 1)))
     setLoading(false)
   }
   useEffect(() => { load() }, [routine, groupId, month])
@@ -79,6 +123,8 @@ export default function HygienePage() {
       morning_time: row.morning_time || null,
       day_time: row.day_time || null,
       evening_time: row.evening_time || null,
+      wash_duration: row.wash_duration || null,
+      sequence_quality: row.sequence_quality || null,
       monitor_name: row.monitor_name || null,
     }
     if (editingId) {
@@ -87,7 +133,7 @@ export default function HygienePage() {
       await supabase.from('hygiene_log').upsert(payload, { onConflict: 'date,routine,group_id' })
     }
     setEditingId(null)
-    setRow({ date: '', children_count: '', morning_time: '', day_time: '', evening_time: '', monitor_name: '' })
+    setRow({ date: '', children_count: '', morning_time: '', day_time: '', evening_time: '', wash_duration: '', sequence_quality: '', monitor_name: '' })
     load()
   }
   async function removeRow(id: string) {
@@ -103,6 +149,8 @@ export default function HygienePage() {
       morning_time: l.morning_time || '',
       day_time: l.day_time || '',
       evening_time: l.evening_time || '',
+      wash_duration: l.wash_duration || '',
+      sequence_quality: l.sequence_quality || '',
       monitor_name: l.monitor_name || '',
     })
   }
@@ -110,7 +158,7 @@ export default function HygienePage() {
   function downloadCsv() {
     const r = ROUTINES[routine]
     const grp = groups.find((g) => g.id === groupId)
-    const header = ['№', 'Огноо', 'Хүүхдийн тоо', ...r.slots.map((s) => SLOT_LABEL[s]), 'Хянасан хүн']
+    const header = ['№', 'Огноо', 'Хүүхдийн тоо', ...r.slots.map((s) => SLOT_LABEL[s]), ...(routine === 'brush' ? ['Үргэлжлэх хугацаа', 'Дараалал/чанар'] : []), 'Хянасан хүн']
     const rows = [header]
     logs.forEach((l, i) => {
       const arr: string[] = [String(i + 1), l.date, l.children_count?.toString() || '']
@@ -118,6 +166,10 @@ export default function HygienePage() {
         const v = s === 'morning' ? l.morning_time : s === 'day' ? l.day_time : l.evening_time
         arr.push(v || '')
       })
+      if (routine === 'brush') {
+        arr.push(l.wash_duration || '')
+        arr.push(l.sequence_quality || '')
+      }
       arr.push(l.monitor_name || '')
       rows.push(arr)
     })
@@ -182,6 +234,10 @@ export default function HygienePage() {
                   <th className="p-2 border border-slate-200 text-xs font-semibold text-slate-600 w-28">Сар өдөр</th>
                   <th className="p-2 border border-slate-200 text-xs font-semibold text-slate-600 w-24">Хүүхдийн тоо</th>
                   {r.slots.map((s) => <th key={s} className="p-2 border border-slate-200 text-xs font-semibold text-slate-600">Хугацаа — {SLOT_LABEL[s]}</th>)}
+                  {routine === 'brush' && <>
+                    <th className="p-2 border border-slate-200 text-xs font-semibold text-slate-600">Үргэлжлэх хугацаа</th>
+                    <th className="p-2 border border-slate-200 text-xs font-semibold text-slate-600">Дараалал/чанар</th>
+                  </>}
                   <th className="p-2 border border-slate-200 text-xs font-semibold text-slate-600">Хянасан хүн</th>
                   <th className="p-2 border border-slate-200 print:hidden w-24"></th>
                 </tr>
@@ -196,6 +252,10 @@ export default function HygienePage() {
                       const v = s === 'morning' ? l.morning_time : s === 'day' ? l.day_time : l.evening_time
                       return <td key={s} className="p-2 border border-slate-200 text-center text-xs">{v || ''}</td>
                     })}
+                    {routine === 'brush' && <>
+                      <td className="p-2 border border-slate-200 text-center text-xs">{l.wash_duration || ''}</td>
+                      <td className="p-2 border border-slate-200 text-center text-xs">{l.sequence_quality || ''}</td>
+                    </>}
                     <td className="p-2 border border-slate-200 text-xs">{l.monitor_name || ''}</td>
                     <td className="p-1 border border-slate-200 text-center print:hidden">
                       <button onClick={() => editRow(l)} className="text-blue-600 hover:text-blue-800 text-xs mr-2">✏️</button>
@@ -204,7 +264,7 @@ export default function HygienePage() {
                   </tr>
                 ))}
                 {logs.length === 0 && (
-                  <tr><td colSpan={r.slots.length + 5} className="p-8 text-center text-slate-400 text-sm">Тухайн сард бичлэг алга — доор нэмэх боломжтой</td></tr>
+                  <tr><td colSpan={r.slots.length + 5 + (routine === 'brush' ? 2 : 0)} className="p-8 text-center text-slate-400 text-sm">Тухайн сард бичлэг алга — доор нэмэх боломжтой</td></tr>
                 )}
                 {/* Мөр нэмэх/засах */}
                 <tr className="bg-emerald-50 print:hidden">
@@ -216,10 +276,21 @@ export default function HygienePage() {
                     const setVal = (v: string) => setRow({ ...row, [s === 'morning' ? 'morning_time' : s === 'day' ? 'day_time' : 'evening_time']: v })
                     return <td key={s} className="p-1 border border-slate-200"><input value={val} onChange={(e) => setVal(e.target.value)} placeholder="9:30-9:40" className="w-full border border-slate-300 rounded px-2 py-1 text-xs" /></td>
                   })}
+                  {routine === 'brush' && <>
+                    <td className="p-1 border border-slate-200"><input value={row.wash_duration} onChange={(e) => setRow({ ...row, wash_duration: e.target.value })} placeholder="2 мин" className="w-full border border-slate-300 rounded px-2 py-1 text-xs" /></td>
+                    <td className="p-1 border border-slate-200">
+                      <select value={row.sequence_quality} onChange={(e) => setRow({ ...row, sequence_quality: e.target.value })} className="w-full border border-slate-300 rounded px-1 py-1 text-xs">
+                        <option value="">—</option>
+                        <option value="✅ Зөв дараалалтай">✅ Зөв</option>
+                        <option value="🔄 Заримдаа алддаг">🔄 Заримдаа</option>
+                        <option value="❌ Буруу дараалалтай">❌ Буруу</option>
+                      </select>
+                    </td>
+                  </>}
                   <td className="p-1 border border-slate-200"><input value={row.monitor_name} onChange={(e) => setRow({ ...row, monitor_name: e.target.value })} placeholder="Гарын үсэг" className="w-full border border-slate-300 rounded px-2 py-1 text-xs" /></td>
                   <td className="p-1 border border-slate-200 text-center">
                     <button onClick={saveRow} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-2 py-1 rounded">{editingId ? 'Хадгал' : '+'}</button>
-                    {editingId && <button onClick={() => { setEditingId(null); setRow({ date: '', children_count: '', morning_time: '', day_time: '', evening_time: '', monitor_name: '' }) }} className="ml-1 text-xs text-slate-500">×</button>}
+                    {editingId && <button onClick={() => { setEditingId(null); setRow({ date: '', children_count: '', morning_time: '', day_time: '', evening_time: '', wash_duration: '', sequence_quality: '', monitor_name: '' }) }} className="ml-1 text-xs text-slate-500">×</button>}
                   </td>
                 </tr>
               </tbody>

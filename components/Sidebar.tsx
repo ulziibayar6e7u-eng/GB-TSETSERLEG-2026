@@ -88,6 +88,7 @@ function tuslahMenu(me: Me): MenuSection[] {
         { href: `/tuslah/${me.id}?tab=dadal`,       label: 'Хүүхдийн дадал хэвшил',   icon: '🌱' },
         { href: `/tuslah/${me.id}?tab=ahits`,       label: 'Хүүхдийн дадал хэвшлийн судалгаа', icon: '📊' },
         { href: `/tuslah-hygiene`,                  label: 'Ариун цэврийн журнал',    icon: '🧴' },
+        { href: `/tuslah-cleaning`,                 label: 'Цэвэрлэгээ хяналт',       icon: '🧹' },
         { href: `/tuslah/${me.id}?tab=sanaachlaga`, label: 'Санаачилсан ажил',         icon: '💡' },
       ],
     },
@@ -220,7 +221,7 @@ function busadMenu(me?: Me): MenuSection[] {
   const isCleaner  = isKitchenAssist || isUilchleg
 
   const workspaceItems: MenuItem[] = []
-  if (p.includes('эмч'))          workspaceItems.push({ href: '/busad/emch',     label: 'Эрүүл мэндийн хэсэг', icon: '🩺' })
+  if (p.includes('эмч'))          { workspaceItems.push({ href: '/busad/emch',     label: 'Эрүүл мэндийн хэсэг', icon: '🩺' }); workspaceItems.push({ href: '/emch-cleaning', label: 'Цэвэрлэгээ хяналт', icon: '🧹' }) }
   else if (isTogooch)             workspaceItems.push({ href: '/busad/togooch',  label: 'Хоолны цэс',         icon: '👨‍🍳' })
   else if (p.includes('нярав'))   workspaceItems.push({ href: '/busad/nyarav',   label: 'Нөөц удирдлага',     icon: '📦' })
   else if (p.includes('нягтлан')) workspaceItems.push({ href: '/busad/nyagtlan', label: 'Санхүүгийн бүртгэл', icon: '💰' })
