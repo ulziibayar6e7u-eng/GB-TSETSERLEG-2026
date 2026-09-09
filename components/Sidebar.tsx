@@ -55,6 +55,7 @@ function bagshMenu(me: Me): MenuSection[] {
         { href: '/hutulbur', label: 'Хөтөлбөрийн хэрэгжилт', icon: '📚' },
         { href: '/bagts', label: 'Хөтөлбөрийн бэлэн багц', icon: '📦' },
         { href: '/heregleg', label: 'Хэрэглэгдэхүүн, хөтөлбөр', icon: '📎' },
+        { href: '/zaah-argyn-negdel', label: 'Заах аргын нэгдэл', icon: '🧭' },
       ],
     },
     {
@@ -132,6 +133,7 @@ function argaZuichMenu(): MenuSection[] {
         { href: '/hutulbur', label: 'Хөтөлбөрийн хэрэгжилт', icon: '📚' },
         { href: '/bagts', label: 'Хөтөлбөрийн бэлэн багц', icon: '📦' },
         { href: '/heregleg', label: 'Хэрэглэгдэхүүн, хөтөлбөр', icon: '📎' },
+        { href: '/zaah-argyn-negdel', label: 'Заах аргын нэгдэл', icon: '🧭' },
         { href: '/irts', label: 'Ирц', icon: '⏰' },
         { href: '/juuru', label: 'Жижүүр багшийн хуваарь', icon: '🛎' },
       ],
@@ -175,6 +177,7 @@ function erhlegchMenu(): MenuSection[] {
         { href: '/hamgaalal', label: 'Хүүхэд хамгаалал', icon: '🛡' },
         { href: '/hutulbur', label: 'Хөтөлбөрийн хэрэгжилт', icon: '📚' },
         { href: '/heregleg', label: 'Хэрэглэгдэхүүн, хөтөлбөр', icon: '📎' },
+        { href: '/zaah-argyn-negdel', label: 'Заах аргын нэгдэл', icon: '🧭' },
         { href: '/irts-staff', label: 'Ажилтны ирц', icon: '⏰' },
         { href: '/juuru', label: 'Жижүүр багшийн тайлан', icon: '🛎' },
       ],
