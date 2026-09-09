@@ -66,13 +66,19 @@ export default function Home() {
       }))
 
       if (me && !canSeeAllChildren(me.role, me.is_admin)) {
-        const myGroupIds = me.groups.map((g) => g.id)
-        if (myGroupIds.length > 0) {
-          const { count } = await supabase
-            .from('children')
-            .select('id', { count: 'exact', head: true })
-            .in('group_id', myGroupIds)
+        const isMusicTeacher = me.first_name === 'Өлзийбаяр' || me.groups?.some((g) => g.code === 'hogjim')
+        if (isMusicTeacher) {
+          const { count } = await supabase.from('children').select('id', { count: 'exact', head: true }).eq('status', 'active')
           setStats((s) => ({ ...s, myChildren: count || 0 }))
+        } else {
+          const myGroupIds = me.groups.map((g) => g.id)
+          if (myGroupIds.length > 0) {
+            const { count } = await supabase
+              .from('children')
+              .select('id', { count: 'exact', head: true })
+              .in('group_id', myGroupIds)
+            setStats((s) => ({ ...s, myChildren: count || 0 }))
+          }
         }
         const { count: myPending } = await supabase
           .from('plans')
@@ -124,7 +130,7 @@ export default function Home() {
         ) : (me?.role === 'bagsh' || me?.role === 'bagsh_tuslah') ? (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <StatCard href="/huuhed" icon="👧" label="Миний хүүхдүүд" value={stats.myChildren} color="from-blue-500 to-blue-600" />
+              <StatCard href={(me?.first_name === 'Өлзийбаяр' || me?.groups?.some((g: any) => g.code === 'hogjim')) ? '/hogjim-huuhed' : '/huuhed'} icon="👧" label="Миний хүүхдүүд" value={stats.myChildren} color="from-blue-500 to-blue-600" />
               <StatCard href="/irts" icon="⏰" label="Өнөөдрийн ирц" value={`${irtsPct}%`} sub={`${stats.todayIrsen}/${stats.todayAll}`} color="from-emerald-500 to-emerald-600" />
               <StatCard href="/ajigllt" icon="🎯" label="Өнөөдрийн ажиглалт" value={stats.todayObs} color="from-amber-500 to-amber-600" />
               <StatCard href="/tulvluguu" icon="📅" label="Засах төлөвлөгөө" value={stats.myPlansPending} color="from-purple-500 to-purple-600" />
