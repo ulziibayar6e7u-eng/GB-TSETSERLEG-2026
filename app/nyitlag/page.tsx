@@ -26,7 +26,8 @@ export default function PublicEventsPage() {
   const [form, setForm] = useState({ title:'', description:'', event_date: new Date().toISOString().slice(0,10), event_time:'', location:'' })
   const [saving, setSaving] = useState(false)
 
-  const canManage = !!(me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich'))
+  const isMusic = !!(me && (me.first_name === 'Өлзийбаяр' || me.groups?.some((g: any) => g.code === 'hogjim')))
+  const canManage = !!(me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich' || isMusic))
 
   async function loadEvents() {
     const { data } = await supabase.from('public_events').select('*').order('event_date', { ascending: false }).limit(100)
