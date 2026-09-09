@@ -42,20 +42,22 @@ export default function PublicEventsPage() {
     setStaff((data as any) || [])
   }
   useEffect(() => { loadEvents(); loadStaff() }, [])
+  useEffect(() => { if (!openId && events.length > 0) setOpenId(events[0].id) }, [events])
   useEffect(() => { if (openId) loadAttendance(openId) }, [openId])
 
   async function saveEvent() {
     if (!form.title.trim()) { alert('Гарчиг бөглөнө үү'); return }
     setSaving(true)
-    const { error } = await supabase.from('public_events').insert({
+    const { data, error } = await supabase.from('public_events').insert({
       title: form.title.trim(), description: form.description || null,
       event_date: form.event_date, event_time: form.event_time || null,
       location: form.location || null, created_by: me?.id || null,
-    })
+    }).select().single()
     setSaving(false)
     if (error) { alert('Алдаа: '+error.message); return }
     setShowForm(false); setForm({ title:'', description:'', event_date: new Date().toISOString().slice(0,10), event_time:'', location:'' })
-    loadEvents()
+    await loadEvents()
+    if (data?.id) setOpenId(data.id)
   }
   async function deleteEvent(id: string) {
     if (!confirm('Устгах уу?')) return
@@ -118,7 +120,7 @@ export default function PublicEventsPage() {
                     {e.description && <div className="text-sm text-slate-700 mt-2 whitespace-pre-wrap">{e.description}</div>}
                   </div>
                   <div className="flex gap-2 items-center">
-                    <button onClick={()=>setOpenId(open?null:e.id)} className="text-sm bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-lg font-medium">{open?'Хаах':'Ирц'}</button>
+                    <button onClick={()=>setOpenId(open?null:e.id)} className={`text-sm px-4 py-2 rounded-lg font-semibold ${open?'bg-slate-200 hover:bg-slate-300 text-slate-700':'bg-purple-600 hover:bg-purple-700 text-white'}`}>{open?'✕ Хаах':'👥 Ирц бүртгэх'}</button>
                     {canManage && <button onClick={()=>deleteEvent(e.id)} className="text-red-600 hover:text-red-800 text-sm">Устгах</button>}
                   </div>
                 </div>
