@@ -14,7 +14,8 @@ export default function UilAjilgaaPage() {
   const supabase = useMemo(() => createClient(), [])
   const [fullscreen, setFullscreen] = useState(false)
 
-  const isLeader = me?.is_admin || me?.role === 'erhlegch' || me?.role === 'arga_zuich'
+  const isMusicTeacher = !!(me?.first_name === 'Өлзийбаяр' || me?.groups?.some((g: any) => g.code === 'hogjim'))
+  const isLeader = !isMusicTeacher && (me?.is_admin || me?.role === 'erhlegch' || me?.role === 'arga_zuich')
 
   // Leader dashboard state
   const [teachers, setTeachers] = useState<Teacher[]>([])
