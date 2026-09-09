@@ -37,6 +37,7 @@ export default function BatlamjPlanReview({ params }: { params: Promise<{ id: st
   const [loading, setLoading] = useState(true)
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
   const canApprove = me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich')
 
@@ -131,9 +132,9 @@ export default function BatlamjPlanReview({ params }: { params: Promise<{ id: st
             <div className="text-sm font-semibold text-slate-700 mb-2">📎 Файлууд ({plan.files.length})</div>
             <div className="flex flex-wrap gap-2">
               {plan.files.map((f, i) => (
-                <a key={i} href={f.src} target="_blank" rel="noopener" className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-medium">
-                  📄 {f.label || 'Файл ' + (i+1)}
-                </a>
+                <button key={i} onClick={() => setPreviewUrl(f.src)} className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg font-medium">
+                  👁 {f.label || 'Файл ' + (i+1)}
+                </button>
               ))}
             </div>
           </div>
@@ -171,6 +172,26 @@ export default function BatlamjPlanReview({ params }: { params: Promise<{ id: st
           </div>
         )}
       </div>
+      {previewUrl && (() => {
+        const ext = previewUrl.split('?')[0].split('.').pop()?.toLowerCase() || ''
+        const isOffice = ['doc','docx','ppt','pptx','xls','xlsx'].includes(ext)
+        const isImage  = ['png','jpg','jpeg','gif','webp','svg'].includes(ext)
+        const isVideo  = ['mp4','webm','mov'].includes(ext)
+        const viewerSrc = isOffice ? `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(previewUrl)}` : previewUrl
+        return (
+          <div className="fixed inset-0 bg-black/60 z-50 flex flex-col" onContextMenu={(e) => e.preventDefault()}>
+            <div className="bg-white px-4 py-2 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0"><span className="text-lg">👁</span><span className="text-sm text-slate-700 truncate">Зөвхөн харах горим</span></div>
+              <button onClick={() => setPreviewUrl(null)} className="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg">✕ Хаах</button>
+            </div>
+            <div className="flex-1 bg-slate-900 flex items-center justify-center overflow-auto select-none">
+              {isImage ? <img src={previewUrl} alt="" className="max-w-full max-h-full object-contain pointer-events-none" draggable={false} />
+               : isVideo ? <video src={previewUrl} controls controlsList="nodownload" className="max-w-full max-h-full" onContextMenu={(e) => e.preventDefault()} />
+               : <iframe src={viewerSrc} className="w-full h-full border-0 bg-white" sandbox="allow-scripts allow-same-origin" />}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

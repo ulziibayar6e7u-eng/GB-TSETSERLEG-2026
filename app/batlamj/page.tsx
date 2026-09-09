@@ -406,10 +406,7 @@ export default function BatlamjPage() {
                           {i.description && <div className="text-sm text-slate-700 whitespace-pre-wrap mb-3">{i.description}</div>}
                           <div className="flex flex-wrap gap-2">
                             {i.fileUrl && (
-                              <>
-                                <button onClick={() => setPreviewUrl(i.fileUrl!)} className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg font-medium">👁 Файл харах</button>
-                                <a href={i.fileUrl} target="_blank" rel="noopener" className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg">📎 Татах</a>
-                              </>
+                              <button onClick={() => setPreviewUrl(i.fileUrl!)} className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg font-medium">👁 Файл харах</button>
                             )}
                             {(i.extraLinks || []).map((url, idx) => (
                               <div key={idx} className="flex gap-1">
@@ -472,21 +469,35 @@ export default function BatlamjPage() {
         )}
       </div>
 
-      {previewUrl && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex flex-col">
-          <div className="bg-white px-4 py-2 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-lg">👁</span>
-              <span className="text-sm text-slate-700 truncate">{previewUrl}</span>
-            </div>
-            <div className="flex gap-2 flex-shrink-0">
-              <a href={previewUrl} target="_blank" rel="noopener" className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-lg">↗ Шинэ таб</a>
+      {previewUrl && (() => {
+        const ext = previewUrl.split('?')[0].split('.').pop()?.toLowerCase() || ''
+        const isOffice = ['doc','docx','ppt','pptx','xls','xlsx'].includes(ext)
+        const isImage  = ['png','jpg','jpeg','gif','webp','svg'].includes(ext)
+        const isVideo  = ['mp4','webm','mov'].includes(ext)
+        const viewerSrc = isOffice
+          ? `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(previewUrl)}`
+          : previewUrl
+        return (
+          <div className="fixed inset-0 bg-black/60 z-50 flex flex-col" onContextMenu={(e) => e.preventDefault()}>
+            <div className="bg-white px-4 py-2 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-lg">👁</span>
+                <span className="text-sm text-slate-700 truncate">Зөвхөн харах горим</span>
+              </div>
               <button onClick={() => setPreviewUrl(null)} className="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg">✕ Хаах</button>
             </div>
+            <div className="flex-1 bg-slate-900 flex items-center justify-center overflow-auto select-none">
+              {isImage ? (
+                <img src={previewUrl} alt="" className="max-w-full max-h-full object-contain pointer-events-none" draggable={false} />
+              ) : isVideo ? (
+                <video src={previewUrl} controls controlsList="nodownload" className="max-w-full max-h-full" onContextMenu={(e) => e.preventDefault()} />
+              ) : (
+                <iframe src={viewerSrc} className="w-full h-full border-0 bg-white" sandbox="allow-scripts allow-same-origin" />
+              )}
+            </div>
           </div>
-          <iframe src={previewUrl} className="flex-1 w-full border-0 bg-white" />
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
