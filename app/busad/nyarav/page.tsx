@@ -4,364 +4,390 @@ import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useMe } from '@/lib/useMe'
 
-type Item = { id: string; name: string; category: string | null; unit: string; quantity: number; min_quantity: number; location: string | null; note: string | null; expiry_date: string | null; supplier: string | null }
-
-const CATS = [
-  { key: 'food',    label: '🍚 Хүнс' },
-  { key: 'hygiene', label: '🧴 Ариун цэвэр' },
-  { key: 'clean',   label: '🧹 Цэвэрлэгээ' },
-  { key: 'equipment', label: '🔧 Тоног төхөөрөмж' },
-  { key: 'office',  label: '📋 Оффис' },
-  { key: 'toy',     label: '🧸 Тоглоом, хэрэгсэл' },
-  { key: 'other',   label: '📦 Бусад' },
-]
-type Movement = {
-  id: string
-  item_id: string | null
-  movement_type: 'purchase' | 'distribute' | 'adjust' | 'writeoff'
-  quantity: number
-  date: string
-  recipient: string | null
-  price: number | null
-  supplier: string | null
-  note: string | null
-  file_url: string | null
-  inventory_items?: { name: string } | null
-  employees?: { last_name: string; first_name: string } | null
-}
-
-const MTYPES = {
-  purchase:   { icon: '📥', label: 'Худалдан авалт', color: 'bg-emerald-100 text-emerald-700' },
-  distribute: { icon: '📤', label: 'Хуваарилалт',     color: 'bg-blue-100 text-blue-700' },
-  adjust:     { icon: '⚙️', label: 'Тохируулга',      color: 'bg-slate-100 text-slate-700' },
-  writeoff:   { icon: '🗑', label: 'Хасалт',          color: 'bg-red-100 text-red-700' },
+const PURPOSES = {
+  food:      { icon: '🥕', label: 'Хүнсний материал',       color: 'from-orange-500 to-red-500' },
+  cleaning:  { icon: '🧴', label: 'Ариун цэврийн бодис',    color: 'from-blue-500 to-cyan-500' },
+  staff_kit: { icon: '🧤', label: 'Ажилтны хамгаалалт',     color: 'from-emerald-500 to-teal-500' },
+  office:    { icon: '📋', label: 'Албан хэрэгсэл',         color: 'from-violet-500 to-purple-500' },
 } as const
+type Purpose = keyof typeof PURPOSES
+
+type Item = { id: string; name: string; category: string|null; unit: string; quantity: number; min_quantity: number; location: string|null; note: string|null; purpose: string|null }
+type Movement = { id: string; item_id: string; movement_type: 'purchase'|'distribute'|'adjust'|'writeoff'; quantity: number; date: string; recipient: string|null; recipient_type: string|null; recipient_id: string|null; price: number|null; supplier: string|null; note: string|null; inventory_items?: { name: string; unit: string; purpose: string|null } }
+type Supplier = { id: string; name: string; contact: string|null; phone: string|null; address: string|null }
+type Emp = { id: string; last_name: string; first_name: string; positions?: { name: string }|null }
+type Tab = 'dashboard' | 'items' | 'receive' | 'distribute' | 'movements' | 'suppliers'
 
 export default function NyaravPage() {
   const supabase = useMemo(() => createClient(), [])
-  const { me } = useMe()
-  const [tab, setTab] = useState<'items' | 'movements' | 'lowstock' | 'expiring'>('items')
-  const [filterCat, setFilterCat] = useState<string>('')
+  const { me, loading: meLoading } = useMe()
+  const [tab, setTab] = useState<Tab>('dashboard')
   const [items, setItems] = useState<Item[]>([])
-  const [movs, setMovs] = useState<Movement[]>([])
-  const [showItem, setShowItem] = useState(false)
-  const [editingItem, setEditingItem] = useState<Item | null>(null)
-  const [itemForm, setItemForm] = useState({ name: '', category: '', unit: 'ш', quantity: '0', min_quantity: '0', location: '', note: '', expiry_date: '', supplier: '' })
-  const [showMov, setShowMov] = useState(false)
-  const [movForm, setMovForm] = useState({ item_id: '', movement_type: 'purchase' as Movement['movement_type'], quantity: '', date: new Date().toISOString().split('T')[0], recipient: '', price: '', supplier: '', note: '', file: null as File | null })
-  const [saving, setSaving] = useState(false)
+  const [moves, setMoves] = useState<Movement[]>([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [staff, setStaff] = useState<Emp[]>([])
+  const [showItemForm, setShowItemForm] = useState(false)
+  const [editItem, setEditItem] = useState<Item|null>(null)
+  const [itemForm, setItemForm] = useState({ name:'', category:'', unit:'ш', min_quantity:0, location:'', purpose:'food' as Purpose, note:'' })
+  const [receiveForm, setReceiveForm] = useState({ item_id:'', quantity:0, supplier:'', supplier_id:'', price:0, date: new Date().toISOString().slice(0,10), note:'' })
+  const [distForm, setDistForm] = useState({ item_id:'', quantity:0, recipient_type:'cook', recipient_id:'', recipient:'', date: new Date().toISOString().slice(0,10), note:'' })
+  const [showSupForm, setShowSupForm] = useState(false)
+  const [supForm, setSupForm] = useState({ name:'', contact:'', phone:'', address:'', note:'' })
+  const [filterPurpose, setFilterPurpose] = useState<Purpose|'all'>('all')
 
-  async function load() {
-    const [i, m] = await Promise.all([
+  async function loadAll() {
+    const [i, m, s, e] = await Promise.all([
       supabase.from('inventory_items').select('*').order('name'),
-      supabase.from('inventory_movements').select('*, inventory_items(name), employees:author_id(last_name, first_name)').order('date', { ascending: false }).limit(100),
+      supabase.from('inventory_movements').select('*, inventory_items(name, unit, purpose)').order('date', { ascending: false }).limit(200),
+      supabase.from('suppliers').select('*').order('name'),
+      supabase.from('employees').select('id, last_name, first_name, positions(name)').order('first_name'),
     ])
-    setItems((i.data as Item[]) || [])
-    setMovs((m.data as unknown as Movement[]) || [])
+    setItems((i.data as any) || [])
+    setMoves((m.data as any) || [])
+    setSuppliers((s.data as any) || [])
+    setStaff((e.data as any) || [])
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => { loadAll() }, [])
 
   async function saveItem() {
-    const payload = {
-      name: itemForm.name.trim(),
-      category: itemForm.category || null,
-      unit: itemForm.unit || 'ш',
-      quantity: parseFloat(itemForm.quantity) || 0,
-      min_quantity: parseFloat(itemForm.min_quantity) || 0,
-      location: itemForm.location || null,
-      note: itemForm.note || null,
-      expiry_date: itemForm.expiry_date || null,
-      supplier: itemForm.supplier || null,
-    }
-    const { error } = editingItem
-      ? await supabase.from('inventory_items').update({...payload, updated_at: new Date().toISOString()}).eq('id', editingItem.id)
+    if (!itemForm.name.trim()) { alert('Нэр бөглөнө үү'); return }
+    const payload = { ...itemForm, min_quantity: Number(itemForm.min_quantity) || 0, updated_at: new Date().toISOString() }
+    const { error } = editItem
+      ? await supabase.from('inventory_items').update(payload).eq('id', editItem.id)
       : await supabase.from('inventory_items').insert(payload)
-    if (error) { alert('Алдаа: ' + error.message); return }
-    setShowItem(false); setEditingItem(null); load()
+    if (error) { alert(error.message); return }
+    setShowItemForm(false); setEditItem(null)
+    setItemForm({ name:'', category:'', unit:'ш', min_quantity:0, location:'', purpose:'food', note:'' })
+    loadAll()
   }
-  async function removeItem(i: Item) {
-    if (!confirm(`"${i.name}"-г устгах уу?`)) return
-    await supabase.from('inventory_items').delete().eq('id', i.id)
-    load()
+  async function removeItem(id: string) {
+    if (!confirm('Устгах уу?')) return
+    await supabase.from('inventory_items').delete().eq('id', id)
+    loadAll()
   }
-  async function saveMov() {
-    if (!me) return
-    setSaving(true)
-    let file_url: string | null = null
-    if (movForm.file) {
-      const path = `inv/${Date.now()}_${movForm.file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
-      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, movForm.file)
-      if (upErr) { alert('Файл алдаа: ' + upErr.message); setSaving(false); return }
-      const { data: pub } = supabase.storage.from('org-plans').getPublicUrl(path)
-      file_url = pub?.publicUrl || null
-    }
-    const qty = parseFloat(movForm.quantity) || 0
-    const { error } = await supabase.from('inventory_movements').insert({
-      item_id: movForm.item_id,
-      movement_type: movForm.movement_type,
-      quantity: qty,
-      date: movForm.date,
-      recipient: movForm.recipient || null,
-      price: movForm.price ? parseFloat(movForm.price) : null,
-      supplier: movForm.supplier || null,
-      note: movForm.note || null,
-      file_url,
-      author_id: me.id,
+  async function saveReceive() {
+    if (!receiveForm.item_id || !receiveForm.quantity) { alert('Материал болон тоо ширхэг сонгоно уу'); return }
+    const it = items.find(x => x.id === receiveForm.item_id)!
+    const { error: e1 } = await supabase.from('inventory_movements').insert({
+      item_id: receiveForm.item_id, movement_type: 'purchase', quantity: Number(receiveForm.quantity), date: receiveForm.date,
+      supplier: suppliers.find(s => s.id === receiveForm.supplier_id)?.name || receiveForm.supplier || null,
+      price: Number(receiveForm.price) || null, note: receiveForm.note || null, author_id: me?.id || null,
     })
-    if (!error) {
-      // Update stock
-      const item = items.find((x) => x.id === movForm.item_id)
-      if (item) {
-        const delta = movForm.movement_type === 'purchase' || movForm.movement_type === 'adjust' ? qty : -qty
-        await supabase.from('inventory_items').update({ quantity: item.quantity + delta }).eq('id', item.id)
-      }
-    }
-    setSaving(false)
-    if (error) { alert('Алдаа: ' + error.message); return }
-    setShowMov(false)
-    setMovForm({ item_id: '', movement_type: 'purchase', quantity: '', date: new Date().toISOString().split('T')[0], recipient: '', price: '', supplier: '', note: '', file: null })
-    load()
+    if (e1) { alert(e1.message); return }
+    await supabase.from('inventory_items').update({ quantity: Number(it.quantity) + Number(receiveForm.quantity), updated_at: new Date().toISOString() }).eq('id', receiveForm.item_id)
+    setReceiveForm({ item_id:'', quantity:0, supplier:'', supplier_id:'', price:0, date: new Date().toISOString().slice(0,10), note:'' })
+    loadAll(); alert('✅ Хүлээн авалт бүртгэгдлээ')
+  }
+  async function saveDist() {
+    if (!distForm.item_id || !distForm.quantity) { alert('Материал болон тоо ширхэг сонгоно уу'); return }
+    const it = items.find(x => x.id === distForm.item_id)!
+    if (Number(distForm.quantity) > Number(it.quantity)) { alert('Үлдэгдэл хүрэлцэхгүй байна'); return }
+    const staffMatch = staff.find(s => s.id === distForm.recipient_id)
+    const recipientName = distForm.recipient_type === 'cook' ? 'Тогооч'
+      : distForm.recipient_type === 'staff' ? (staffMatch ? `${staffMatch.last_name}.${staffMatch.first_name}` : distForm.recipient) : distForm.recipient
+    const { error: e1 } = await supabase.from('inventory_movements').insert({
+      item_id: distForm.item_id, movement_type: 'distribute', quantity: Number(distForm.quantity), date: distForm.date,
+      recipient: recipientName || null, recipient_type: distForm.recipient_type,
+      recipient_id: distForm.recipient_type === 'staff' ? (distForm.recipient_id || null) : null,
+      note: distForm.note || null, author_id: me?.id || null,
+    })
+    if (e1) { alert(e1.message); return }
+    await supabase.from('inventory_items').update({ quantity: Number(it.quantity) - Number(distForm.quantity), updated_at: new Date().toISOString() }).eq('id', distForm.item_id)
+    setDistForm({ item_id:'', quantity:0, recipient_type:'cook', recipient_id:'', recipient:'', date: new Date().toISOString().slice(0,10), note:'' })
+    loadAll(); alert('✅ Тараалт бүртгэгдлээ')
+  }
+  async function saveSupplier() {
+    if (!supForm.name.trim()) { alert('Нэр бөглөнө үү'); return }
+    const { error } = await supabase.from('suppliers').insert(supForm)
+    if (error) { alert(error.message); return }
+    setShowSupForm(false); setSupForm({ name:'', contact:'', phone:'', address:'', note:'' })
+    loadAll()
   }
 
-  const lowStock = items.filter((i) => i.quantity <= i.min_quantity && i.min_quantity > 0)
+  if (meLoading) return <div className="p-8 text-slate-500">Ачааллаж байна...</div>
+  if (!me) return null
+
+  const lowStock = items.filter(i => Number(i.quantity) <= Number(i.min_quantity || 0))
+  const byPurpose = (Object.keys(PURPOSES) as Purpose[]).map(p => ({ purpose: p, items: items.filter(i => i.purpose === p) }))
+  const totalValue = moves.filter(m => m.movement_type === 'purchase' && m.price).reduce((s,m) => s + Number(m.price || 0), 0)
+  const shownItems = filterPurpose === 'all' ? items : items.filter(i => i.purpose === filterPurpose)
+
+  const TabBtn = ({ k, icon, label }: { k: Tab; icon: string; label: string }) => (
+    <button onClick={()=>setTab(k)} className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${tab===k?'bg-amber-600 text-white':'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>{icon} {label}</button>
+  )
 
   return (
     <div className="p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="rounded-2xl p-6 text-white mb-6 shadow-lg bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-500">
+      <div className="max-w-6xl mx-auto">
+        <div className="rounded-2xl p-6 text-white mb-6 shadow-lg bg-gradient-to-br from-amber-500 via-orange-500 to-red-500">
           <div className="flex items-center gap-4">
             <div className="text-5xl">📦</div>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold">Няравын хэсэг</h1>
-              <p className="text-sm opacity-90">Нөөц, худалдан авалт, хуваарилалт</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div><div className="text-2xl font-bold">{items.length}</div><div className="text-xs opacity-80">Нэр төрөл</div></div>
-              <div><div className="text-2xl font-bold">{lowStock.length}</div><div className="text-xs opacity-80">Дуусаж буй</div></div>
+            <div>
+              <h1 className="text-2xl font-bold">Няравын нөөц удирдлага</h1>
+              <p className="text-sm opacity-90 mt-1">Хүлээн авалт · Тараалт · Үлдэгдэл · Нийлүүлэгч</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-3 mb-6 flex gap-2 items-center flex-wrap">
-          <button onClick={() => setTab('items')} className={`px-3 py-2 rounded-lg text-sm font-medium ${tab === 'items' ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
-            📦 Нөөц ({items.length})
-          </button>
-          <button onClick={() => setTab('movements')} className={`px-3 py-2 rounded-lg text-sm font-medium ${tab === 'movements' ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
-            🔄 Хөдөлгөөн ({movs.length})
-          </button>
-          {(() => {
-            const lo = items.filter((i) => i.min_quantity > 0 && i.quantity <= i.min_quantity).length
-            const today = new Date().toISOString().split('T')[0]
-            const soon = new Date(); soon.setDate(soon.getDate() + 30)
-            const soonStr = soon.toISOString().split('T')[0]
-            const exp = items.filter((i) => i.expiry_date && i.expiry_date <= soonStr && i.expiry_date >= today).length
-            return (
-              <>
-                <button onClick={() => setTab('lowstock')} className={`px-3 py-2 rounded-lg text-sm font-medium ${tab === 'lowstock' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
-                  ⚠️ Дуусаж буй ({lo})
-                </button>
-                <button onClick={() => setTab('expiring')} className={`px-3 py-2 rounded-lg text-sm font-medium ${tab === 'expiring' ? 'bg-amber-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
-                  🗓 Хугацаа ({exp})
-                </button>
-              </>
-            )
-          })()}
-          <div className="ml-auto flex gap-2">
-            {tab === 'items' && <button onClick={() => { setEditingItem(null); setItemForm({ name: '', category: '', unit: 'ш', quantity: '0', min_quantity: '0', location: '', note: '', expiry_date: '', supplier: '' }); setShowItem(true) }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Нэр төрөл</button>}
-            {tab === 'movements' && items.length > 0 && <button onClick={() => setShowMov(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Хөдөлгөөн бүртгэх</button>}
-          </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-3 mb-4 flex gap-2 flex-wrap overflow-x-auto">
+          <TabBtn k="dashboard"  icon="📊" label="Хяналтын самбар" />
+          <TabBtn k="items"      icon="📦" label="Материалын жагсаалт" />
+          <TabBtn k="receive"    icon="⬇️" label="Хүлээн авалт" />
+          <TabBtn k="distribute" icon="⬆️" label="Тараалт" />
+          <TabBtn k="movements"  icon="🔄" label="Хөдөлгөөний түүх" />
+          <TabBtn k="suppliers"  icon="🏭" label="Нийлүүлэгчид" />
         </div>
 
-        {tab === 'items' && (
-          items.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500">
-              <div className="text-5xl mb-3">📦</div>
-              <div>Хараахан нөөц оруулаагүй</div>
+        {tab === 'dashboard' && (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+              <div className="bg-white rounded-xl border border-slate-200 p-4"><div className="text-3xl font-bold text-slate-800">{items.length}</div><div className="text-xs text-slate-500 mt-1">📦 Материалын төрөл</div></div>
+              <div className="bg-white rounded-xl border border-slate-200 p-4"><div className="text-3xl font-bold text-red-600">{lowStock.length}</div><div className="text-xs text-slate-500 mt-1">⚠️ Үлдэгдэл багасаж буй</div></div>
+              <div className="bg-white rounded-xl border border-slate-200 p-4"><div className="text-3xl font-bold text-emerald-600">{moves.filter(m=>m.movement_type==='purchase').length}</div><div className="text-xs text-slate-500 mt-1">⬇️ Нийт хүлээн авалт</div></div>
+              <div className="bg-white rounded-xl border border-slate-200 p-4"><div className="text-3xl font-bold text-amber-600">{totalValue.toLocaleString('mn-MN')}₮</div><div className="text-xs text-slate-500 mt-1">💰 Худалдан авалтын дүн</div></div>
             </div>
-          ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50">
-                  <tr className="text-left text-xs font-semibold text-slate-600 uppercase">
-                    <th className="px-4 py-3">Нэр</th>
-                    <th className="px-4 py-3">Ангилал</th>
-                    <th className="px-4 py-3">Нэгж</th>
-                    <th className="px-4 py-3 text-right">Үлдэгдэл</th>
-                    <th className="px-4 py-3">Байршил</th>
-                    <th className="px-4 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {items.map((i) => (
-                    <tr key={i.id} className={i.quantity <= i.min_quantity && i.min_quantity > 0 ? 'bg-red-50' : ''}>
-                      <td className="px-4 py-3 font-medium">{i.name}</td>
-                      <td className="px-4 py-3 text-slate-600">{i.category || '-'}</td>
-                      <td className="px-4 py-3 text-slate-600">{i.unit}</td>
-                      <td className="px-4 py-3 text-right font-semibold">
-                        {i.quantity}
-                        {i.min_quantity > 0 && <span className="text-xs text-slate-400"> / мин {i.min_quantity}</span>}
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">{i.location || '-'}</td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <button onClick={() => { setEditingItem(i); setItemForm({ name: i.name, category: i.category || '', unit: i.unit, quantity: String(i.quantity), min_quantity: String(i.min_quantity), location: i.location || '', note: i.note || '', expiry_date: i.expiry_date || '', supplier: i.supplier || '' }); setShowItem(true) }} className="text-blue-600 hover:text-blue-800 text-xs mr-3">Засах</button>
-                        <button onClick={() => removeItem(i)} className="text-red-600 hover:text-red-800 text-xs">Устгах</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
-        )}
 
-        {(tab === 'lowstock' || tab === 'expiring') && (() => {
-          const today = new Date().toISOString().split('T')[0]
-          const soon = new Date(); soon.setDate(soon.getDate() + 30)
-          const soonStr = soon.toISOString().split('T')[0]
-          const list = tab === 'lowstock'
-            ? items.filter((i) => i.min_quantity > 0 && i.quantity <= i.min_quantity)
-            : items.filter((i) => i.expiry_date && i.expiry_date <= soonStr).sort((a, b) => (a.expiry_date! < b.expiry_date! ? -1 : 1))
-          if (list.length === 0) return (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500">
-              <div className="text-5xl mb-3">{tab === 'lowstock' ? '✅' : '🗓'}</div>
-              <div>{tab === 'lowstock' ? 'Дуусаж буй нэр төрөл алга' : 'Хугацаа дуусах бүтээгдэхүүн алга'}</div>
-            </div>
-          )
-          return (
-            <div className="space-y-2">
-              {list.map((i) => {
-                const isExpired = i.expiry_date && i.expiry_date < today
-                return (
-                  <div key={i.id} className={`bg-white rounded-xl border p-4 flex items-center gap-3 ${isExpired ? 'border-red-300 bg-red-50' : tab === 'lowstock' ? 'border-red-200' : 'border-amber-200'}`}>
-                    <div className="text-2xl">{tab === 'lowstock' ? '⚠️' : (isExpired ? '🚫' : '⏰')}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-slate-800">{i.name}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        {i.category && <span className="mr-2">{CATS.find((c) => c.key === i.category)?.label || i.category}</span>}
-                        {i.location && <span className="mr-2">📍 {i.location}</span>}
-                        {i.supplier && <span className="mr-2">🏭 {i.supplier}</span>}
+            {lowStock.length > 0 && (
+              <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-5 mb-4">
+                <div className="font-semibold text-red-800 mb-3">⚠️ Үлдэгдэл багасаж буй материалууд ({lowStock.length})</div>
+                <div className="grid md:grid-cols-2 gap-2">
+                  {lowStock.map(it => (
+                    <div key={it.id} className="bg-white rounded-lg p-3 flex justify-between items-center">
+                      <div>
+                        <div className="font-medium text-slate-800">{it.name}</div>
+                        <div className="text-xs text-slate-500">Байгаа: {it.quantity} {it.unit} · Хамгийн бага: {it.min_quantity} {it.unit}</div>
                       </div>
+                      <button onClick={()=>{setTab('receive'); setReceiveForm(f => ({...f, item_id: it.id}))}} className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg font-medium">⬇️ Авах</button>
                     </div>
-                    <div className="text-right">
-                      {tab === 'lowstock' ? (
-                        <>
-                          <div className="text-lg font-bold text-red-700">{i.quantity} <span className="text-xs text-slate-400 font-normal">{i.unit}</span></div>
-                          <div className="text-xs text-slate-500">Мин: {i.min_quantity}</div>
-                        </>
-                      ) : (
-                        <>
-                          <div className={`text-sm font-semibold ${isExpired ? 'text-red-700' : 'text-amber-700'}`}>🗓 {i.expiry_date}</div>
-                          <div className="text-xs text-slate-500">{isExpired ? 'Хугацаа хэтэрсэн' : 'Удахгүй дуусна'}</div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )
-        })()}
-
-        {tab === 'movements' && (
-          movs.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500">
-              <div className="text-5xl mb-3">🔄</div>
-              <div>Хөдөлгөөн бүртгэгдээгүй</div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {movs.map((m) => {
-                const t = MTYPES[m.movement_type]
-                return (
-                  <div key={m.id} className="bg-white rounded-xl border border-slate-200 p-4 flex items-start gap-3">
-                    <div className="text-2xl">{t.icon}</div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${t.color}`}>{t.label}</span>
-                        <span className="text-xs text-slate-500">🗓 {m.date}</span>
-                      </div>
-                      <div className="font-medium text-slate-800">{m.inventory_items?.name || '?'} · {m.quantity}</div>
-                      {m.recipient && <div className="text-xs text-slate-600 mt-0.5">Хүлээн авагч: {m.recipient}</div>}
-                      {m.supplier && <div className="text-xs text-slate-600">Нийлүүлэгч: {m.supplier}</div>}
-                      {m.price != null && <div className="text-xs text-slate-600">Үнэ: {m.price.toLocaleString()}₮</div>}
-                      {m.note && <div className="text-xs text-slate-500 mt-1">{m.note}</div>}
-                      {m.file_url && <a href={m.file_url} target="_blank" rel="noopener" className="inline-block mt-1 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-0.5 rounded">📎 Баримт</a>}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )
-        )}
-      </div>
-
-      {showItem && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-            <div className="p-5 border-b border-slate-200"><h2 className="text-lg font-semibold text-slate-800">{editingItem ? 'Засах' : 'Шинэ нэр төрөл'}</h2></div>
-            <div className="p-5 space-y-3">
-              <div><label className="block text-sm text-slate-700 mb-1">Нэр</label><input value={itemForm.name} onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-              <div>
-                <label className="block text-sm text-slate-700 mb-1">Ангилал</label>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {CATS.map((c) => (
-                    <button key={c.key} type="button" onClick={() => setItemForm({ ...itemForm, category: c.key })}
-                      className={`px-2 py-1 rounded-full text-xs ${itemForm.category === c.key ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
-                      {c.label}
-                    </button>
                   ))}
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div><label className="block text-sm text-slate-700 mb-1">Нэгж</label><input value={itemForm.unit} onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-                <div><label className="block text-sm text-slate-700 mb-1">Тоо</label><input type="number" step="0.01" value={itemForm.quantity} onChange={(e) => setItemForm({ ...itemForm, quantity: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-                <div><label className="block text-sm text-slate-700 mb-1">Мин үлдэгдэл</label><input type="number" step="0.01" value={itemForm.min_quantity} onChange={(e) => setItemForm({ ...itemForm, min_quantity: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+            )}
+
+            <div className="grid md:grid-cols-2 gap-4 mb-4">
+              {byPurpose.filter(p => p.items.length > 0).map(({ purpose, items: pItems }) => {
+                const cat = PURPOSES[purpose as Purpose]
+                return (
+                  <div key={purpose} className="bg-white rounded-2xl border border-slate-200 p-4">
+                    <div className={`inline-block px-3 py-1 rounded-full text-white text-xs font-semibold bg-gradient-to-r ${cat.color} mb-3`}>{cat.icon} {cat.label}</div>
+                    <div className="space-y-1">
+                      {pItems.slice(0, 8).map(it => (
+                        <div key={it.id} className="flex justify-between text-sm py-1">
+                          <span className="text-slate-700">{it.name}</span>
+                          <span className={`font-semibold ${Number(it.quantity) <= Number(it.min_quantity)?'text-red-600':'text-slate-600'}`}>{it.quantity} {it.unit}</span>
+                        </div>
+                      ))}
+                      {pItems.length > 8 && <div className="text-xs text-slate-400 mt-2">... бас {pItems.length - 8}</div>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        {tab === 'items' && (
+          <>
+            <div className="bg-white rounded-2xl border border-slate-200 p-3 mb-3 flex gap-2 flex-wrap">
+              <select value={filterPurpose} onChange={(e)=>setFilterPurpose(e.target.value as any)} className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm">
+                <option value="all">Бүх зориулалт</option>
+                {(Object.keys(PURPOSES) as Purpose[]).map(p => <option key={p} value={p}>{PURPOSES[p].icon} {PURPOSES[p].label}</option>)}
+              </select>
+              <button onClick={()=>{setEditItem(null); setItemForm({ name:'', category:'', unit:'ш', min_quantity:0, location:'', purpose:'food', note:'' }); setShowItemForm(true)}} className="ml-auto bg-amber-600 hover:bg-amber-700 text-white text-sm px-3 py-1.5 rounded-lg">+ Шинэ материал</button>
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50"><tr>
+                  <th className="p-2 text-left border-b border-slate-200">Нэр</th>
+                  <th className="p-2 text-left border-b border-slate-200">Зориулалт</th>
+                  <th className="p-2 text-center border-b border-slate-200">Үлдэгдэл</th>
+                  <th className="p-2 text-center border-b border-slate-200">Хамг. бага</th>
+                  <th className="p-2 text-left border-b border-slate-200">Байршил</th>
+                  <th className="p-2 text-center border-b border-slate-200 w-32">Үйлдэл</th>
+                </tr></thead>
+                <tbody>
+                  {shownItems.map(it => {
+                    const low = Number(it.quantity) <= Number(it.min_quantity || 0)
+                    const p = PURPOSES[it.purpose as Purpose]
+                    return (
+                      <tr key={it.id} className={`hover:bg-slate-50 ${low?'bg-red-50':''}`}>
+                        <td className="p-2 border-b border-slate-100 font-medium">{it.name}</td>
+                        <td className="p-2 border-b border-slate-100">{p ? <span className="text-xs px-2 py-0.5 rounded bg-slate-100">{p.icon} {p.label}</span> : '—'}</td>
+                        <td className="p-2 border-b border-slate-100 text-center"><span className={`font-semibold ${low?'text-red-600':'text-slate-700'}`}>{it.quantity} {it.unit}</span></td>
+                        <td className="p-2 border-b border-slate-100 text-center text-xs text-slate-500">{it.min_quantity} {it.unit}</td>
+                        <td className="p-2 border-b border-slate-100 text-xs text-slate-600">{it.location || ''}</td>
+                        <td className="p-2 border-b border-slate-100 text-center">
+                          <button onClick={()=>{setEditItem(it); setItemForm({ name:it.name, category:it.category||'', unit:it.unit, min_quantity:it.min_quantity, location:it.location||'', purpose:(it.purpose||'food') as Purpose, note:it.note||'' }); setShowItemForm(true)}} className="text-xs text-blue-600 hover:text-blue-800 mr-2">Засах</button>
+                          <button onClick={()=>removeItem(it.id)} className="text-xs text-red-600 hover:text-red-800">Устгах</button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {shownItems.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-slate-500">Материал алга</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {tab === 'receive' && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 max-w-2xl">
+            <h2 className="text-lg font-semibold mb-4">⬇️ Нийлүүлэгчээс хүлээн авах</h2>
+            <div className="space-y-3">
+              <div><label className="block text-sm mb-1">Материал *</label>
+                <select value={receiveForm.item_id} onChange={(e)=>setReceiveForm({...receiveForm, item_id: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2">
+                  <option value="">— Сонго —</option>
+                  {items.map(i => <option key={i.id} value={i.id}>{i.name} ({i.quantity} {i.unit})</option>)}
+                </select>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div><label className="block text-sm text-slate-700 mb-1">Байршил</label><input value={itemForm.location} onChange={(e) => setItemForm({ ...itemForm, location: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-                <div><label className="block text-sm text-slate-700 mb-1">🗓 Хугацаа дуусах</label><input type="date" value={itemForm.expiry_date} onChange={(e) => setItemForm({ ...itemForm, expiry_date: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-sm mb-1">Тоо ширхэг *</label><input type="number" min="0" step="0.01" value={receiveForm.quantity} onChange={(e)=>setReceiveForm({...receiveForm, quantity: Number(e.target.value)})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+                <div><label className="block text-sm mb-1">Огноо</label><input type="date" value={receiveForm.date} onChange={(e)=>setReceiveForm({...receiveForm, date: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
               </div>
-              <div><label className="block text-sm text-slate-700 mb-1">🏭 Нийлүүлэгч</label><input value={itemForm.supplier} onChange={(e) => setItemForm({ ...itemForm, supplier: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-              <div className="flex gap-2 pt-2">
-                <button onClick={() => setShowItem(false)} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg">Болих</button>
-                <button onClick={saveItem} disabled={!itemForm.name.trim()} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg font-medium">Хадгалах</button>
+              <div><label className="block text-sm mb-1">Нийлүүлэгч</label>
+                <select value={receiveForm.supplier_id} onChange={(e)=>setReceiveForm({...receiveForm, supplier_id: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2 mb-2">
+                  <option value="">— Бүртгэлээс сонго —</option>
+                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <input value={receiveForm.supplier} onChange={(e)=>setReceiveForm({...receiveForm, supplier: e.target.value})} placeholder="эсвэл гараар бичих" className="w-full border border-slate-300 rounded-lg px-3 py-2" />
               </div>
+              <div><label className="block text-sm mb-1">Үнэ (₮)</label><input type="number" min="0" value={receiveForm.price} onChange={(e)=>setReceiveForm({...receiveForm, price: Number(e.target.value)})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <div><label className="block text-sm mb-1">Тэмдэглэл</label><textarea rows={2} value={receiveForm.note} onChange={(e)=>setReceiveForm({...receiveForm, note: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <button onClick={saveReceive} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-2.5 font-semibold">⬇️ Хүлээн авах</button>
+            </div>
+          </div>
+        )}
+
+        {tab === 'distribute' && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 max-w-2xl">
+            <h2 className="text-lg font-semibold mb-4">⬆️ Тараах</h2>
+            <div className="space-y-3">
+              <div><label className="block text-sm mb-1">Материал *</label>
+                <select value={distForm.item_id} onChange={(e)=>setDistForm({...distForm, item_id: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2">
+                  <option value="">— Сонго —</option>
+                  {items.map(i => <option key={i.id} value={i.id}>{i.name} · Үлдэгдэл {i.quantity} {i.unit}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-sm mb-1">Тоо ширхэг *</label><input type="number" min="0" step="0.01" value={distForm.quantity} onChange={(e)=>setDistForm({...distForm, quantity: Number(e.target.value)})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+                <div><label className="block text-sm mb-1">Огноо</label><input type="date" value={distForm.date} onChange={(e)=>setDistForm({...distForm, date: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Хэнд *</label>
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                  <button onClick={()=>setDistForm({...distForm, recipient_type:'cook', recipient_id:''})} className={`p-2 rounded-lg border-2 text-sm ${distForm.recipient_type==='cook'?'border-orange-500 bg-orange-50':'border-slate-200'}`}>👨‍🍳 Тогооч</button>
+                  <button onClick={()=>setDistForm({...distForm, recipient_type:'staff'})} className={`p-2 rounded-lg border-2 text-sm ${distForm.recipient_type==='staff'?'border-emerald-500 bg-emerald-50':'border-slate-200'}`}>👤 Ажилтан</button>
+                  <button onClick={()=>setDistForm({...distForm, recipient_type:'other', recipient_id:''})} className={`p-2 rounded-lg border-2 text-sm ${distForm.recipient_type==='other'?'border-slate-500 bg-slate-50':'border-slate-200'}`}>📝 Бусад</button>
+                </div>
+                {distForm.recipient_type === 'staff' && (
+                  <select value={distForm.recipient_id} onChange={(e)=>setDistForm({...distForm, recipient_id: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2">
+                    <option value="">— Ажилтан сонго —</option>
+                    {staff.map(s => <option key={s.id} value={s.id}>{s.last_name}.{s.first_name} {s.positions?.name?`(${s.positions.name})`:''}</option>)}
+                  </select>
+                )}
+                {distForm.recipient_type === 'other' && (
+                  <input value={distForm.recipient} onChange={(e)=>setDistForm({...distForm, recipient: e.target.value})} placeholder="Хүлээн авагчийн нэр" className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+                )}
+              </div>
+              <div><label className="block text-sm mb-1">Тэмдэглэл</label><textarea rows={2} value={distForm.note} onChange={(e)=>setDistForm({...distForm, note: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <button onClick={saveDist} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2.5 font-semibold">⬆️ Тараах</button>
+            </div>
+          </div>
+        )}
+
+        {tab === 'movements' && (
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50"><tr>
+                <th className="p-2 text-left border-b border-slate-200">Огноо</th>
+                <th className="p-2 text-left border-b border-slate-200">Төрөл</th>
+                <th className="p-2 text-left border-b border-slate-200">Материал</th>
+                <th className="p-2 text-center border-b border-slate-200">Тоо</th>
+                <th className="p-2 text-left border-b border-slate-200">Хэн/Хаана</th>
+                <th className="p-2 text-left border-b border-slate-200">Тэмдэглэл</th>
+              </tr></thead>
+              <tbody>
+                {moves.map(m => (
+                  <tr key={m.id} className="hover:bg-slate-50">
+                    <td className="p-2 border-b border-slate-100 text-xs">{m.date}</td>
+                    <td className="p-2 border-b border-slate-100">
+                      {m.movement_type === 'purchase' && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">⬇️ Хүлээн авалт</span>}
+                      {m.movement_type === 'distribute' && <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">⬆️ Тараалт</span>}
+                      {m.movement_type === 'writeoff' && <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">🗑 Хасалт</span>}
+                    </td>
+                    <td className="p-2 border-b border-slate-100">{m.inventory_items?.name || '—'}</td>
+                    <td className="p-2 border-b border-slate-100 text-center font-semibold">{m.quantity} {m.inventory_items?.unit || ''}</td>
+                    <td className="p-2 border-b border-slate-100 text-xs">{m.movement_type === 'purchase' ? (m.supplier || '') : (m.recipient || '')}</td>
+                    <td className="p-2 border-b border-slate-100 text-xs text-slate-600">{m.note || ''}</td>
+                  </tr>
+                ))}
+                {moves.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-slate-500">Хөдөлгөөн байхгүй</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {tab === 'suppliers' && (
+          <>
+            <div className="mb-3 flex justify-end">
+              <button onClick={()=>setShowSupForm(true)} className="bg-amber-600 hover:bg-amber-700 text-white text-sm px-3 py-1.5 rounded-lg">+ Шинэ нийлүүлэгч</button>
+            </div>
+            <div className="grid md:grid-cols-2 gap-3">
+              {suppliers.map(s => (
+                <div key={s.id} className="bg-white rounded-xl border border-slate-200 p-4">
+                  <div className="text-lg font-semibold text-slate-800">🏭 {s.name}</div>
+                  {s.contact && <div className="text-sm text-slate-600 mt-1">👤 {s.contact}</div>}
+                  {s.phone && <div className="text-sm text-slate-600">📞 {s.phone}</div>}
+                  {s.address && <div className="text-sm text-slate-600">📍 {s.address}</div>}
+                </div>
+              ))}
+              {suppliers.length === 0 && <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-500 md:col-span-2">Нийлүүлэгч бүртгэгдээгүй</div>}
+            </div>
+          </>
+        )}
+      </div>
+
+      {showItemForm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-lg my-8 max-h-[90vh] flex flex-col">
+            <div className="p-5 border-b border-slate-200"><h2 className="text-lg font-semibold">{editItem?'Материал засах':'Шинэ материал'}</h2></div>
+            <div className="p-5 space-y-3 overflow-y-auto flex-1">
+              <div><label className="block text-sm mb-1">Нэр *</label><input value={itemForm.name} onChange={(e)=>setItemForm({...itemForm, name: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <div><label className="block text-sm mb-1">Зориулалт</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.keys(PURPOSES) as Purpose[]).map(p => (
+                    <button key={p} onClick={()=>setItemForm({...itemForm, purpose: p})} className={`p-2 rounded-lg border-2 text-sm ${itemForm.purpose===p?'border-amber-500 bg-amber-50':'border-slate-200'}`}>{PURPOSES[p].icon} {PURPOSES[p].label}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-sm mb-1">Нэгж</label><input value={itemForm.unit} onChange={(e)=>setItemForm({...itemForm, unit: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" placeholder="ш, кг, л..." /></div>
+                <div><label className="block text-sm mb-1">Хамг. бага үлдэгдэл</label><input type="number" min="0" value={itemForm.min_quantity} onChange={(e)=>setItemForm({...itemForm, min_quantity: Number(e.target.value)})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              </div>
+              <div><label className="block text-sm mb-1">Байршил</label><input value={itemForm.location} onChange={(e)=>setItemForm({...itemForm, location: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" placeholder="Агуулах 1, тавиур 3..." /></div>
+              <div><label className="block text-sm mb-1">Тэмдэглэл</label><textarea rows={2} value={itemForm.note} onChange={(e)=>setItemForm({...itemForm, note: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+            </div>
+            <div className="p-5 border-t border-slate-200 flex gap-2">
+              <button onClick={()=>setShowItemForm(false)} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg">Болих</button>
+              <button onClick={saveItem} className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium">Хадгалах</button>
             </div>
           </div>
         </div>
       )}
 
-      {showMov && (
+      {showSupForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="p-5 border-b border-slate-200"><h2 className="text-lg font-semibold text-slate-800">Хөдөлгөөн бүртгэх</h2></div>
+          <div className="bg-white rounded-2xl w-full max-w-lg">
+            <div className="p-5 border-b border-slate-200"><h2 className="text-lg font-semibold">Шинэ нийлүүлэгч</h2></div>
             <div className="p-5 space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div><label className="block text-sm text-slate-700 mb-1">Төрөл</label>
-                  <select value={movForm.movement_type} onChange={(e) => setMovForm({ ...movForm, movement_type: e.target.value as Movement['movement_type'] })} className="w-full border border-slate-300 rounded-lg px-3 py-2">
-                    {(Object.keys(MTYPES) as Movement['movement_type'][]).map((k) => (<option key={k} value={k}>{MTYPES[k].icon} {MTYPES[k].label}</option>))}
-                  </select>
-                </div>
-                <div><label className="block text-sm text-slate-700 mb-1">Огноо</label><input type="date" value={movForm.date} onChange={(e) => setMovForm({ ...movForm, date: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-              </div>
-              <div><label className="block text-sm text-slate-700 mb-1">Нэр төрөл</label>
-                <select value={movForm.item_id} onChange={(e) => setMovForm({ ...movForm, item_id: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2">
-                  <option value="">— Сонгох —</option>
-                  {items.map((i) => (<option key={i.id} value={i.id}>{i.name} (үлд: {i.quantity} {i.unit})</option>))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div><label className="block text-sm text-slate-700 mb-1">Тоо</label><input type="number" step="0.01" value={movForm.quantity} onChange={(e) => setMovForm({ ...movForm, quantity: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-                <div><label className="block text-sm text-slate-700 mb-1">Үнэ (₮)</label><input type="number" value={movForm.price} onChange={(e) => setMovForm({ ...movForm, price: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-              </div>
-              {movForm.movement_type === 'purchase' && <div><label className="block text-sm text-slate-700 mb-1">Нийлүүлэгч</label><input value={movForm.supplier} onChange={(e) => setMovForm({ ...movForm, supplier: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>}
-              {movForm.movement_type === 'distribute' && <div><label className="block text-sm text-slate-700 mb-1">Хүлээн авагч</label><input value={movForm.recipient} onChange={(e) => setMovForm({ ...movForm, recipient: e.target.value })} placeholder="Бүлэг, багш..." className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>}
-              <div><label className="block text-sm text-slate-700 mb-1">Тэмдэглэл</label><textarea rows={2} value={movForm.note} onChange={(e) => setMovForm({ ...movForm, note: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-              <div><label className="block text-sm text-slate-700 mb-1">📎 Баримт</label><input type="file" accept="image/*,.pdf" onChange={(e) => setMovForm({ ...movForm, file: e.target.files?.[0] || null })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-              <div className="flex gap-2 pt-2">
-                <button onClick={() => setShowMov(false)} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg">Болих</button>
-                <button onClick={saveMov} disabled={saving || !movForm.item_id || !movForm.quantity} className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white rounded-lg font-medium">{saving ? '...' : 'Хадгалах'}</button>
-              </div>
+              <div><label className="block text-sm mb-1">Нэр *</label><input value={supForm.name} onChange={(e)=>setSupForm({...supForm, name: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" placeholder="Аж ахуйн нэгжийн нэр" /></div>
+              <div><label className="block text-sm mb-1">Холбогдох хүн</label><input value={supForm.contact} onChange={(e)=>setSupForm({...supForm, contact: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <div><label className="block text-sm mb-1">Утас</label><input value={supForm.phone} onChange={(e)=>setSupForm({...supForm, phone: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <div><label className="block text-sm mb-1">Хаяг</label><input value={supForm.address} onChange={(e)=>setSupForm({...supForm, address: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+            </div>
+            <div className="p-5 border-t border-slate-200 flex gap-2">
+              <button onClick={()=>setShowSupForm(false)} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg">Болих</button>
+              <button onClick={saveSupplier} className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium">Хадгалах</button>
             </div>
           </div>
         </div>
