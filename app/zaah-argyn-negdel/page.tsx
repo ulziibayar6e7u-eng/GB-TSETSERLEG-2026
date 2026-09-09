@@ -67,9 +67,13 @@ export default function ZaahArgynNegdelPage() {
   async function load() {
     setLoading(true)
     const { data } = await supabase.from('teach_method')
-      .select('*, employees:author_id(last_name, first_name), target:target_teacher_id(last_name, first_name), groups(name, icon, color)')
+      .select('*, author:author_id(last_name, first_name, role, is_admin), employees:author_id(last_name, first_name), target:target_teacher_id(last_name, first_name), groups(name, icon, color)')
       .eq('kind', tab).order('is_pinned', { ascending: false }).order('date', { ascending: false }).limit(100)
-    setRows((data as unknown as Row[]) || [])
+    let list = (data as any[]) || []
+    if (tab === 'support' && me && me.role === 'arga_zuich' && !me.is_admin) {
+      list = list.filter((r: any) => !(r.author?.is_admin || r.author?.role === 'erhlegch') || r.author_id === me.id)
+    }
+    setRows(list as unknown as Row[])
     setLoading(false)
   }
   useEffect(() => { load() }, [tab])

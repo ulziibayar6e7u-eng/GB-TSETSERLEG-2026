@@ -50,7 +50,7 @@ function bagshMenu(me: Me): MenuSection[] {
       items: [
         { href: '/irts', label: 'Ирц', icon: '⏰' },
         { href: '/juuru', label: 'Жижүүр багш', icon: '🛎' },
-        { href: '/uil-ajilgaa', label: 'Сургалт, үйл ажиллагаа', icon: '📸' },
+        { href: isMusicTeacher ? '/hogjim-uil-ajilgaa' : '/uil-ajilgaa', label: 'Сургалт, үйл ажиллагаа', icon: '📸' },
         { href: '/dugilan', label: 'Дугуйлан', icon: '🎨' },
         { href: '/hutulbur', label: 'Хөтөлбөрийн хэрэгжилт', icon: '📚' },
         { href: '/bagts', label: 'Хөтөлбөрийн бэлэн багц', icon: '📦' },
