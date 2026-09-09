@@ -76,9 +76,9 @@ export default function ZaahArgynNegdelPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: t } = await supabase.from('employees').select('id, last_name, first_name, role, is_active').in('role', ['bagsh']).order('last_name')
-      const list = ((t as any) || []).filter((x: any) => x.is_active !== false)
-      setTeachers(list)
+      const { data: t, error: te } = await supabase.from('employees').select('id, last_name, first_name, role').in('role', ['bagsh']).order('first_name')
+      if (te) console.error('teachers load error', te)
+      setTeachers((t as any) || [])
       const { data: g } = await supabase.from('groups').select('id, name, icon').order('id')
       setGroups((g as any) || [])
     })()
