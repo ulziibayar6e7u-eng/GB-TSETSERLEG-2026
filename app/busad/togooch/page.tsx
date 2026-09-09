@@ -31,7 +31,7 @@ export default function TogoochPage() {
 
   // Taste
   const [tastes, setTastes] = useState<any[]>([])
-  const [tForm, setTForm] = useState({ group_id:'', child_name:'', child_age:'', taster_id:'', comment:'' })
+  const [tForm, setTForm] = useState({ group_id:'', child_name:'', child_age:'', taster_id:'', comment:'', photo: null as File|null })
 
   // Count
   const [counts, setCounts] = useState<any[]>([])
@@ -81,8 +81,17 @@ export default function TogoochPage() {
   }
   async function saveT() {
     if (!tForm.comment.trim()) { alert('Санал бичнэ үү'); return }
-    await supabase.from('cook_taste').insert({ ...tForm, group_id: tForm.group_id ? Number(tForm.group_id) : null, taster_id: tForm.taster_id || null, date, author_id: me?.id || null })
-    setTForm({ group_id:'', child_name:'', child_age:'', taster_id:'', comment:'' })
+    let photo_url: string | null = null
+    if (tForm.photo) {
+      const path = `taste/${Date.now()}_${tForm.photo.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
+      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, tForm.photo)
+      if (upErr) { alert('Зураг алдаа: '+upErr.message); return }
+      const { data: pub } = supabase.storage.from('org-plans').getPublicUrl(path)
+      photo_url = pub?.publicUrl || null
+    }
+    const { photo, ...rest } = tForm
+    await supabase.from('cook_taste').insert({ ...rest, group_id: tForm.group_id ? Number(tForm.group_id) : null, taster_id: tForm.taster_id || null, date, photo_url, author_id: me?.id || null })
+    setTForm({ group_id:'', child_name:'', child_age:'', taster_id:'', comment:'', photo: null })
     loadAll()
   }
   async function saveCount(groupId: number, cnt: number) {
@@ -262,6 +271,11 @@ export default function TogoochPage() {
                 <input value={tForm.child_name} onChange={(e)=>setTForm({...tForm, child_name: e.target.value})} placeholder="Хүүхдийн нэр" className="border border-slate-300 rounded px-2 py-1.5 text-sm" />
                 <input value={tForm.child_age} onChange={(e)=>setTForm({...tForm, child_age: e.target.value})} placeholder="Он сар өдөр" className="border border-slate-300 rounded px-2 py-1.5 text-sm" />
                 <textarea value={tForm.comment} onChange={(e)=>setTForm({...tForm, comment: e.target.value})} placeholder="Санал хүсэлт *" className="border border-slate-300 rounded px-2 py-1.5 text-sm md:col-span-3" rows={2} />
+                <label className="md:col-span-3 flex items-center gap-2 text-sm">
+                  <span className="text-slate-600">📷 Зураг:</span>
+                  <input type="file" accept="image/*" capture="environment" onChange={(e)=>setTForm({...tForm, photo: e.target.files?.[0] || null})} className="flex-1 border border-slate-300 rounded px-2 py-1.5 text-sm" />
+                  {tForm.photo && <span className="text-xs text-emerald-600">✓ {tForm.photo.name}</span>}
+                </label>
                 <button onClick={saveT} className="bg-orange-600 hover:bg-orange-700 text-white text-sm rounded px-3 py-1.5 md:col-span-3">💾 Бүртгэх</button>
               </div>
             </div>
@@ -280,6 +294,7 @@ export default function TogoochPage() {
                   <th className="p-2 text-left border-b">Хүүхэд</th>
                   <th className="p-2 text-center border-b">ОСӨ</th>
                   <th className="p-2 text-left border-b">Санал</th>
+                  <th className="p-2 text-center border-b">Зураг</th>
                   <th className="p-2 text-left border-b">Амтлуулсан</th>
                 </tr></thead>
                 <tbody>
@@ -290,10 +305,11 @@ export default function TogoochPage() {
                       <td className="p-2 border-b border-slate-100">{r.child_name}</td>
                       <td className="p-2 border-b border-slate-100 text-center text-xs">{r.child_age}</td>
                       <td className="p-2 border-b border-slate-100 text-xs">{r.comment}</td>
+                      <td className="p-2 border-b border-slate-100 text-center">{r.photo_url ? <a href={r.photo_url} target="_blank" rel="noopener"><img src={r.photo_url} alt="" className="w-12 h-12 object-cover rounded inline-block" /></a> : '—'}</td>
                       <td className="p-2 border-b border-slate-100 text-xs">{r.taster?`${r.taster.last_name}.${r.taster.first_name}`:''}</td>
                     </tr>
                   ))}
-                  {tastes.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-slate-500">Бүртгэл алга</td></tr>}
+                  {tastes.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-slate-500">Бүртгэл алга</td></tr>}
                 </tbody>
               </table>
             </div>
