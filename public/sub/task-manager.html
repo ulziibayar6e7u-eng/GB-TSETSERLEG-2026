@@ -340,6 +340,15 @@ function renderTask(t) {
 
   const overdue = t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done';
 
+  function calcAutoRating(respAt) {
+    if (!t.due_date) return 100;
+    const due = new Date(t.due_date); due.setHours(23,59,59,999);
+    const at = respAt ? new Date(respAt) : new Date();
+    if (at <= due) return 100;
+    const daysLate = Math.ceil((at - due) / 86400000);
+    return Math.max(0, 100 - daysLate * 5);
+  }
+
   // Хариултууд/тайлангууд харуулах
   const respsHtml = t.responses.length ? `
     <div class="responses">
@@ -370,9 +379,10 @@ function renderTask(t) {
               <div style="font-weight:700;color:#1e40af;font-size:12px;margin-bottom:6px">📊 Үнэлгээ ${r.review ? '<span style="color:#64748b;font-weight:500">(засах)</span>' : 'өгөх'}</div>
               <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
                 <label style="font-size:11px;color:#475569">Хувь:</label>
-                <input type="range" id="rate_${t.id}_${ri}" min="0" max="100" step="10" value="${r.review?.rating ?? 80}" oninput="document.getElementById('ratev_${t.id}_${ri}').textContent=this.value+'%'" style="flex:1">
-                <span id="ratev_${t.id}_${ri}" style="font-weight:700;color:#1e40af;min-width:40px">${r.review?.rating ?? 80}%</span>
+                <input type="range" id="rate_${t.id}_${ri}" min="0" max="100" step="5" value="${r.review?.rating ?? calcAutoRating(r.at)}" oninput="document.getElementById('ratev_${t.id}_${ri}').textContent=this.value+'%'" style="flex:1">
+                <span id="ratev_${t.id}_${ri}" style="font-weight:700;color:#1e40af;min-width:40px">${r.review?.rating ?? calcAutoRating(r.at)}%</span>
               </div>
+              ${(() => { const auto = calcAutoRating(r.at); return auto < 100 ? `<div style="font-size:11px;color:#b45309;margin-bottom:6px">⚠️ Хугацаа хэтэрсэн: авто ${auto}% (өдөрт -5%)</div>` : `<div style="font-size:11px;color:#059669;margin-bottom:6px">✅ Хугацаандаа: авто 100%</div>` })()}
               <input id="rnote_${t.id}_${ri}" value="${escape(r.review?.note || '')}" placeholder="Тэмдэглэл (сонголт)..." style="width:100%;padding:6px 10px;border:1px solid #bfdbfe;border-radius:6px;font-size:12px;margin-bottom:6px">
               <div style="display:flex;gap:6px">
                 <button onclick="event.stopPropagation();reviewResponse('${t.id}',${ri},'approved')" style="flex:1;padding:6px;background:#10b981;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px">✅ Батлах</button>
