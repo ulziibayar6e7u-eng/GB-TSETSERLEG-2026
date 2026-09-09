@@ -72,6 +72,7 @@ function bagshMenu(me: Me): MenuSection[] {
     {
       title: 'Харилцаа',
       items: [
+        { href: '/nyitlag', label: 'Олон нийтийн үйл ажиллагаа', icon: '🎪' },
         { href: '/zurvas', label: 'Эцэг эхтэй чат', icon: '💬' },
         { href: '/zar', label: 'Зар мэдээ', icon: '📢' },
       ],
@@ -111,6 +112,7 @@ function tuslahMenu(me: Me): MenuSection[] {
     {
       title: 'Харилцаа',
       items: [
+        { href: '/nyitlag', label: 'Олон нийтийн үйл ажиллагаа', icon: '🎪' },
         { href: '/zurvas', label: 'Зурвас', icon: '💬' },
         { href: '/zar', label: 'Зар мэдээ', icon: '📢' },
       ],
@@ -157,6 +159,7 @@ function argaZuichMenu(): MenuSection[] {
         { href: '/uureg/report', label: 'Үүргийн нэгтгэл', icon: '📊' },
         { href: '/sanaachlaga', label: 'Санаачилсан ажил', icon: '💡' },
         { href: '/chuluu', label: 'Чөлөө', icon: '📅' },
+        { href: '/nyitlag', label: 'Олон нийтийн үйл ажиллагаа', icon: '🎪' },
         { href: '/zar', label: 'Зар мэдээ', icon: '📢' },
       ],
     },
@@ -210,6 +213,7 @@ function erhlegchMenu(): MenuSection[] {
         { href: '/uureg/report', label: 'Үүргийн нэгтгэл', icon: '📊' },
         { href: '/sanaachlaga', label: 'Санаачилсан ажил', icon: '💡' },
         { href: '/chuluu', label: 'Чөлөө', icon: '📅' },
+        { href: '/nyitlag', label: 'Олон нийтийн үйл ажиллагаа', icon: '🎪' },
         { href: '/zar', label: 'Зар мэдээ', icon: '📢' },
       ],
     },
@@ -257,8 +261,12 @@ function busadMenu(me?: Me): MenuSection[] {
     {
       title: 'Харилцаа',
       items: isTogooch
-        ? [{ href: '/zar', label: 'Зар мэдээ', icon: '📢' }]
+        ? [
+            { href: '/nyitlag', label: 'Олон нийтийн үйл ажиллагаа', icon: '🎪' },
+            { href: '/zar', label: 'Зар мэдээ', icon: '📢' },
+          ]
         : [
+            { href: '/nyitlag', label: 'Олон нийтийн үйл ажиллагаа', icon: '🎪' },
             { href: '/zurvas', label: 'Зурвас', icon: '💬' },
             { href: '/zar', label: 'Зар мэдээ', icon: '📢' },
           ],
