@@ -65,7 +65,7 @@ export default function PublicEventsPage() {
     loadEvents(); if (openId === id) setOpenId(null)
   }
 
-  async function mark(empId: string, eventId: string, status: 'present'|'leave'|'skipped') {
+  async function mark(empId: string, eventId: string, status: 'present'|'leave'|'skipped'|'onduty') {
     if (!canManage) return
     const exists = att.find(a => a.employee_id === empId)
     const payload: any = { status }
@@ -85,6 +85,7 @@ export default function PublicEventsPage() {
   const presentCount = att.filter(a => a.status === 'present').length
   const leaveCount = att.filter(a => a.status === 'leave').length
   const skipCount = att.filter(a => a.status === 'skipped').length
+  const dutyCount = att.filter(a => a.status === 'onduty').length
 
   return (
     <div className="p-6 lg:p-8">
@@ -129,6 +130,7 @@ export default function PublicEventsPage() {
                   <div className="border-t border-slate-200 bg-slate-50 p-4">
                     <div className="flex gap-3 mb-3 text-sm">
                       <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-medium">✅ Ирсэн: {presentCount}</span>
+                      <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-medium">👶 Ангид үлдсэн: {dutyCount}</span>
                       <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">📄 Чөлөөтэй: {leaveCount}</span>
                       <span className="px-3 py-1 rounded-full bg-red-100 text-red-700 font-medium">❌ Тасалсан: {skipCount}</span>
                       <span className="px-3 py-1 rounded-full bg-slate-200 text-slate-700 font-medium">Нийт: {staff.length}</span>
@@ -156,6 +158,7 @@ export default function PublicEventsPage() {
                                 <td className="p-2 border-b border-slate-100 text-xs text-slate-600">{s.positions?.name || ''}</td>
                                 <td className="p-2 border-b border-slate-100 text-center">
                                   {a?.status === 'present' && <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">✅ Ирсэн</span>}
+                                  {a?.status === 'onduty' && <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">👶 Ангид үлдсэн</span>}
                                   {a?.status === 'leave' && <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">📄 Чөлөөтэй</span>}
                                   {a?.status === 'skipped' && <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-medium">❌ Тасалсан</span>}
                                   {!a && <span className="text-slate-400 text-xs">—</span>}
@@ -165,6 +168,7 @@ export default function PublicEventsPage() {
                                   <td className="p-2 border-b border-slate-100 text-center">
                                     <div className="flex gap-1 justify-center">
                                       <button onClick={()=>mark(s.id, e.id, 'present')} title="Ирсэн" className={`px-2 py-1 rounded text-xs font-medium ${a?.status==='present'?'bg-emerald-600 text-white':'bg-emerald-100 hover:bg-emerald-200 text-emerald-700'}`}>✅</button>
+                                      <button onClick={()=>mark(s.id, e.id, 'onduty')} title="Ангид үлдсэн" className={`px-2 py-1 rounded text-xs font-medium ${a?.status==='onduty'?'bg-amber-600 text-white':'bg-amber-100 hover:bg-amber-200 text-amber-700'}`}>👶</button>
                                       <button onClick={()=>mark(s.id, e.id, 'leave')} title="Чөлөөтэй" className={`px-2 py-1 rounded text-xs font-medium ${a?.status==='leave'?'bg-blue-600 text-white':'bg-blue-100 hover:bg-blue-200 text-blue-700'}`}>📄</button>
                                       <button onClick={()=>mark(s.id, e.id, 'skipped')} title="Тасалсан" className={`px-2 py-1 rounded text-xs font-medium ${a?.status==='skipped'?'bg-red-600 text-white':'bg-red-100 hover:bg-red-200 text-red-700'}`}>❌</button>
                                     </div>
