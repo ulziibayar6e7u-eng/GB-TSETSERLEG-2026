@@ -43,13 +43,14 @@ export default function Home() {
   useEffect(() => {
     ;(async () => {
       const today = new Date().toISOString().split('T')[0]
-      const [emps, grps, kids, todayAtt, obs, plansSub] = await Promise.all([
+      const [emps, grps, kids, todayAtt, obs, plansSub, matSub] = await Promise.all([
         supabase.from('employees').select('id', { count: 'exact', head: true }),
         supabase.from('groups').select('id', { count: 'exact', head: true }),
         supabase.from('children').select('id', { count: 'exact', head: true }).eq('status', 'active'),
         supabase.from('attendance').select('status').eq('date', today),
         supabase.from('observations').select('id', { count: 'exact', head: true }).eq('date', today),
         supabase.from('plans').select('id', { count: 'exact', head: true }).eq('status', 'submitted'),
+        supabase.from('teacher_materials').select('id', { count: 'exact', head: true }).eq('status', 'submitted'),
       ])
       const atts = (todayAtt.data as { status: string }[]) || []
       const irsen = atts.filter((a) => a.status === 'irsen').length
@@ -61,7 +62,7 @@ export default function Home() {
         todayAll: atts.length,
         todayIrsen: irsen,
         todayObs: obs.count || 0,
-        plansPending: plansSub.count || 0,
+        plansPending: (plansSub.count || 0) + (matSub.count || 0),
       }))
 
       if (me && !canSeeAllChildren(me.role, me.is_admin)) {
@@ -115,7 +116,7 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-              <AlertCard href="/tulvluguu" icon="📅" label="Хянагдах төлөвлөгөө" value={stats.plansPending} color="bg-blue-50 border-blue-200 text-blue-700" />
+              <AlertCard href="/batlamj" icon="📅" label="Хянагдах төлөвлөгөө" value={stats.plansPending} color="bg-blue-50 border-blue-200 text-blue-700" />
               <AlertCard href="/ajigllt" icon="🎯" label="Өнөөдрийн ажиглалт" value={stats.todayObs} color="bg-emerald-50 border-emerald-200 text-emerald-700" />
               <AlertCard href="/hamgaalal" icon="🛡" label="Хүүхэд хамгааллын анхаарал" value={0} color="bg-red-50 border-red-200 text-red-700" />
             </div>

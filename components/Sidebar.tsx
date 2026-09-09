@@ -56,6 +56,7 @@ function bagshMenu(me: Me): MenuSection[] {
         { href: '/bagts', label: 'Хөтөлбөрийн бэлэн багц', icon: '📦' },
         { href: '/heregleg', label: 'Хэрэглэгдэхүүн, хөтөлбөр', icon: '📎' },
         { href: '/zaah-argyn-negdel', label: 'Заах аргын нэгдэл', icon: '🧭' },
+        { href: '/zaah-argyn-negdel/report', label: 'Заах аргын нэгтгэл', icon: '📊' },
       ],
     },
     {
@@ -63,6 +64,7 @@ function bagshMenu(me: Me): MenuSection[] {
       items: [
         { href: '/tulvluguu-bail', label: 'Байгууллагын төлөвлөгөө', icon: '📆' },
         { href: '/uureg', label: 'Үүрэг даалгавар', icon: '📌' },
+        { href: '/uureg/report', label: 'Үүргийн нэгтгэл', icon: '📊' },
         { href: '/sanaachlaga', label: 'Санаачилсан ажил', icon: '💡' },
         { href: '/chuluu', label: 'Чөлөө', icon: '📅' },
       ],
@@ -103,6 +105,7 @@ function tuslahMenu(me: Me): MenuSection[] {
       title: 'Ажил үүрэг',
       items: [
         { href: '/uureg', label: 'Үүрэг даалгавар', icon: '📌' },
+        { href: '/uureg/report', label: 'Үүргийн нэгтгэл', icon: '📊' },
       ],
     },
     {
@@ -134,6 +137,7 @@ function argaZuichMenu(): MenuSection[] {
         { href: '/bagts', label: 'Хөтөлбөрийн бэлэн багц', icon: '📦' },
         { href: '/heregleg', label: 'Хэрэглэгдэхүүн, хөтөлбөр', icon: '📎' },
         { href: '/zaah-argyn-negdel', label: 'Заах аргын нэгдэл', icon: '🧭' },
+        { href: '/zaah-argyn-negdel/report', label: 'Заах аргын нэгтгэл', icon: '📊' },
         { href: '/irts', label: 'Ирц', icon: '⏰' },
         { href: '/juuru', label: 'Жижүүр багшийн хуваарь', icon: '🛎' },
       ],
@@ -150,6 +154,7 @@ function argaZuichMenu(): MenuSection[] {
       title: 'Ажил үүрэг',
       items: [
         { href: '/uureg', label: 'Үүрэг даалгавар', icon: '📌' },
+        { href: '/uureg/report', label: 'Үүргийн нэгтгэл', icon: '📊' },
         { href: '/sanaachlaga', label: 'Санаачилсан ажил', icon: '💡' },
         { href: '/chuluu', label: 'Чөлөө', icon: '📅' },
         { href: '/zar', label: 'Зар мэдээ', icon: '📢' },
@@ -178,6 +183,7 @@ function erhlegchMenu(): MenuSection[] {
         { href: '/hutulbur', label: 'Хөтөлбөрийн хэрэгжилт', icon: '📚' },
         { href: '/heregleg', label: 'Хэрэглэгдэхүүн, хөтөлбөр', icon: '📎' },
         { href: '/zaah-argyn-negdel', label: 'Заах аргын нэгдэл', icon: '🧭' },
+        { href: '/zaah-argyn-negdel/report', label: 'Заах аргын нэгтгэл', icon: '📊' },
         { href: '/irts-staff', label: 'Ажилтны ирц', icon: '⏰' },
         { href: '/juuru', label: 'Жижүүр багшийн тайлан', icon: '🛎' },
       ],
@@ -201,6 +207,7 @@ function erhlegchMenu(): MenuSection[] {
       title: 'Мэдээлэл',
       items: [
         { href: '/uureg', label: 'Үүрэг даалгавар', icon: '📌' },
+        { href: '/uureg/report', label: 'Үүргийн нэгтгэл', icon: '📊' },
         { href: '/sanaachlaga', label: 'Санаачилсан ажил', icon: '💡' },
         { href: '/chuluu', label: 'Чөлөө', icon: '📅' },
         { href: '/zar', label: 'Зар мэдээ', icon: '📢' },
@@ -242,6 +249,7 @@ function busadMenu(me?: Me): MenuSection[] {
       items: [
         { href: '/tulvluguu-bail', label: 'Байгууллагын төлөвлөгөө', icon: '📆' },
         { href: '/uureg', label: 'Үүрэг даалгавар', icon: '📌' },
+        { href: '/uureg/report', label: 'Үүргийн нэгтгэл', icon: '📊' },
         { href: '/sanaachlaga', label: 'Санаачилсан ажил', icon: '💡' },
         { href: '/chuluu', label: 'Чөлөө', icon: '📅' },
       ],
