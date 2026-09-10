@@ -417,41 +417,42 @@ export default function TogoochPage() {
           </>
         )}
 
-        {tab === 'report' && (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-white rounded-2xl border border-slate-200 p-5">
-              <div className="text-4xl mb-2">🍚</div>
-              <div className="text-3xl font-bold text-orange-600">{portion.length}</div>
-              <div className="text-sm text-slate-500 mt-1">Хоолны хэмжээ бичлэг</div>
+        {tab === 'report' && (() => {
+          const cards = [
+            { key: 'portion' as Tab, icon: '🍚', color: 'text-orange-600', border: 'border-orange-200', label: 'Хоолны хэмжээ бичлэг', count: portion.length,
+              csv: () => download('portion', portion, ['Огноо','Бүлэг','Хоол','Хэмжээ (г)','Нэмэлт','Тэмдэглэл'], (r:any)=>[r.date, r.groups?.name||'', r.meal_slot||'', r.portion_g||0, r.extra_g||0, r.note||'']) },
+            { key: 'sample' as Tab, icon: '🧪', color: 'text-blue-600', border: 'border-blue-200', label: 'Дээж бүртгэл', count: samples.length,
+              csv: () => download('sample', samples, ['Огноо','Хоол','Хэмжээ','Авах цаг','Хадгалах хэм','Гаргах цаг','Тэмдэглэл'], (r:any)=>[r.date,r.meal_name||'',r.sample_size||'',r.sample_taken_time||'',r.keep_temp||'',r.taken_out_time||'',r.disposal_note||'']) },
+            { key: 'taste' as Tab, icon: '👅', color: 'text-pink-600', border: 'border-pink-200', label: 'Амтлуулсан бүртгэл', count: tastes.length,
+              csv: () => download('taste', tastes, ['Огноо','Бүлэг','Хүүхэд','ОСӨ','Санал','Амтлуулсан'], (r:any)=>[r.date, r.groups?.name||'', r.child_name||'', r.child_age||'', r.comment||'', r.taster?`${r.taster.last_name}.${r.taster.first_name}`:'']) },
+            { key: 'count' as Tab, icon: '👶', color: 'text-emerald-600', border: 'border-emerald-200', label: 'Хүүхэд-өдөр (нийт)', count: counts.reduce((s,c)=>s+(c.count||0),0),
+              csv: () => download('count', counts, ['Огноо','Бүлэг','Тоо'], (r:any)=>[r.date, r.groups?.name||'', r.count]) },
+            { key: 'sanitation' as Tab, icon: '🧼', color: 'text-teal-600', border: 'border-teal-200', label: 'Ариутгалын бүртгэл', count: sanit.length,
+              csv: () => download('sanitation', sanit, ['Огноо','Бүлэг','Цаг','Тэмдэглэл'], (r:any)=>[r.date, r.groups?.name||'', r.time_slot, r.note||'']) },
+          ]
+          return (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {cards.map(c => (
+                <div key={c.key} className={`bg-white rounded-2xl border-2 ${c.border} p-5 flex flex-col`}>
+                  <div className="text-4xl mb-2">{c.icon}</div>
+                  <div className={`text-3xl font-bold ${c.color}`}>{c.count}</div>
+                  <div className="text-sm text-slate-500 mt-1 mb-3">{c.label}</div>
+                  <div className="mt-auto flex gap-2">
+                    <button onClick={()=>setTab(c.key)} className="flex-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg font-medium">👁 Харах</button>
+                    <button onClick={c.csv} className="flex-1 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg font-medium">⬇️ CSV</button>
+                  </div>
+                </div>
+              ))}
+              <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl p-5 text-white">
+                <div className="text-4xl mb-2">📁</div>
+                <div className="font-semibold mb-2">Архивт хадгалах</div>
+                <div className="text-xs opacity-90 mb-3">Бүх 5 бүртгэлийг нэгэн зэрэг татаж, хэвлэн архивт өгнө.</div>
+                <button onClick={()=>{ cards.forEach(c => c.csv()) }} className="bg-white text-orange-700 rounded-lg px-3 py-2 text-sm font-semibold w-full mb-2">⬇️ 5 CSV бүгдийг татах</button>
+                <button onClick={()=>window.print()} className="bg-white/20 border border-white/40 rounded-lg px-3 py-2 text-sm font-semibold w-full">🖨️ Хэвлэх</button>
+              </div>
             </div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-5">
-              <div className="text-4xl mb-2">🧪</div>
-              <div className="text-3xl font-bold text-blue-600">{samples.length}</div>
-              <div className="text-sm text-slate-500 mt-1">Дээж бүртгэл</div>
-            </div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-5">
-              <div className="text-4xl mb-2">👅</div>
-              <div className="text-3xl font-bold text-pink-600">{tastes.length}</div>
-              <div className="text-sm text-slate-500 mt-1">Амтлуулсан бүртгэл</div>
-            </div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-5">
-              <div className="text-4xl mb-2">👶</div>
-              <div className="text-3xl font-bold text-emerald-600">{counts.reduce((s,c)=>s+(c.count||0),0)}</div>
-              <div className="text-sm text-slate-500 mt-1">Хүүхэд-өдөр (нийт)</div>
-            </div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-5">
-              <div className="text-4xl mb-2">🧼</div>
-              <div className="text-3xl font-bold text-teal-600">{sanit.length}</div>
-              <div className="text-sm text-slate-500 mt-1">Ариутгалын бүртгэл</div>
-            </div>
-            <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl p-5 text-white">
-              <div className="text-4xl mb-2">📁</div>
-              <div className="font-semibold mb-2">Архивт хадгалах</div>
-              <div className="text-xs opacity-90 mb-3">Бүх бүртгэлийг CSV татаж, хэвлэн архивт өгнө.</div>
-              <button onClick={()=>window.print()} className="bg-white text-orange-700 rounded-lg px-3 py-2 text-sm font-semibold w-full">🖨️ Бүгдийг хэвлэх</button>
-            </div>
-          </div>
-        )}
+          )
+        })()}
       </div>
     </div>
   )
