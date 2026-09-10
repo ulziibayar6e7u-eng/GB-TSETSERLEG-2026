@@ -103,7 +103,7 @@ function Inner({ id }: { id: string }) {
     const [e, r, c, gt] = await Promise.all([
       supabase.from('employees').select('id, last_name, first_name, positions(name)').eq('id', id).maybeSingle(),
       supabase.from('tuslah_records').select('*, children(id, last_name, first_name), reviewer:reviewer_id(id, last_name, first_name)').eq('employee_id', id).eq('category', tab).order('date', { ascending: false }),
-      supabase.from('children').select('id, last_name, first_name').eq('status', 'active').order('last_name'),
+      supabase.from('children').select('id, last_name, first_name, group_id').eq('status', 'active').order('last_name'),
       supabase.from('group_teachers').select('group_id').eq('employee_id', id),
     ])
     const groupIds = ((gt.data as { group_id: number }[]) || []).map((r) => r.group_id)
@@ -123,7 +123,9 @@ function Inner({ id }: { id: string }) {
     }
     setEmp(e.data as unknown as Employee)
     setRecords((r.data as unknown as Record[]) || [])
-    setChildren((c.data as Child[]) || [])
+    const allChildren = (c.data as any[]) || []
+    const filtered = groupIds.length > 0 ? allChildren.filter((k) => groupIds.includes(k.group_id)) : allChildren
+    setChildren(filtered as Child[])
 
     // Бүлгийн хүүхдүүд + сарын дадал үнэлгээ
     if (tab === 'ahits' && groupIds.length > 0) {
