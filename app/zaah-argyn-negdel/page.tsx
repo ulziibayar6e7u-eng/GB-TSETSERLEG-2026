@@ -20,7 +20,7 @@ const SUBJECTS: Record<string,string> = {
 }
 
 const BEG_LINKS = [
-  { title: 'Чанга уншлагын хичээл №1', url: 'https://www.facebook.com/beg.gov.mn' },
+  { title: 'Хичээл №1: Чанга уншлагын арга зүйн үндэс', url: 'https://www.facebook.com/watch/?v=1580154890033808' },
   { title: 'Чанга уншлагын хичээл №2', url: 'https://www.facebook.com/beg.gov.mn' },
   { title: 'Чанга уншлагын хичээл №3', url: 'https://www.facebook.com/beg.gov.mn' },
   { title: 'Чанга уншлагын хичээл №4', url: 'https://www.facebook.com/beg.gov.mn' },
