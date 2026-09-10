@@ -77,7 +77,35 @@ const INSP_STATUS = {
 export default function EmchPage() {
   const supabase = useMemo(() => createClient(), [])
   const { me } = useMe()
-  const [tab, setTab] = useState<'children' | 'staff' | 'inspection' | 'cleaning_review'>('children')
+  const [tab, setTab] = useState<'children' | 'staff' | 'inspection' | 'cleaning_review' | 'cook_review' | 'uilchleg_review'>('children')
+  const [cookRows, setCookRows] = useState<any[]>([])
+  const [cookKind, setCookKind] = useState<'sample'|'taste'|'sanitation'>('sample')
+  const [uilRows, setUilRows] = useState<any[]>([])
+  const [reviewOpen, setReviewOpen] = useState<{ table: string; id: string; status: string; note: string }|null>(null)
+
+  async function loadCookRows() {
+    const table = cookKind === 'sample' ? 'cook_sample' : cookKind === 'taste' ? 'cook_taste' : 'cook_sanitation'
+    const { data } = await supabase.from(table).select('*, employees:author_id(last_name, first_name), groups(name, icon), doctor:doctor_id(last_name, first_name)').order('date', { ascending: false }).limit(100)
+    setCookRows((data as any) || [])
+  }
+  async function loadUilRows() {
+    const { data } = await supabase.from('staff_daily_logs').select('*, employees:author_id(last_name, first_name, positions(name)), doctor:doctor_id(last_name, first_name)').order('date', { ascending: false }).limit(100)
+    setUilRows(((data as any) || []).filter((r: any) => {
+      const p = (r.employees?.positions?.name || '').toLowerCase()
+      return p.includes('үйлчлэг') || p.includes('гал тогоо') || p.includes('туслах')
+    }))
+  }
+  useEffect(() => { if (tab === 'cook_review') loadCookRows() }, [tab, cookKind])
+  useEffect(() => { if (tab === 'uilchleg_review') loadUilRows() }, [tab])
+
+  async function saveDocReview() {
+    if (!reviewOpen || !me) return
+    const { table, id, status, note } = reviewOpen
+    await supabase.from(table).update({ doctor_status: status || null, doctor_note: note || null, doctor_id: me.id, reviewed_at: new Date().toISOString() }).eq('id', id)
+    setReviewOpen(null)
+    if (tab === 'cook_review') loadCookRows()
+    if (tab === 'uilchleg_review') loadUilRows()
+  }
   const [cleaningRows, setCleaningRows] = useState<{
     id: string; date: string; category: string; location: string | null; description: string | null;
     status: string; photo_url: string | null; extra_links: string[];
@@ -279,11 +307,13 @@ export default function EmchPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-3 mb-6 flex gap-2 flex-wrap items-center">
-          <button onClick={() => setTab('children')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'children' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>👧 Хүүхэд ({stats.child})</button>
-          <button onClick={() => setTab('staff')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'staff' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>👨‍🏫 Багш ажилтан ({stats.staff})</button>
-          <button onClick={() => setTab('inspection')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'inspection' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>🔍 Эмчийн хяналт ({stats.insp}){stats.warnings > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{stats.warnings}</span>}</button>
-          <button onClick={() => setTab('cleaning_review')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'cleaning_review' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>🧹 Туслах цэвэрлэгээ хянах ({cleaningRows.length}){cleaningRows.filter((c) => !c.doctor_status).length > 0 && <span className="ml-1 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">{cleaningRows.filter((c) => !c.doctor_status).length}</span>}</button>
+        <div className="bg-white rounded-2xl border border-slate-200 p-3 mb-6 flex gap-2 items-center overflow-x-auto">
+          <button onClick={() => setTab('children')} className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${tab === 'children' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>👧 Хүүхэд ({stats.child})</button>
+          <button onClick={() => setTab('staff')} className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${tab === 'staff' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>👨‍🏫 Ажилтан ({stats.staff})</button>
+          <button onClick={() => setTab('inspection')} className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${tab === 'inspection' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>🔍 Хяналт ({stats.insp}){stats.warnings > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{stats.warnings}</span>}</button>
+          <button onClick={() => setTab('cleaning_review')} className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${tab === 'cleaning_review' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>🧹 Туслах цэвэрлэгээ ({cleaningRows.length}){cleaningRows.filter((c) => !c.doctor_status).length > 0 && <span className="ml-1 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">{cleaningRows.filter((c) => !c.doctor_status).length}</span>}</button>
+          <button onClick={() => setTab('cook_review')} className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${tab === 'cook_review' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>👨‍🍳 Тогооч хянах</button>
+          <button onClick={() => setTab('uilchleg_review')} className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${tab === 'uilchleg_review' ? 'bg-red-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>🧹 Үйлчлэгч тайлан</button>
           <div className="ml-auto">
             {tab === 'children' && <button onClick={() => openAdd('child')} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Хүүхдийн бүртгэл</button>}
             {tab === 'staff' && <button onClick={() => openAdd('staff')} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Ажилтны бүртгэл</button>}
@@ -394,6 +424,77 @@ export default function EmchPage() {
                           {c.doctor_status ? '🔄 Дахин' : '🩺 Үнэлэх'}
                         </button>
                       )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        ) : tab === 'cook_review' ? (
+          <>
+            <div className="bg-white rounded-2xl border border-slate-200 p-3 mb-3 flex gap-2 flex-wrap">
+              <button onClick={()=>setCookKind('sample')} className={`px-3 py-1.5 rounded-lg text-sm font-medium ${cookKind==='sample'?'bg-orange-600 text-white':'bg-slate-100 text-slate-700'}`}>🧪 Дээж</button>
+              <button onClick={()=>setCookKind('taste')} className={`px-3 py-1.5 rounded-lg text-sm font-medium ${cookKind==='taste'?'bg-orange-600 text-white':'bg-slate-100 text-slate-700'}`}>👅 Амталгаа</button>
+              <button onClick={()=>setCookKind('sanitation')} className={`px-3 py-1.5 rounded-lg text-sm font-medium ${cookKind==='sanitation'?'bg-orange-600 text-white':'bg-slate-100 text-slate-700'}`}>🧼 Ариутгал</button>
+            </div>
+            {cookRows.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500"><div className="text-5xl mb-3">👨‍🍳</div>Бүртгэл алга</div>
+            ) : (
+              <div className="space-y-3">
+                {cookRows.map((r: any) => {
+                  const table = cookKind === 'sample' ? 'cook_sample' : cookKind === 'taste' ? 'cook_taste' : 'cook_sanitation'
+                  const emchSt = r.doctor_status ? INSP_STATUS[r.doctor_status as 'ok'|'warning'|'critical'] : null
+                  return (
+                    <div key={r.id} className="bg-white rounded-xl border border-slate-200 p-4">
+                      <div className="flex items-start gap-3 flex-wrap">
+                        <div className="text-2xl">{cookKind==='sample'?'🧪':cookKind==='taste'?'👅':'🧼'}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className="text-xs text-slate-500">🗓 {r.date}</span>
+                            {cookKind === 'sample' && r.meal_name && <span className="text-sm font-semibold">{r.meal_name}</span>}
+                            {cookKind === 'taste' && r.child_name && <span className="text-sm font-semibold">{r.child_name}</span>}
+                            {cookKind === 'sanitation' && r.time_slot && <span className="text-sm font-semibold">🕐 {r.time_slot}</span>}
+                            {r.groups && <span className="text-xs text-slate-500">{r.groups.icon} {r.groups.name}</span>}
+                            {emchSt ? <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${emchSt.color}`}>{emchSt.icon} {emchSt.label}</span> : <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">⏳ Хянаагүй</span>}
+                          </div>
+                          {cookKind === 'sample' && <div className="text-xs text-slate-600">Хэмжээ: {r.sample_size} · Хадг. хэм: {r.keep_temp} · Гаргах: {r.taken_out_time}</div>}
+                          {cookKind === 'taste' && <div className="text-sm text-slate-700 whitespace-pre-wrap">{r.comment}</div>}
+                          {cookKind === 'sanitation' && r.note && <div className="text-sm text-slate-700">{r.note}</div>}
+                          {r.photo_url && <a href={r.photo_url} target="_blank" rel="noopener" className="inline-block mt-1 text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">📷 Зураг</a>}
+                          {r.employees && <div className="text-xs text-slate-400 mt-1">— {r.employees.last_name}.{r.employees.first_name}</div>}
+                          {r.doctor_note && <div className="mt-2 p-2 rounded bg-red-50 border-l-4 border-red-400 text-sm"><b className="text-red-700 text-xs">🩺 Эмч:</b> {r.doctor_note}</div>}
+                        </div>
+                        <button onClick={()=>setReviewOpen({ table, id: r.id, status: r.doctor_status || 'ok', note: r.doctor_note || '' })} className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium flex-shrink-0">🩺 Үнэлэх</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
+        ) : tab === 'uilchleg_review' ? (
+          uilRows.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500"><div className="text-5xl mb-3">🧹</div>Тайлан алга</div>
+          ) : (
+            <div className="space-y-3">
+              {uilRows.map((r: any) => {
+                const emchSt = r.doctor_status ? INSP_STATUS[r.doctor_status as 'ok'|'warning'|'critical'] : null
+                return (
+                  <div key={r.id} className="bg-white rounded-xl border border-slate-200 p-4">
+                    <div className="flex items-start gap-3 flex-wrap">
+                      <div className="text-2xl">📓</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="text-xs text-slate-500">🗓 {r.date}</span>
+                          {r.title && <span className="text-sm font-semibold">{r.title}</span>}
+                          {r.category && <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded">{r.category}</span>}
+                          {emchSt ? <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${emchSt.color}`}>{emchSt.icon} {emchSt.label}</span> : <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">⏳ Хянаагүй</span>}
+                        </div>
+                        {r.description && <div className="text-sm text-slate-700 whitespace-pre-wrap">{r.description}</div>}
+                        {r.employees && <div className="text-xs text-slate-400 mt-1">— {r.employees.last_name}.{r.employees.first_name} {r.employees.positions?.name?`(${r.employees.positions.name})`:''}</div>}
+                        {r.doctor_note && <div className="mt-2 p-2 rounded bg-red-50 border-l-4 border-red-400 text-sm"><b className="text-red-700 text-xs">🩺 Эмч:</b> {r.doctor_note}</div>}
+                      </div>
+                      <button onClick={()=>setReviewOpen({ table: 'staff_daily_logs', id: r.id, status: r.doctor_status || 'ok', note: r.doctor_note || '' })} className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium flex-shrink-0">🩺 Үнэлэх</button>
                     </div>
                   </div>
                 )
@@ -585,6 +686,32 @@ export default function EmchPage() {
                 <button onClick={() => setShowInsp(false)} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg">Болих</button>
                 <button onClick={saveInsp} disabled={savingInsp} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-slate-300 text-white rounded-lg font-medium">{savingInsp ? '...' : 'Хадгалах'}</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reviewOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl w-full max-w-md">
+            <div className="p-5 border-b border-slate-200"><h2 className="text-lg font-semibold">🩺 Эмчийн үнэлгээ</h2></div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="block text-sm mb-2">Төлөв</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['ok','warning','critical'] as const).map((s) => (
+                    <button key={s} onClick={() => setReviewOpen({ ...reviewOpen!, status: s })} className={`px-3 py-2 rounded-lg text-sm font-medium ${reviewOpen!.status === s ? INSP_STATUS[s].color : 'bg-slate-100 text-slate-700'}`}>{INSP_STATUS[s].icon} {INSP_STATUS[s].label}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Тэмдэглэл / зөвлөгөө</label>
+                <textarea rows={4} value={reviewOpen.note} onChange={(e) => setReviewOpen({ ...reviewOpen!, note: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" placeholder="Юуг хянасан, ямар зөвлөгөө өгсөн..." />
+              </div>
+            </div>
+            <div className="p-5 border-t border-slate-200 flex gap-2">
+              <button onClick={()=>setReviewOpen(null)} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg">Болих</button>
+              <button onClick={saveDocReview} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium">💾 Хадгалах</button>
             </div>
           </div>
         </div>
