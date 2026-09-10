@@ -475,7 +475,7 @@ export default function BatlamjPage() {
         const isImage  = ['png','jpg','jpeg','gif','webp','svg'].includes(ext)
         const isVideo  = ['mp4','webm','mov'].includes(ext)
         const viewerSrc = isOffice
-          ? `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(previewUrl)}`
+          ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewUrl)}`
           : previewUrl
         return (
           <div className="fixed inset-0 bg-black/60 z-50 flex flex-col" onContextMenu={(e) => e.preventDefault()}>
@@ -492,7 +492,7 @@ export default function BatlamjPage() {
               ) : isVideo ? (
                 <video src={previewUrl} controls controlsList="nodownload" className="max-w-full max-h-full" onContextMenu={(e) => e.preventDefault()} />
               ) : (
-                <iframe src={viewerSrc} className="w-full h-full border-0 bg-white" sandbox="allow-scripts allow-same-origin" />
+                <iframe src={viewerSrc} className="w-full h-full border-0 bg-white" />
               )}
             </div>
           </div>
