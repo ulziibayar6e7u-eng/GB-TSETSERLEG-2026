@@ -116,7 +116,12 @@ export default function AjiglltPage() {
       } as unknown as Observation)
     })
     combined.sort((x, y) => (y.date > x.date ? 1 : -1))
-    setObservations(combined)
+    const isLeader = me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich')
+    const isMusicTeacher = me && (me.first_name === 'Өлзийбаяр' || me.groups?.some((g: any) => g.code === 'hogjim'))
+    const filtered = isLeader ? combined
+      : isMusicTeacher ? combined
+      : combined.filter((o) => !o.observer_id || o.observer_id === me?.id)
+    setObservations(filtered)
     setAreas((ar.data as Area[]) || [])
     setChildren((c.data as Child[]) || [])
     setOutcomes((o.data as typeof outcomes) || [])
