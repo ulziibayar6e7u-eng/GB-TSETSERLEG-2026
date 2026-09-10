@@ -82,7 +82,10 @@ export default function IrtsStaffPage() {
             <h1 className="text-2xl font-bold text-slate-800">Ажилтны ирц</h1>
             <p className="text-sm text-slate-500 mt-1">Өдөр тутмын ажилтны ирцийн бүртгэл · Дархад автоматаар хадгалагдана</p>
           </div>
-          <button onClick={() => history.back()} className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium">← Буцах</button>
+          <div className="flex gap-2">
+            <a href="/irts-staff/report" className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium">📊 Сарын нэгтгэл</a>
+            <button onClick={() => history.back()} className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium">← Буцах</button>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6">

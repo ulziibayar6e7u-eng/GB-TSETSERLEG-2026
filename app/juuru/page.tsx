@@ -332,30 +332,49 @@ export default function JuuruPage() {
               const filtered = src.filter((r) => r.category === repCat)
               if (loading) return <div className="p-12 text-center text-slate-500">Ачааллаж байна...</div>
               if (filtered.length === 0) return <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500"><div className="text-5xl mb-3">{CATS[repCat].icon}</div><div>Тайлан байхгүй</div></div>
+              const byTeacher: Record<string, typeof filtered> = {}
+              filtered.forEach((r) => {
+                const tid = r.teacher_id || 'unknown'
+                if (!byTeacher[tid]) byTeacher[tid] = []
+                byTeacher[tid].push(r)
+              })
               return (
             <div className="space-y-3">
-              {filtered.map((r) => {
-                const cat = CATS[r.category as Cat] || CATS.other
+              {Object.entries(byTeacher).map(([tid, group]) => {
+                const first = group[0]
+                const cat = CATS[repCat as Cat] || CATS.other
+                const teacherName = first.employees ? `${first.employees.last_name}.${first.employees.first_name}` : 'Тодорхойгүй'
+                const dates = [...new Set(group.map(r => r.date))].sort()
                 return (
-                  <div key={r.id} className="bg-white rounded-xl border border-slate-200 p-5">
-                    <div className="flex items-start gap-3">
+                  <div key={tid} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div className="bg-slate-50 p-4 border-b border-slate-200 flex items-center gap-3 flex-wrap">
                       <div className="text-2xl">{cat.icon}</div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="text-xs text-slate-500">🗓 {r.date}</span>
-                          <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">{cat.label}</span>
-                          {r.employees && <span className="text-xs text-slate-500">— {r.employees.last_name}.{r.employees.first_name}</span>}
-                        </div>
-                        {r.title && <h3 className="font-semibold text-slate-800">{r.title}</h3>}
-                        {r.description && <div className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">{r.description}</div>}
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {r.file_url && <a href={r.file_url} target="_blank" rel="noopener" className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg">📎 Нотлох баримт</a>}
-                          {(r.extra_links || []).map((url, i) => (<a key={i} href={url} target="_blank" rel="noopener" className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg">🔗 Линк {i + 1}</a>))}
+                        <div className="font-bold text-slate-800">👤 {teacherName}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">
+                          {cat.label} · {group.length} бичлэг · {dates[0]}{dates.length > 1 ? ` — ${dates[dates.length-1]}` : ''}
                         </div>
                       </div>
-                      {(me.is_admin || me.role === 'erhlegch' || r.teacher_id === me.id) && (
-                        <button onClick={() => removeReport(r.id)} className="text-red-600 hover:text-red-800 text-xs px-2 py-1">Устгах</button>
-                      )}
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {group.map((r) => (
+                        <div key={r.id} className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs text-slate-500 mb-1">🗓 {r.date}</div>
+                              {r.title && <h3 className="font-semibold text-slate-800">{r.title}</h3>}
+                              {r.description && <div className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">{r.description}</div>}
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {r.file_url && <a href={r.file_url} target="_blank" rel="noopener" className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg">📎 Нотлох баримт</a>}
+                                {(r.extra_links || []).map((url, i) => (<a key={i} href={url} target="_blank" rel="noopener" className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg">🔗 Линк {i + 1}</a>))}
+                              </div>
+                            </div>
+                            {(me.is_admin || me.role === 'erhlegch' || r.teacher_id === me.id) && (
+                              <button onClick={() => removeReport(r.id)} className="text-red-600 hover:text-red-800 text-xs px-2 py-1">Устгах</button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )
