@@ -9,14 +9,15 @@ export default function FileViewer({ url, onClose }: { url: string; onClose: () 
     ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`
     : url
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex flex-col" onContextMenu={(e) => e.preventDefault()}>
-      <div className="bg-white px-4 py-2 flex items-center justify-between gap-3">
+    <div className="fixed inset-0 bg-black/70 flex flex-col" style={{zIndex: 99999}} onContextMenu={(e) => e.preventDefault()}>
+      <div className="bg-white px-4 py-3 flex items-center justify-between gap-3 border-b-2 border-red-500">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-lg">👁</span>
           <span className="text-sm text-slate-700 truncate">Зөвхөн харах горим</span>
         </div>
-        <button onClick={onClose} className="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg">✕ Хаах</button>
+        <button onClick={onClose} className="text-sm bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold shadow">← Буцах</button>
       </div>
+      <button onClick={onClose} className="fixed top-3 right-3 bg-red-600 hover:bg-red-700 text-white w-12 h-12 rounded-full font-bold text-xl shadow-lg" style={{zIndex: 100000}} title="Хаах">✕</button>
       <div className="flex-1 bg-slate-900 flex items-center justify-center overflow-auto select-none">
         {isImage ? (
           <img src={url} alt="" className="max-w-full max-h-full object-contain pointer-events-none" draggable={false} />
