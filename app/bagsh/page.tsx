@@ -50,16 +50,17 @@ export default function BagshListPage() {
         .in('role', ['bagsh', 'bagsh_tuslah'])
         .order('first_name')
 
-      const [gtRes, clubRes, plansRes, obsRes] = await Promise.all([
+      const [gtRes, clubRes, plansRes, obsRes, matRes] = await Promise.all([
         supabase.from('group_teachers').select('employee_id, role_in_group, groups(id, code, name, icon, color)'),
         supabase.from('clubs').select('id, name, icon, color, teacher_id'),
         supabase.from('plans').select('id, author_id, status, created_at'),
         supabase.from('observations').select('id, observer_id, date, created_at'),
+        supabase.from('teacher_materials').select('id, author_id, status, created_at'),
       ])
 
       const gts = (gtRes.data as unknown as {employee_id: string; role_in_group: string; groups: {id:number;code:string;name:string;icon:string;color:string}}[]) || []
       const clubs = (clubRes.data as {id:number; name:string; icon:string; color:string; teacher_id:string|null}[]) || []
-      const plans = (plansRes.data as {id:string; author_id:string|null; status:string; created_at:string}[]) || []
+      const plans = [ ...((plansRes.data as any[]) || []), ...((matRes.data as any[]) || []) ] as {id:string; author_id:string|null; status:string; created_at:string}[]
       const obs = (obsRes.data as {id:string; observer_id:string|null; date:string; created_at:string}[]) || []
 
       const stats: TeacherStats[] = ((emps as unknown as Employee[]) || []).map((emp) => {
@@ -100,13 +101,19 @@ export default function BagshListPage() {
         .select('id, last_name, first_name, positions(name)')
         .eq('role', 'arga_zuich')
         .order('first_name')
-      const { data: azActs } = await supabase
-        .from('argazuich_activities')
-        .select('employee_id, category')
-      const azActRows = (azActs as { employee_id: string; category: 'negdel'|'hicheel_suusan'|'zuvluguu' }[]) || []
+      const [azActsRes, teachMethodRes] = await Promise.all([
+        supabase.from('argazuich_activities').select('employee_id, category'),
+        supabase.from('teach_method').select('author_id, kind, note'),
+      ])
+      const azActRows = (azActsRes.data as { employee_id: string; category: 'negdel'|'hicheel_suusan'|'zuvluguu' }[]) || []
+      const tmRows = (teachMethodRes.data as { author_id: string; kind: string; note: string|null }[]) || []
       const azList = ((azEmps as unknown as { id: string; last_name: string; first_name: string; positions?: { name: string } }[]) || []).map((e) => {
         const c = { negdel: 0, hicheel_suusan: 0, zuvluguu: 0 }
         azActRows.filter((r) => r.employee_id === e.id).forEach((r) => { c[r.category]++ })
+        tmRows.filter((r) => r.author_id === e.id).forEach((r) => {
+          if (r.kind === 'activity') c.negdel++
+          else if (r.kind === 'support') { c.hicheel_suusan++; if (r.note && r.note.trim()) c.zuvluguu++ }
+        })
         return { ...e, counts: c }
       })
       setArgaZuichList(azList)
