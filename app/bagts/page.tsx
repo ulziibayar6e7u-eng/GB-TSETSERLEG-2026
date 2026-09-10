@@ -30,6 +30,8 @@ export default function BagtsPage() {
     if (isLeader) return PACKS
     const myCodes = new Set(me.groups.map((g) => g.code))
     const isMusicTeacher = me.groups.some((g) => g.code === 'hogjim') || me.first_name === 'Өлзийбаяр'
+    const isHuvilbart = me.groups.some((g) => g.code === 'huvilbart')
+    if (isHuvilbart) { myCodes.add('dund'); myCodes.add('ahlah') }
     return PACKS.filter((p) => {
       if (p.code === 'music') return isMusicTeacher
       return p.groupCode ? myCodes.has(p.groupCode) : true
