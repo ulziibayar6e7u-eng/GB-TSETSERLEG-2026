@@ -42,6 +42,8 @@ export default function AjiglltPage() {
   const [areas, setAreas] = useState<Area[]>([])
   const [children, setChildren] = useState<Child[]>([])
   const [loading, setLoading] = useState(true)
+  const [showReport, setShowReport] = useState(false)
+  const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0,7))
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Observation | null>(null)
   const [form, setForm] = useState({
@@ -117,10 +119,7 @@ export default function AjiglltPage() {
     })
     combined.sort((x, y) => (y.date > x.date ? 1 : -1))
     const isLeader = me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich')
-    const isMusicTeacher = me && (me.first_name === 'Өлзийбаяр' || me.groups?.some((g: any) => g.code === 'hogjim'))
-    const filtered = isLeader ? combined
-      : isMusicTeacher ? combined
-      : combined.filter((o) => !o.observer_id || o.observer_id === me?.id)
+    const filtered = isLeader ? combined : combined.filter((o) => o.observer_id === me?.id)
     setObservations(filtered)
     setAreas((ar.data as Area[]) || [])
     setChildren((c.data as Child[]) || [])
@@ -227,12 +226,15 @@ export default function AjiglltPage() {
             <h1 className="text-2xl font-bold text-slate-800">Өдөр тутмын ажиглалт</h1>
             <p className="text-sm text-slate-500 mt-1">Нийт {filtered.length} тэмдэглэл</p>
           </div>
-          <button
-            onClick={() => openAdd()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium shadow-sm"
-          >
-            + Ажиглалт нэмэх
-          </button>
+          <div className="flex gap-2">
+            <button onClick={()=>setShowReport(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-medium shadow-sm">📊 Сарын нэгтгэл</button>
+            <button
+              onClick={() => openAdd()}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium shadow-sm"
+            >
+              + Ажиглалт нэмэх
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex flex-col md:flex-row gap-3">
@@ -465,6 +467,76 @@ export default function AjiglltPage() {
           </div>
         </div>
       )}
+
+      {showReport && (() => {
+        const monthRows = observations.filter(o => (o.date||'').slice(0,7) === reportMonth)
+        const byArea: Record<string, number> = {}
+        const byChild: Record<string, number> = {}
+        const byLevel: Record<string, number> = { done: 0, in_progress: 0, not_yet: 0 }
+        monthRows.forEach(o => {
+          const a = o.development_areas?.name || 'Бусад'
+          byArea[a] = (byArea[a] || 0) + 1
+          const c = o.children ? `${o.children.last_name}.${o.children.first_name}` : 'Тодорхойгүй'
+          byChild[c] = (byChild[c] || 0) + 1
+          if (o.level) byLevel[o.level] = (byLevel[o.level] || 0) + 1
+        })
+        const maxA = Math.max(1, ...Object.values(byArea))
+        const maxC = Math.max(1, ...Object.values(byChild))
+        function csv() {
+          const header = ['Огноо','Хүүхэд','Бүлэг','Судлагдахуун','Түвшин','Үйл ажиллагаа','Ажиглалт']
+          const lines = [header.join(',')]
+          monthRows.forEach(o => {
+            lines.push([o.date, o.children?`${o.children.last_name}.${o.children.first_name}`:'', o.children?.groups?.name||'', o.development_areas?.name||'', o.level||'', o.activity||'', (o.observation||'').replace(/\n/g,' ')].map(v=>`"${String(v).replace(/,/g,';')}"`).join(','))
+          })
+          const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+          const url = URL.createObjectURL(blob); const a = document.createElement('a')
+          a.href = url; a.download = `ajiglalt-${reportMonth}.csv`; a.click(); URL.revokeObjectURL(url)
+        }
+        return (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 overflow-y-auto">
+            <div className="bg-white rounded-2xl w-full max-w-4xl my-8 max-h-[90vh] flex flex-col">
+              <div className="p-5 border-b border-slate-200 flex-shrink-0 flex justify-between items-center gap-3 flex-wrap">
+                <h2 className="text-lg font-semibold">📊 Ажиглалтын сарын нэгтгэл</h2>
+                <div className="flex gap-2">
+                  <input type="month" value={reportMonth} onChange={(e)=>setReportMonth(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm" />
+                  <button onClick={csv} className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-sm">⬇️ CSV</button>
+                  <button onClick={()=>window.print()} className="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-sm">🖨️</button>
+                  <button onClick={()=>setShowReport(false)} className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm">✕</button>
+                </div>
+              </div>
+              <div className="p-5 overflow-y-auto flex-1 space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-slate-50 rounded-xl p-4"><div className="text-3xl font-bold text-slate-800">{monthRows.length}</div><div className="text-xs text-slate-500 mt-1">Нийт ажиглалт</div></div>
+                  <div className="bg-emerald-50 rounded-xl p-4"><div className="text-3xl font-bold text-emerald-600">{byLevel.done||0}</div><div className="text-xs text-slate-500 mt-1">⭐ Эзэмшсэн</div></div>
+                  <div className="bg-amber-50 rounded-xl p-4"><div className="text-3xl font-bold text-amber-600">{byLevel.in_progress||0}</div><div className="text-xs text-slate-500 mt-1">🌱 Эзэмшиж буй</div></div>
+                  <div className="bg-slate-100 rounded-xl p-4"><div className="text-3xl font-bold text-slate-500">{byLevel.not_yet||0}</div><div className="text-xs text-slate-500 mt-1">💤 Эзэмшээгүй</div></div>
+                </div>
+                {Object.keys(byArea).length > 0 && (
+                  <div className="bg-white rounded-xl border border-slate-200 p-4">
+                    <div className="font-semibold mb-3">📚 Судлагдахуунаар</div>
+                    <div className="space-y-2">
+                      {Object.entries(byArea).sort((a,b)=>b[1]-a[1]).map(([k,v])=>(
+                        <div key={k}><div className="flex justify-between text-sm mb-1"><span>{k}</span><span className="font-semibold">{v}</span></div><div className="h-2 bg-slate-100 rounded"><div style={{width:`${(v/maxA)*100}%`}} className="h-full bg-blue-500 rounded"></div></div></div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {Object.keys(byChild).length > 0 && (
+                  <div className="bg-white rounded-xl border border-slate-200 p-4">
+                    <div className="font-semibold mb-3">👧 Хүүхдээр</div>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {Object.entries(byChild).sort((a,b)=>b[1]-a[1]).map(([k,v])=>(
+                        <div key={k}><div className="flex justify-between text-sm mb-1"><span>{k}</span><span className="font-semibold">{v}</span></div><div className="h-2 bg-slate-100 rounded"><div style={{width:`${(v/maxC)*100}%`}} className="h-full bg-emerald-500 rounded"></div></div></div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {monthRows.length === 0 && <div className="p-8 text-center text-slate-500">Тухайн сард бичлэг алга</div>}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
