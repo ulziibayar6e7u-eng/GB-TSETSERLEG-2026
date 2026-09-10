@@ -99,7 +99,10 @@ export default function PublicEventsPage() {
                 <p className="text-sm opacity-90 mt-1">Хамт олон · Ирц бүртгэл · Автомат цаг</p>
               </div>
             </div>
-            {canManage && <button onClick={()=>setShowForm(true)} className="bg-white text-purple-700 hover:bg-white/90 px-4 py-2.5 rounded-lg font-semibold text-sm">+ Шинэ үйл ажиллагаа</button>}
+            <div className="flex gap-2">
+              <a href="/nyitlag/report" className="bg-white/20 border border-white/30 hover:bg-white/30 text-white px-4 py-2.5 rounded-lg font-semibold text-sm">📊 Сарын нэгтгэл</a>
+              {canManage && <button onClick={()=>setShowForm(true)} className="bg-white text-purple-700 hover:bg-white/90 px-4 py-2.5 rounded-lg font-semibold text-sm">+ Шинэ үйл ажиллагаа</button>}
+            </div>
           </div>
         </div>
 
