@@ -54,6 +54,24 @@ export default function ZaahArgynNegdelPage() {
     file: null as File|null, mediaFiles: [] as File[], extraLinks: ''
   })
   const [saving, setSaving] = useState(false)
+  const [resources, setResources] = useState<{ id: string; title: string; url: string }[]>([])
+  const [showResForm, setShowResForm] = useState(false)
+  const [resForm, setResForm] = useState({ title: '', url: '' })
+
+  async function loadResources() {
+    const { data } = await supabase.from('reading_resources').select('*').order('sort_order').order('created_at')
+    setResources((data as any) || [])
+  }
+  useEffect(() => { loadResources() }, [])
+  async function saveResource() {
+    if (!resForm.title.trim() || !resForm.url.trim()) { alert('Нэр + линк оруулна уу'); return }
+    await supabase.from('reading_resources').insert({ ...resForm, created_by: me?.id || null })
+    setResForm({ title: '', url: '' }); setShowResForm(false); loadResources()
+  }
+  async function removeResource(id: string) {
+    if (!confirm('Устгах уу?')) return
+    await supabase.from('reading_resources').delete().eq('id', id); loadResources()
+  }
 
   const isReviewer = me && (me.is_admin || me.role === 'arga_zuich' || me.role === 'erhlegch')
   const canPost = (k: Kind) => {
@@ -185,11 +203,35 @@ export default function ZaahArgynNegdelPage() {
 
         {tab === 'reading' && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
-            <div className="font-semibold text-amber-900 mb-2">📺 БЕГ-ын цуврал хичээлүүд</div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-semibold text-amber-900">📺 БЕГ-ын цуврал хичээл + гарын авлагууд</div>
+              {isReviewer && <button onClick={()=>setShowResForm(true)} className="text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded-lg">+ Шинэ линк</button>}
+            </div>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
               {BEG_LINKS.map((l, i) => (
                 <a key={i} href={l.url} target="_blank" rel="noopener" className="bg-white border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-800 hover:bg-amber-100">🎬 {l.title}</a>
               ))}
+              {resources.map(r => (
+                <div key={r.id} className="bg-white border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-800 hover:bg-amber-100 flex items-center justify-between gap-2">
+                  <a href={r.url} target="_blank" rel="noopener" className="flex-1 truncate">🎬 {r.title}</a>
+                  {isReviewer && <button onClick={()=>removeResource(r.id)} className="text-red-500 hover:text-red-700 text-xs">✕</button>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {showResForm && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl w-full max-w-md">
+              <div className="p-5 border-b border-slate-200"><h2 className="text-lg font-semibold">Шинэ гарын авлагын линк</h2></div>
+              <div className="p-5 space-y-3">
+                <div><label className="block text-sm mb-1">Хичээл/Гарчиг *</label><input value={resForm.title} onChange={(e)=>setResForm({...resForm, title: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" placeholder="Жишээ: Хичээл №7 - Нэр" /></div>
+                <div><label className="block text-sm mb-1">Линк *</label><input value={resForm.url} onChange={(e)=>setResForm({...resForm, url: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" placeholder="https://..." /></div>
+              </div>
+              <div className="p-5 border-t border-slate-200 flex gap-2">
+                <button onClick={()=>setShowResForm(false)} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg">Болих</button>
+                <button onClick={saveResource} className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium">💾 Хадгалах</button>
+              </div>
             </div>
           </div>
         )}
