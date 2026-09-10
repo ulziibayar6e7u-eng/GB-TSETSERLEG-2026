@@ -47,6 +47,7 @@ export default function HereglegPage() {
   const [items, setItems] = useState<Material[]>([])
   const [loading, setLoading] = useState(true)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [fileNotes, setFileNotes] = useState<Record<string, { note: string; author: string; date: string }[]>>({})
   const [tab, setTab] = useState<'mine' | 'all'>('mine')
   const [showForm, setShowForm] = useState(false)
 
@@ -77,6 +78,19 @@ export default function HereglegPage() {
     setLoading(true)
     const { data } = await supabase.from('teacher_materials').select('*, employees:author_id(last_name, first_name), reviewer:reviewer_id(last_name, first_name), groups(name, icon, color)').order('updated_at', { ascending: false }).limit(200)
     setItems((data as unknown as Material[]) || [])
+    const urls = ((data as any[])||[]).map(m => m.file_url).filter(Boolean)
+    if (urls.length > 0) {
+      const { data: notes } = await supabase.from('file_notes').select('file_url, note, created_at, employees:author_id(last_name, first_name)').in('file_url', urls).order('created_at', { ascending: false })
+      const map: Record<string, any[]> = {}
+      ;((notes as any[])||[]).forEach(n => {
+        const author = n.employees ? `${n.employees.last_name}.${n.employees.first_name}` : 'Тодорхойгүй'
+        if (!map[n.file_url]) map[n.file_url] = []
+        map[n.file_url].push({ note: n.note, author, date: n.created_at.slice(0,10) })
+      })
+      setFileNotes(map)
+    } else {
+      setFileNotes({})
+    }
     setLoading(false)
   }
   useEffect(() => { load() }, [])
@@ -190,10 +204,21 @@ export default function HereglegPage() {
                           {(m.extra_links || []).map((url, i) => (<a key={i} href={url} target="_blank" rel="noopener" className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg">🔗 Линк {i + 1}</a>))}
                         </div>
                         {m.employees && <div className="text-xs text-slate-500 mt-2">✍️ {m.employees.last_name}.{m.employees.first_name}</div>}
-                        {m.status === 'approved' && m.reviewer_note && (
+                        {m.status === 'approved' && (m.reviewer_note || (m.file_url && fileNotes[m.file_url]?.length)) && (
                           <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-800">
-                            <div className="font-semibold mb-0.5">✅ Батлагдсан тэмдэглэл:</div>
-                            {m.reviewer_note}
+                            <div className="font-semibold mb-1">✅ Батлагдсан тэмдэглэл:</div>
+                            {m.reviewer_note && <div className="whitespace-pre-wrap">{m.reviewer_note}</div>}
+                            {m.file_url && fileNotes[m.file_url]?.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-emerald-200 space-y-1">
+                                <div className="text-xs font-semibold text-emerald-700">💬 Файлын зөвлөмж:</div>
+                                {fileNotes[m.file_url].map((n, i) => (
+                                  <div key={i} className="bg-white/60 rounded p-2 text-xs">
+                                    <div className="text-emerald-700 font-medium">✍️ {n.author} <span className="text-emerald-500 font-normal">· {n.date}</span></div>
+                                    <div className="text-emerald-900 whitespace-pre-wrap mt-0.5">{n.note}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                         {m.status === 'returned' && m.reviewer_note && (
@@ -259,7 +284,7 @@ export default function HereglegPage() {
           </div>
         </div>
       )}
-      {previewUrl && <FileViewer url={previewUrl} onClose={()=>setPreviewUrl(null)} />}
+      {previewUrl && <FileViewer url={previewUrl} onClose={()=>{ setPreviewUrl(null); load() }} />}
     </div>
   )
 }
