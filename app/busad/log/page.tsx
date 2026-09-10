@@ -16,6 +16,7 @@ type Log = {
   category: string | null
   checklist: ChecklistItem[]
   file_url: string | null
+  media_urls: string[]
   extra_links: string[]
   reviewer_id: string | null
   reviewer_note: string | null
@@ -63,7 +64,7 @@ export default function DailyLogPage() {
   const [logs, setLogs] = useState<Log[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], shift: '', title: '', description: '', category: '', checklist: [] as ChecklistItem[], file: null as File | null, extraLinks: '' })
+  const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], shift: '', title: '', description: '', category: '', checklist: [] as ChecklistItem[], files: [] as File[], extraLinks: '' })
   const cats = CATS_BY_ROLE[role] || CATS_BY_ROLE.other
   const [saving, setSaving] = useState(false)
   const [reviewingId, setReviewingId] = useState<string | null>(null)
@@ -82,13 +83,13 @@ export default function DailyLogPage() {
   async function save() {
     if (!me) return
     setSaving(true)
-    let file_url: string | null = null
-    if (form.file) {
-      const path = `logs/${Date.now()}_${form.file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
-      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, form.file)
-      if (upErr) { alert('Файл алдаа: ' + upErr.message); setSaving(false); return }
+    const media_urls: string[] = []
+    for (const f of form.files) {
+      const path = `logs/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
+      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, f)
+      if (upErr) { alert('Файл алдаа: '+upErr.message); setSaving(false); return }
       const { data: pub } = supabase.storage.from('org-plans').getPublicUrl(path)
-      file_url = pub?.publicUrl || null
+      if (pub?.publicUrl) media_urls.push(pub.publicUrl)
     }
     const { error } = await supabase.from('staff_daily_logs').insert({
       author_id: me.id,
@@ -98,13 +99,14 @@ export default function DailyLogPage() {
       description: form.description || null,
       category: form.category || null,
       checklist: form.checklist,
-      file_url,
+      file_url: media_urls[0] || null,
+      media_urls,
       extra_links: form.extraLinks.split(/\r?\n/).map(s=>s.trim()).filter(Boolean),
     })
     setSaving(false)
     if (error) { alert('Алдаа: ' + error.message); return }
     setShowForm(false)
-    setForm({ date: new Date().toISOString().split('T')[0], shift: '', title: '', description: '', category: '', checklist: [], file: null, extraLinks: '' })
+    setForm({ date: new Date().toISOString().split('T')[0], shift: '', title: '', description: '', category: '', checklist: [], files: [], extraLinks: '' })
     load()
   }
   async function remove(l: Log) {
@@ -172,8 +174,22 @@ export default function DailyLogPage() {
                         ))}
                       </div>
                     )}
+                    {((l.media_urls && l.media_urls.length) || l.file_url) && (
+                      <div className="mt-2 grid grid-cols-3 md:grid-cols-4 gap-2">
+                        {(l.media_urls && l.media_urls.length > 0 ? l.media_urls : (l.file_url ? [l.file_url] : [])).map((url, i) => {
+                          const isImg = /\.(png|jpe?g|gif|webp)$/i.test(url)
+                          const isVid = /\.(mp4|webm|mov)$/i.test(url)
+                          return (
+                            <a key={i} href={url} target="_blank" rel="noopener" className="block rounded-lg overflow-hidden border border-slate-200 hover:border-blue-400 aspect-square bg-slate-50">
+                              {isImg ? <img src={url} alt="" className="w-full h-full object-cover" />
+                               : isVid ? <video src={url} className="w-full h-full object-cover" />
+                               : <div className="flex items-center justify-center h-full text-slate-400 text-xs">📎 Файл</div>}
+                            </a>
+                          )
+                        })}
+                      </div>
+                    )}
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {l.file_url && <a href={l.file_url} target="_blank" rel="noopener" className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg">📎 Файл</a>}
                       {(l.extra_links || []).map((url, i) => (<a key={i} href={url} target="_blank" rel="noopener" className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg">🔗 Линк {i + 1}</a>))}
                     </div>
                     {l.reviewer_note && (
@@ -248,7 +264,11 @@ export default function DailyLogPage() {
               )}
               <div><label className="block text-sm text-slate-700 mb-1">Гарчиг</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
               <div><label className="block text-sm text-slate-700 mb-1">Тайлбар</label><textarea rows={5} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-              <div><label className="block text-sm text-slate-700 mb-1">📎 Файл</label><input type="file" accept="image/*,video/*,.pdf" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <div>
+                <label className="block text-sm text-slate-700 mb-1">📎 Зураг, бичлэг, файл (олон сонгож болно)</label>
+                <input type="file" multiple accept="image/*,video/*,.pdf" onChange={(e) => setForm({ ...form, files: Array.from(e.target.files || []) })} className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+                {form.files.length > 0 && <div className="text-xs text-emerald-600 mt-1">✓ {form.files.length} файл сонгосон</div>}
+              </div>
               <div><label className="block text-sm text-slate-700 mb-1">🔗 Линкүүд</label><textarea rows={2} value={form.extraLinks} onChange={(e) => setForm({ ...form, extraLinks: e.target.value })} placeholder="Мөр бүрд нэг URL" className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
               <div className="flex gap-2 pt-2">
                 <button onClick={() => setShowForm(false)} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg">Болих</button>
