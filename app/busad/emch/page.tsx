@@ -493,7 +493,23 @@ export default function EmchPage() {
                         {grouped[gname].map((c) => (<option key={c.id} value={c.id}>{c.last_name}.{c.first_name}</option>))}
                       </optgroup>
                     ))
-                  })() : staff.map((s) => (<option key={s.id} value={s.id}>{s.last_name}.{s.first_name}{s.positions ? ` · ${s.positions.name}` : ''}</option>))}
+                  })() : (() => {
+                    const groups: Record<string, typeof staff> = { '👩‍🏫 Бүлгийн багш': [], '🧑‍🤝‍🧑 Багшийн туслах': [], '🧹 Үйлчлэгч': [], '👨‍🍳 Тогооч, гал тогооны ажилтан': [], '🎵 Хөгжмийн багш': [], '👤 Бусад ажилтан': [] }
+                    staff.forEach((s) => {
+                      const p = (s.positions?.name || '').toLowerCase()
+                      if (p.includes('хөгжим')) groups['🎵 Хөгжмийн багш'].push(s)
+                      else if (p.includes('туслах') && p.includes('багш')) groups['🧑‍🤝‍🧑 Багшийн туслах'].push(s)
+                      else if (p.includes('багш') && !p.includes('туслах')) groups['👩‍🏫 Бүлгийн багш'].push(s)
+                      else if (p.includes('үйлчлэг')) groups['🧹 Үйлчлэгч'].push(s)
+                      else if (p.includes('тогооч') || p.includes('гал тогоо')) groups['👨‍🍳 Тогооч, гал тогооны ажилтан'].push(s)
+                      else groups['👤 Бусад ажилтан'].push(s)
+                    })
+                    return Object.entries(groups).filter(([_, arr]) => arr.length > 0).map(([label, arr]) => (
+                      <optgroup key={label} label={label}>
+                        {arr.map((s) => (<option key={s.id} value={s.id}>{s.last_name}.{s.first_name}{s.positions ? ` · ${s.positions.name}` : ''}</option>))}
+                      </optgroup>
+                    ))
+                  })()}
                 </select>
               </div>
               {form.record_type === 'checkup' && form.subject_type === 'child' && (
