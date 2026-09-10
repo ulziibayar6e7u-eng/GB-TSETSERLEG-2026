@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useMe, canSeeAllChildren } from '@/lib/useMe'
+import FileViewer from '@/components/FileViewer'
 
 type Group = { id: number; code: string; name: string; icon: string; color: string; age_group: string | null }
 type Area = { code: string; name: string; icon: string; color: string; sort_order: number }
@@ -30,6 +31,7 @@ export default function HutulburPage() {
   const [children, setChildren] = useState<Child[]>([])
   const [checks, setChecks] = useState<Check[]>([])
   const [loading, setLoading] = useState(true)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
 
   const [dialog, setDialog] = useState<{ outcome: Outcome; child: Child; history: Check[] } | null>(null)
@@ -517,7 +519,7 @@ export default function HutulburPage() {
                           <button onClick={() => removeCheck(h.id)} className="ml-auto text-red-600 hover:text-red-800 text-xs">Устгах</button>
                         </div>
                         {h.note && <div className="text-sm text-slate-700 mt-1.5 whitespace-pre-wrap">{h.note}</div>}
-                        {h.file_url && <a href={h.file_url} target="_blank" rel="noopener" className="inline-block mt-1.5 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded">📎 Нотлох баримт</a>}
+                        {h.file_url && <button onClick={()=>setPreviewUrl(h.file_url!)} className="inline-block mt-1.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded">👁 Файл харах</button>}
                       </div>
                     )
                   })}
@@ -553,6 +555,7 @@ export default function HutulburPage() {
           </div>
         </div>
       )}
+      {previewUrl && <FileViewer url={previewUrl} onClose={()=>setPreviewUrl(null)} />}
     </div>
   )
 }

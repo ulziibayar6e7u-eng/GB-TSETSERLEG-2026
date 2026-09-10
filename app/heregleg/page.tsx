@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
+import FileViewer from '@/components/FileViewer'
 import { useMe } from '@/lib/useMe'
 
 type Material = {
@@ -45,6 +46,7 @@ export default function HereglegPage() {
 
   const [items, setItems] = useState<Material[]>([])
   const [loading, setLoading] = useState(true)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [tab, setTab] = useState<'mine' | 'all'>('mine')
   const [showForm, setShowForm] = useState(false)
 
@@ -184,7 +186,7 @@ export default function HereglegPage() {
                         <h3 className="font-semibold text-slate-800">{m.title}</h3>
                         {m.description && <div className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">{m.description}</div>}
                         <div className="mt-2 flex flex-wrap gap-2">
-                          {m.file_url && <a href={m.file_url} target="_blank" rel="noopener" className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg">📎 Файл</a>}
+                          {m.file_url && <button onClick={()=>setPreviewUrl(m.file_url!)} className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg">👁 Файл</button>}
                           {(m.extra_links || []).map((url, i) => (<a key={i} href={url} target="_blank" rel="noopener" className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg">🔗 Линк {i + 1}</a>))}
                         </div>
                         {m.employees && <div className="text-xs text-slate-500 mt-2">✍️ {m.employees.last_name}.{m.employees.first_name}</div>}
@@ -257,6 +259,7 @@ export default function HereglegPage() {
           </div>
         </div>
       )}
+      {previewUrl && <FileViewer url={previewUrl} onClose={()=>setPreviewUrl(null)} />}
     </div>
   )
 }
