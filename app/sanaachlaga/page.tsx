@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useMe } from '@/lib/useMe'
+import FileViewer from '@/components/FileViewer'
 
 type Work = {
   id: string
@@ -28,6 +29,7 @@ export default function SanaachlagaPage() {
 
   const [works, setWorks] = useState<Work[]>([])
   const [loading, setLoading] = useState(true)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Work | null>(null)
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], title: '', description: '', impact: '', file: null as File | null, extraLinks: '' })
@@ -147,7 +149,7 @@ export default function SanaachlagaPage() {
                     {w.description && <div className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">{w.description}</div>}
                     {w.impact && <div className="text-sm text-emerald-800 bg-emerald-50 border-l-4 border-emerald-400 p-2 rounded mt-2"><b>Үр дүн:</b> {w.impact}</div>}
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {w.photo_url && <a href={w.photo_url} target="_blank" rel="noopener" className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg">📎 Файл/зураг</a>}
+                      {w.photo_url && <button onClick={()=>setPreviewUrl(w.photo_url!)} className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg">👁 Файл/зураг</button>}
                       {(w.extra_links || []).map((url, i) => (<a key={i} href={url} target="_blank" rel="noopener" className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg">🔗 Линк {i + 1}</a>))}
                     </div>
                     {w.reviewer_note && (
@@ -204,6 +206,7 @@ export default function SanaachlagaPage() {
           </div>
         </div>
       )}
+      {previewUrl && <FileViewer url={previewUrl} onClose={()=>setPreviewUrl(null)} />}
     </div>
   )
 }
