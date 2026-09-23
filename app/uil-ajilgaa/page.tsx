@@ -296,37 +296,89 @@ export default function UilAjilgaaPage() {
             <div className="text-center py-8 text-slate-500 text-sm">Бичлэг алга</div>
           ) : (
             <div className="space-y-2">
-              {shown.map((r) => {
-                const kindMeta: any = r._kind === 'plan' ? { icon: '📅', label: 'Төлөвлөгөө', color: 'bg-blue-50 text-blue-700' }
-                  : r._kind === 'lesson' ? { icon: '📸', label: 'Хичээлийн бичлэг', color: 'bg-indigo-50 text-indigo-700' }
-                  : r._kind === 'music' ? { icon: '🎵', label: 'Хөгжим', color: 'bg-pink-50 text-pink-700' }
-                  : r._kind === 'club' ? { icon: '🎨', label: 'Дугуйлан', color: 'bg-pink-50 text-pink-700' }
-                  : { icon: '🎯', label: 'Ажиглалт', color: 'bg-emerald-50 text-emerald-700' }
-                const author = r.employees ? `${r.employees.last_name}.${r.employees.first_name}` : ''
-                const title = r.title || r.activity || r.category || 'Гарчиггүй'
-                const desc = r.description || r.note || r.observation || ''
-                return (
-                  <div key={`${r._kind}-${r.id}`} className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className={`text-xs px-2 py-0.5 rounded ${kindMeta.color} font-medium`}>{kindMeta.icon} {kindMeta.label}</span>
-                      <span className="text-xs text-slate-500">🗓 {r._date}</span>
-                      {author && <span className="text-xs text-slate-500">✍️ {author}</span>}
-                      {r.groups && <span className="text-xs text-slate-500">{r.groups.icon} {r.groups.name}</span>}
-                      {r.children && <span className="text-xs text-slate-500">👧 {r.children.last_name}.{r.children.first_name}</span>}
-                    </div>
-                    <div className="text-sm font-medium text-slate-800">{title}</div>
-                    {desc && <div className="text-xs text-slate-600 mt-1 whitespace-pre-wrap line-clamp-3">{desc}</div>}
-                    {(r.file_url || r.photo_url) && (
-                      <a href={r.file_url || r.photo_url} target="_blank" rel="noopener" className="inline-block mt-1 text-xs text-blue-600 hover:text-blue-800">📎 Файл харах</a>
-                    )}
-                  </div>
-                )
-              })}
+              {shown.map((r) => (
+                <EntryCard key={`${r._kind}-${r.id}`} entry={r} me={me} supabase={supabase} />
+              ))}
             </div>
           )
           })()}
         </div>
       </div>
+    </div>
+  )
+}
+
+function EntryCard({ entry: r, me, supabase }: any) {
+  const [open, setOpen] = useState(false)
+  const [notes, setNotes] = useState<any[]>([])
+  const [text, setText] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const isLeader = !!(me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich'))
+  const km: any = r._kind === 'plan' ? { icon: '📅', label: 'Төлөвлөгөө', color: 'bg-blue-50 text-blue-700' }
+    : r._kind === 'lesson' ? { icon: '📸', label: 'Хичээлийн бичлэг', color: 'bg-indigo-50 text-indigo-700' }
+    : r._kind === 'music' ? { icon: '🎵', label: 'Хөгжим', color: 'bg-pink-50 text-pink-700' }
+    : r._kind === 'club' ? { icon: '🎨', label: 'Дугуйлан', color: 'bg-pink-50 text-pink-700' }
+    : { icon: '🎯', label: 'Ажиглалт', color: 'bg-emerald-50 text-emerald-700' }
+  const author = r.employees ? `${r.employees.last_name}.${r.employees.first_name}` : ''
+  const title = r.title || r.activity || r.category || 'Гарчиггүй'
+  const desc = r.description || r.note || r.observation || ''
+  const targetId = r.author_id || r.observer_id || null
+
+  async function load() {
+    const { data } = await supabase.from('entry_feedback').select('*, employees:author_id(last_name, first_name)').eq('entry_kind', r._kind).eq('entry_id', String(r.id)).order('created_at', { ascending: false })
+    setNotes((data as any) || [])
+  }
+  useEffect(() => { if (open) load() }, [open])
+
+  async function save() {
+    if (!text.trim() || !me) return
+    setSaving(true)
+    await supabase.from('entry_feedback').insert({
+      entry_kind: r._kind, entry_id: String(r.id),
+      target_employee_id: targetId, author_id: me.id, note: text.trim(),
+    })
+    setText(''); setSaving(false); load()
+  }
+
+  return (
+    <div className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50">
+      <div className="flex items-center gap-2 flex-wrap mb-1">
+        <span className={`text-xs px-2 py-0.5 rounded ${km.color} font-medium`}>{km.icon} {km.label}</span>
+        <span className="text-xs text-slate-500">🗓 {r._date}</span>
+        {author && <span className="text-xs text-slate-500">✍️ {author}</span>}
+        {r.groups && <span className="text-xs text-slate-500">{r.groups.icon} {r.groups.name}</span>}
+        {r.children && <span className="text-xs text-slate-500">👧 {r.children.last_name}.{r.children.first_name}</span>}
+      </div>
+      <div className="text-sm font-medium text-slate-800">{title}</div>
+      {desc && <div className="text-xs text-slate-600 mt-1 whitespace-pre-wrap line-clamp-3">{desc}</div>}
+      <div className="mt-2 flex flex-wrap gap-2 items-center">
+        {(r.file_url || r.photo_url) && (
+          <a href={r.file_url || r.photo_url} target="_blank" rel="noopener" className="text-xs text-blue-600 hover:text-blue-800">📎 Файл харах</a>
+        )}
+        <button onClick={() => setOpen(!open)} className="text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 px-2 py-1 rounded-lg font-medium">
+          💬 Зөвлөгөө {open ? '▲' : '▼'}
+        </button>
+      </div>
+      {open && (
+        <div className="mt-2 border-t border-slate-100 pt-2">
+          {notes.length === 0 && <div className="text-xs text-slate-400 italic mb-2">Зөвлөгөө алга</div>}
+          <div className="space-y-1 mb-2">
+            {notes.map((n) => (
+              <div key={n.id} className="text-xs bg-amber-50 border border-amber-200 rounded p-2">
+                <div className="text-amber-700 font-medium">✍️ {n.employees ? `${n.employees.last_name}.${n.employees.first_name}` : 'Тодорхойгүй'} <span className="text-amber-500 font-normal">· {new Date(n.created_at).toLocaleDateString('mn-MN')}</span></div>
+                <div className="text-slate-800 mt-0.5 whitespace-pre-wrap">{n.note}</div>
+              </div>
+            ))}
+          </div>
+          {isLeader && (
+            <div className="flex gap-2">
+              <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Зөвлөгөө, тэмдэглэл бичих..." className="flex-1 border border-slate-300 rounded-lg px-3 py-1.5 text-xs" onKeyDown={(e) => e.key === 'Enter' && save()} />
+              <button onClick={save} disabled={saving || !text.trim()} className="bg-amber-600 hover:bg-amber-700 disabled:bg-slate-300 text-white text-xs px-3 py-1.5 rounded-lg font-medium">💾</button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
