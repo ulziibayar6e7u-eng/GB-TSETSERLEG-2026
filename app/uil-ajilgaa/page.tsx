@@ -24,6 +24,7 @@ export default function UilAjilgaaPage() {
   const [schoolYear, setSchoolYear] = useState<number>(now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1)
   const [rows, setRows] = useState<Row[]>([])
   const [dashLoading, setDashLoading] = useState(false)
+  const [recent, setRecent] = useState<any[]>([])
 
   useEffect(() => {
     if (!isLeader) return
@@ -58,6 +59,21 @@ export default function UilAjilgaaPage() {
       ;((a.data as { period: string; author_id: string | null }[]) || []).forEach((r) => addRow(r.period, r.author_id, 'activities'))
       ;((c.data as { date: string; author_id: string | null }[]) || []).forEach((r) => addRow(r.date, r.author_id, 'clubActs'))
       setRows(monthOrder.map((m) => bucket.get(m)!))
+
+      // Сүүлийн үйл ажиллагаа — plans + music_activity + observations
+      const [pl, ma, ob2] = await Promise.all([
+        supabase.from('plans').select('id, period, title, description, file_url, author_id, employees:author_id(last_name, first_name)').gte('period', start).lte('period', end).order('period', { ascending: false }).limit(50),
+        supabase.from('music_activity').select('id, date, category, title, note, file_url, author_id, groups(name, icon), employees:author_id(last_name, first_name)').gte('date', start).lte('date', end).order('date', { ascending: false }).limit(50),
+        supabase.from('observations').select('id, date, activity, observation, photo_url, observer_id, employees:observer_id(last_name, first_name), children(last_name, first_name, groups(name, icon))').gte('date', start).lte('date', end).order('date', { ascending: false }).limit(50),
+      ])
+      const list: any[] = []
+      ;((pl.data as any[]) || []).forEach(r => list.push({ ...r, _kind: 'plan', _date: r.period }))
+      ;((ma.data as any[]) || []).forEach(r => list.push({ ...r, _kind: 'music', _date: r.date }))
+      ;((ob2.data as any[]) || []).forEach(r => list.push({ ...r, _kind: 'obs', _date: r.date }))
+      const filtered = teacherId === 'all' ? list : list.filter(r => (r.author_id || r.observer_id) === teacherId)
+      filtered.sort((a, b) => (b._date > a._date ? 1 : -1))
+      setRecent(filtered.slice(0, 100))
+
       setDashLoading(false)
     })()
   }, [isLeader, schoolYear, teacherId, supabase])
@@ -227,6 +243,40 @@ export default function UilAjilgaaPage() {
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 mt-4 print:hidden">
+          <div className="font-semibold text-slate-800 mb-3">📸 Багш нарын оруулсан үйл ажиллагаа ({recent.length})</div>
+          {recent.length === 0 ? (
+            <div className="text-center py-8 text-slate-500 text-sm">Бичлэг алга</div>
+          ) : (
+            <div className="space-y-2">
+              {recent.map((r) => {
+                const kindMeta: any = r._kind === 'plan' ? { icon: '📅', label: 'Хичээл/төлөвлөгөө', color: 'bg-blue-50 text-blue-700' }
+                  : r._kind === 'music' ? { icon: '🎵', label: 'Хөгжим', color: 'bg-pink-50 text-pink-700' }
+                  : { icon: '🎯', label: 'Ажиглалт', color: 'bg-emerald-50 text-emerald-700' }
+                const author = r.employees ? `${r.employees.last_name}.${r.employees.first_name}` : ''
+                const title = r.title || r.activity || r.category || 'Гарчиггүй'
+                const desc = r.description || r.note || r.observation || ''
+                return (
+                  <div key={`${r._kind}-${r.id}`} className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className={`text-xs px-2 py-0.5 rounded ${kindMeta.color} font-medium`}>{kindMeta.icon} {kindMeta.label}</span>
+                      <span className="text-xs text-slate-500">🗓 {r._date}</span>
+                      {author && <span className="text-xs text-slate-500">✍️ {author}</span>}
+                      {r.groups && <span className="text-xs text-slate-500">{r.groups.icon} {r.groups.name}</span>}
+                      {r.children && <span className="text-xs text-slate-500">👧 {r.children.last_name}.{r.children.first_name}</span>}
+                    </div>
+                    <div className="text-sm font-medium text-slate-800">{title}</div>
+                    {desc && <div className="text-xs text-slate-600 mt-1 whitespace-pre-wrap line-clamp-3">{desc}</div>}
+                    {(r.file_url || r.photo_url) && (
+                      <a href={r.file_url || r.photo_url} target="_blank" rel="noopener" className="inline-block mt-1 text-xs text-blue-600 hover:text-blue-800">📎 Файл харах</a>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
