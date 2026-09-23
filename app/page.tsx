@@ -147,6 +147,7 @@ export default function Home() {
         )}
 
         {isAdminOrLeader && <DutyAttendanceSummary />}
+        {isAdminOrLeader && <TodayActivities />}
         {isAdminOrLeader && <GroupAttendanceSummary />}
         {isAdminOrLeader && <RecentFeed />}
       </div>
@@ -422,5 +423,90 @@ function QuickLink({ href, icon, label, desc }: { href: string; icon: string; la
         </div>
       </div>
     </Link>
+  )
+}
+
+function TodayActivities() {
+  const supabase = useMemo(() => createClient(), [])
+  const d = new Date(); const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+  const [teachers, setTeachers] = useState<{ id: string; last_name: string; first_name: string; role: string }[]>([])
+  const [selected, setSelected] = useState<'all' | string>('all')
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true)
+      const [emp, pl, ma, ob, ca] = await Promise.all([
+        supabase.from('employees').select('id, last_name, first_name, role').in('role', ['bagsh', 'bagsh_tuslah']).order('first_name'),
+        supabase.from('plans').select('id, period, title, description, file_url, author_id, employees:author_id(last_name, first_name)').eq('period', today),
+        supabase.from('music_activity').select('id, date, category, title, note, file_url, author_id, groups(name, icon), employees:author_id(last_name, first_name)').eq('date', today),
+        supabase.from('observations').select('id, date, activity, observation, photo_url, observer_id, employees:observer_id(last_name, first_name), children(last_name, first_name)').eq('date', today),
+        supabase.from('club_activities').select('id, date, title, description, file_url, author_id, clubs(name, icon), employees:author_id(last_name, first_name)').eq('date', today),
+      ])
+      setTeachers((emp.data as any) || [])
+      const list: any[] = []
+      ;((pl.data as any[]) || []).forEach(r => list.push({ ...r, _kind: 'plan', _actor: r.author_id }))
+      ;((ma.data as any[]) || []).forEach(r => list.push({ ...r, _kind: 'music', _actor: r.author_id }))
+      ;((ob.data as any[]) || []).forEach(r => list.push({ ...r, _kind: 'obs', _actor: r.observer_id }))
+      ;((ca.data as any[]) || []).forEach(r => list.push({ ...r, groups: r.clubs, _kind: 'club', _actor: r.author_id }))
+      setItems(list)
+      setLoading(false)
+    })()
+  }, [supabase, today])
+
+  const shown = selected === 'all' ? items : items.filter(r => r._actor === selected)
+  const countFor = (id: string) => items.filter(r => r._actor === id).length
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 mb-8">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div className="font-semibold text-slate-800">📸 Өнөөдрийн сургалт, үйл ажиллагаа <span className="text-sm text-slate-500 font-normal">· {today}</span></div>
+        <Link href="/uil-ajilgaa" className="text-sm text-blue-600 hover:text-blue-800">Бүгд →</Link>
+      </div>
+      <div className="flex gap-2 flex-wrap mb-4">
+        <button onClick={() => setSelected('all')} className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${selected === 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}>Бүгд <span className={`ml-1 text-xs px-1.5 rounded-full ${selected === 'all' ? 'bg-white/25' : 'bg-slate-100'}`}>{items.length}</span></button>
+        {teachers.map(t => {
+          const c = countFor(t.id)
+          if (c === 0 && selected !== t.id) return null
+          const active = selected === t.id
+          return (
+            <button key={t.id} onClick={() => setSelected(t.id)} className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${active ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}>
+              {t.last_name}.{t.first_name} <span className={`ml-1 text-xs px-1.5 rounded-full ${active ? 'bg-white/25' : 'bg-slate-100'}`}>{c}</span>
+            </button>
+          )
+        })}
+      </div>
+      {loading ? <div className="text-center py-6 text-slate-400 text-sm">Ачааллаж байна…</div>
+        : shown.length === 0 ? <div className="text-center py-6 text-slate-500 text-sm">Өнөөдөр бичлэг алга</div>
+        : (
+          <div className="space-y-2">
+            {shown.map((r) => {
+              const km: any = r._kind === 'plan' ? { icon: '📅', label: 'Төлөвлөгөө', color: 'bg-blue-50 text-blue-700' }
+                : r._kind === 'music' ? { icon: '🎵', label: 'Хөгжим', color: 'bg-pink-50 text-pink-700' }
+                : r._kind === 'club' ? { icon: '🎨', label: 'Дугуйлан', color: 'bg-fuchsia-50 text-fuchsia-700' }
+                : { icon: '🎯', label: 'Ажиглалт', color: 'bg-emerald-50 text-emerald-700' }
+              const author = r.employees ? `${r.employees.last_name}.${r.employees.first_name}` : ''
+              const title = r.title || r.activity || r.category || 'Гарчиггүй'
+              const desc = r.description || r.note || r.observation || ''
+              return (
+                <div key={`${r._kind}-${r.id}`} className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className={`text-xs px-2 py-0.5 rounded ${km.color} font-medium`}>{km.icon} {km.label}</span>
+                    {author && <span className="text-xs text-slate-500">✍️ {author}</span>}
+                    {r.groups && <span className="text-xs text-slate-500">{r.groups.icon} {r.groups.name}</span>}
+                    {r.children && <span className="text-xs text-slate-500">👧 {r.children.last_name}.{r.children.first_name}</span>}
+                  </div>
+                  <div className="text-sm font-medium text-slate-800">{title}</div>
+                  {desc && <div className="text-xs text-slate-600 mt-1 whitespace-pre-wrap line-clamp-2">{desc}</div>}
+                  {(r.file_url || r.photo_url) && (
+                    <a href={r.file_url || r.photo_url} target="_blank" rel="noopener" className="inline-block mt-1 text-xs text-blue-600 hover:text-blue-800">📎 Файл харах</a>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+    </div>
   )
 }
