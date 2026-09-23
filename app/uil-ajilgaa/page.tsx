@@ -85,17 +85,19 @@ export default function UilAjilgaaPage() {
       setRows(monthOrder.map((m) => bucket.get(m)!))
 
       // Сүүлийн үйл ажиллагаа — plans + хичээлийн бичлэг + music_activity + club_activities + observations
-      const [pl, ma, ob2, ca] = await Promise.all([
+      const [pl, ma, ob2, ca, tm] = await Promise.all([
         supabase.from('plans').select('id, period, title, description, file_url, author_id, employees:author_id(last_name, first_name)').gte('period', start).lte('period', end).order('period', { ascending: false }).limit(50),
         supabase.from('music_activity').select('id, date, category, title, note, file_url, author_id, groups(name, icon), employees:author_id(last_name, first_name)').gte('date', start).lte('date', end).order('date', { ascending: false }).limit(50),
         supabase.from('observations').select('id, date, activity, observation, photo_url, observer_id, employees:observer_id(last_name, first_name), children(last_name, first_name, groups(name, icon))').gte('date', start).lte('date', end).order('date', { ascending: false }).limit(50),
         supabase.from('club_activities').select('id, date, title, description, file_url, author_id, clubs(name, icon), employees:author_id(last_name, first_name)').gte('date', start).lte('date', end).order('date', { ascending: false }).limit(50),
+        supabase.from('teacher_materials').select('id, created_at, category, title, description, file_url, author_id, groups(name, icon), employees:author_id(last_name, first_name)').gte('created_at', `${start}T00:00:00`).lte('created_at', `${end}T23:59:59`).order('created_at', { ascending: false }).limit(100),
       ])
       const list: any[] = []
       ;((pl.data as any[]) || []).forEach(r => list.push({ ...r, _kind: 'plan', _date: r.period }))
       ;((ma.data as any[]) || []).forEach(r => list.push({ ...r, _kind: 'music', _date: r.date }))
       ;((ob2.data as any[]) || []).forEach(r => list.push({ ...r, _kind: 'obs', _date: r.date }))
       ;((ca.data as any[]) || []).forEach(r => list.push({ ...r, groups: r.clubs, _kind: 'club', _date: r.date }))
+      ;((tm.data as any[]) || []).forEach(r => list.push({ ...r, _kind: 'plan', _date: (r.created_at || '').slice(0,10) }))
       const filtered = teacherId === 'all' ? list : list.filter(r => (r.author_id || r.observer_id) === teacherId)
       // Хичээлийн бичлэг аль хэдийн багшаар шүүгдсэн
       lessons.forEach(r => filtered.push({

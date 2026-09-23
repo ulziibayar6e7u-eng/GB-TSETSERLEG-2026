@@ -122,18 +122,11 @@ function argaZuichMenu(): MenuSection[] {
   return [
     { items: [{ href: '/', label: 'Нүүр', icon: '🏠' }] },
     {
-      title: 'Батламжийн ширээ',
-      items: [
-        { href: '/batlamj', label: 'Батламжийн ширээ', icon: '🏆' },
-      ],
-    },
-    {
       title: 'Хяналт',
       items: [
         { href: '/bagsh', label: 'Багш нар', icon: '👩‍🏫' },
         { href: '/uil-ajilgaa', label: 'Сургалт, үйл ажиллагаа', icon: '📸' },
         { href: '/hutulbur', label: 'Хөтөлбөрийн хэрэгжилт', icon: '📚' },
-        { href: '/bagts', label: 'Хөтөлбөрийн бэлэн багц', icon: '📦' },
         { href: '/heregleg', label: 'Хэрэглэгдэхүүн, хөтөлбөр', icon: '📎' },
         { href: '/zaah-argyn-negdel', label: 'Заах аргын нэгдэл', icon: '🧭' },
         { href: '/zaah-argyn-negdel/report', label: 'Заах аргын нэгтгэл', icon: '📊' },
@@ -167,12 +160,6 @@ function argaZuichMenu(): MenuSection[] {
 function erhlegchMenu(): MenuSection[] {
   return [
     { items: [{ href: '/', label: 'Нүүр', icon: '🏠' }] },
-    {
-      title: 'Батламжийн ширээ',
-      items: [
-        { href: '/batlamj', label: 'Батламжийн ширээ', icon: '🏆' },
-      ],
-    },
     {
       title: 'Хяналт',
       items: [
