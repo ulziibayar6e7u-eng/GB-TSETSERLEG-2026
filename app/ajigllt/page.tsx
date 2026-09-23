@@ -256,7 +256,7 @@ export default function AjiglltPage() {
             className="flex-1 border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Бүх судлагдахуун</option>
-            {areas.filter((a) => ['hel_yaria','bno','matematik','urlag','hodolgoon','niigem','aa_uhaan'].includes(a.code)).map((a) => (
+            {areas.filter((a) => ['hel_yaria','bno','matematik','urlag','hodolgoon','niigem','aa_uhaan','hogjim','music'].includes(a.code)).map((a) => (
               <option key={a.code} value={a.code}>
                 {a.icon} {a.name}
               </option>
@@ -390,7 +390,7 @@ export default function AjiglltPage() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Судлагдахуун</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {areas.filter((a) => ['hel_yaria','bno','matematik','urlag','hodolgoon','niigem','aa_uhaan'].includes(a.code)).map((a) => (
+                  {areas.filter((a) => ['hel_yaria','bno','matematik','urlag','hodolgoon','niigem','aa_uhaan','hogjim','music'].includes(a.code)).map((a) => (
                     <button
                       key={a.code}
                       type="button"

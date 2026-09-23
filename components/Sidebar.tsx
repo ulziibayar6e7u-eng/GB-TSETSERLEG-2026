@@ -39,7 +39,7 @@ function bagshMenu(me: Me): MenuSection[] {
   const workspaceItems = isTuslah
     ? [{ href: '/miny-tuslah', label: 'Миний ажлын хэсэг', icon: '🧑‍🤝‍🧑' }]
     : isMusicTeacher
-    ? [{ href: '/hogjim', label: 'Хөгжмийн модуль', icon: '🎵' }]
+    ? [{ href: '/hogjim-tools/Хөгжмийн_багшийн_туслах.html', label: 'Хөгжмийн багшийн туслах', icon: '🎵' }]
     : []
 
   const sections: MenuSection[] = [
