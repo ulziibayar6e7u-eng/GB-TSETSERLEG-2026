@@ -31,7 +31,7 @@ export default function UilAjilgaaPage() {
   const [rows, setRows] = useState<Row[]>([])
   const [dashLoading, setDashLoading] = useState(false)
   const [recent, setRecent] = useState<any[]>([])
-  const [recentTab, setRecentTab] = useState<'obs'|'plan'|'club'>('plan')
+  const [recentTab, setRecentTab] = useState<'plan'|'lesson'|'obs'|'club'>('plan')
 
   useEffect(() => {
     if (!isLeader) return
@@ -385,10 +385,11 @@ function EntryCard({ entry: r, me, supabase }: any) {
   )
 }
 
-const RECENT_TABS: { id: 'plan' | 'obs' | 'club'; label: string; kinds: string[]; active: string }[] = [
-  { id: 'plan', label: '📅 Хичээл, төлөвлөгөө', kinds: ['plan', 'lesson'], active: 'bg-blue-600 text-white border-blue-600' },
-  { id: 'obs',  label: '🎯 Ажиглалт', kinds: ['obs'], active: 'bg-emerald-600 text-white border-emerald-600' },
-  { id: 'club', label: '🎨 Дугуйлан, хөгжим', kinds: ['club', 'music'], active: 'bg-pink-600 text-white border-pink-600' },
+const RECENT_TABS: { id: 'plan' | 'lesson' | 'obs' | 'club'; label: string; kinds: string[]; active: string }[] = [
+  { id: 'plan',   label: '📅 Батлуулсан төлөвлөгөө', kinds: ['plan'], active: 'bg-blue-600 text-white border-blue-600' },
+  { id: 'lesson', label: '📸 Хичээлийн бичлэг', kinds: ['lesson'], active: 'bg-indigo-600 text-white border-indigo-600' },
+  { id: 'obs',    label: '🎯 Ажиглалт', kinds: ['obs'], active: 'bg-emerald-600 text-white border-emerald-600' },
+  { id: 'club',   label: '🎨 Дугуйлан, хөгжим', kinds: ['club', 'music'], active: 'bg-pink-600 text-white border-pink-600' },
 ]
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
