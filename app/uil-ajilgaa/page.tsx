@@ -387,9 +387,9 @@ function EntryCard({ entry: r, me, supabase }: any) {
 
 const RECENT_TABS: { id: 'plan' | 'lesson' | 'obs' | 'club'; label: string; kinds: string[]; active: string }[] = [
   { id: 'plan',   label: '📅 Батлуулсан төлөвлөгөө', kinds: ['plan'], active: 'bg-blue-600 text-white border-blue-600' },
-  { id: 'lesson', label: '📸 Хичээлийн бичлэг', kinds: ['lesson'], active: 'bg-indigo-600 text-white border-indigo-600' },
+  { id: 'lesson', label: '📸 Хичээлийн бичлэг', kinds: ['lesson', 'music'], active: 'bg-indigo-600 text-white border-indigo-600' },
   { id: 'obs',    label: '🎯 Ажиглалт', kinds: ['obs'], active: 'bg-emerald-600 text-white border-emerald-600' },
-  { id: 'club',   label: '🎨 Дугуйлан, хөгжим', kinds: ['club', 'music'], active: 'bg-pink-600 text-white border-pink-600' },
+  { id: 'club',   label: '🎨 Дугуйлан', kinds: ['club'], active: 'bg-pink-600 text-white border-pink-600' },
 ]
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
