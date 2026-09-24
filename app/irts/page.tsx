@@ -11,7 +11,7 @@ type Attendance = { id: string; child_id: string; date: string; status: AttStatu
 
 const STATUS_META: Record<AttStatus, { label: string; color: string; bg: string; short: string }> = {
   irsen:     { label: 'Ирсэн',    short: 'И',  color: 'text-emerald-700', bg: 'bg-emerald-100 hover:bg-emerald-200 border-emerald-300' },
-  iree_gui:  { label: 'Ирээгүй',  short: 'Х', color: 'text-red-700',     bg: 'bg-red-100 hover:bg-red-200 border-red-300' },
+  iree_gui:  { label: 'Тасалсан',  short: 'Т', color: 'text-red-700',     bg: 'bg-red-100 hover:bg-red-200 border-red-300' },
   chuluutei: { label: 'Чөлөөтэй', short: 'Ч',  color: 'text-amber-700',   bg: 'bg-amber-100 hover:bg-amber-200 border-amber-300' },
   uvchtei:   { label: 'Өвчтэй',   short: 'Ө',  color: 'text-purple-700',  bg: 'bg-purple-100 hover:bg-purple-200 border-purple-300' },
 }

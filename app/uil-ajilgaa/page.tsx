@@ -6,8 +6,8 @@ import { createClient as createPlainClient } from '@supabase/supabase-js'
 import { useMe } from '@/lib/useMe'
 
 // Багшийн "📸 Хичээлийн бичлэг" (iframe /hogjim) тусдаа Supabase-ийн activities хүснэгтэд хадгалагддаг — public/hogjim/config.js
-const HOGJIM_URL = process.env.NEXT_PUBLIC_HOGJIM_SUPABASE_URL || ''
-const HOGJIM_KEY = process.env.NEXT_PUBLIC_HOGJIM_SUPABASE_KEY || ''
+const HOGJIM_URL = process.env.NEXT_PUBLIC_HOGJIM_SUPABASE_URL || 'https://dehxrmupnbilwlxsovpi.supabase.co'
+const HOGJIM_KEY = process.env.NEXT_PUBLIC_HOGJIM_SUPABASE_KEY || 'sb_publishable_VRNBeM9nqwFlrDhT2-wD3w_Gp3O85uy'
 
 type Teacher = { id: string; last_name: string; first_name: string; role: string }
 type Row = { month: number; observations: number; activities: number; clubActs: number }
