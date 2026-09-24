@@ -31,7 +31,7 @@ export default function HogjimActivityPage() {
   const [filterCat, setFilterCat] = useState<Cat|'all'>('all')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Row|null>(null)
-  const [form, setForm] = useState({ date: new Date().toISOString().slice(0,10), group_id: '', category: 'new_song' as Cat, title: '', note: '', file: null as File|null, extraLinks: '' })
+  const [form, setForm] = useState({ date: new Date().toISOString().slice(0,10), group_id: '', category: 'new_song' as Cat, title: '', note: '', files: [] as File[], extraLinks: '' })
   const [saving, setSaving] = useState(false)
 
   async function load() {
@@ -53,12 +53,12 @@ export default function HogjimActivityPage() {
 
   function openAdd() {
     setEditing(null)
-    setForm({ date: new Date().toISOString().slice(0,10), group_id: '', category: 'new_song', title: '', note: '', file: null, extraLinks: '' })
+    setForm({ date: new Date().toISOString().slice(0,10), group_id: '', category: 'new_song', title: '', note: '', files: [], extraLinks: '' })
     setShowForm(true)
   }
   function openEdit(r: Row) {
     setEditing(r)
-    setForm({ date: r.date, group_id: r.group_id?.toString() || '', category: r.category, title: r.title, note: r.note || '', file: null, extraLinks: (r.extra_links||[]).join('\n') })
+    setForm({ date: r.date, group_id: r.group_id?.toString() || '', category: r.category, title: r.title, note: r.note || '', files: [], extraLinks: (r.extra_links||[]).join('\n') })
     setShowForm(true)
   }
 
@@ -68,17 +68,19 @@ export default function HogjimActivityPage() {
     if (!form.title.trim()) { alert('Гарчиг бөглөнө үү'); return }
     setSaving(true)
     let file_url = editing?.file_url || null
-    if (form.file) {
-      const path = `music-activity/${Date.now()}_${form.file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
-      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, form.file)
+    const media_urls: string[] = (editing?.media_urls || []) as string[]
+    for (const f of form.files) {
+      const path = `music-activity/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
+      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, f)
       if (upErr) { alert('Файл алдаа: '+upErr.message); setSaving(false); return }
       const { data: pub } = supabase.storage.from('org-plans').getPublicUrl(path)
-      file_url = pub?.publicUrl || null
+      if (pub?.publicUrl) media_urls.push(pub.publicUrl)
     }
+    if (media_urls[0] && !file_url) file_url = media_urls[0]
     const payload = {
       date: form.date, group_id: Number(form.group_id), category: form.category,
       title: form.title.trim(), note: form.note || null,
-      author_id: me.id, file_url,
+      author_id: me.id, file_url, media_urls,
       extra_links: form.extraLinks.split(/\r?\n/).map(s=>s.trim()).filter(Boolean),
       updated_at: new Date().toISOString(),
     }
@@ -187,7 +189,11 @@ export default function HogjimActivityPage() {
               <div><label className="block text-sm text-slate-700 mb-1">Огноо</label><input type="date" value={form.date} onChange={(e)=>setForm({...form, date: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
               <div><label className="block text-sm text-slate-700 mb-1">Гарчиг *</label><input value={form.title} onChange={(e)=>setForm({...form, title: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" placeholder="Жишээ: Намрын дуу" /></div>
               <div><label className="block text-sm text-slate-700 mb-1">Тэмдэглэл</label><textarea rows={4} value={form.note} onChange={(e)=>setForm({...form, note: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-              <div><label className="block text-sm text-slate-700 mb-1">📎 Файл (PDF/зураг/бичлэг)</label><input type="file" accept=".pdf,image/*,video/*,audio/*" onChange={(e)=>setForm({...form, file: e.target.files?.[0]||null})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <div>
+                <label className="block text-sm text-slate-700 mb-1">📎 Файл (олон сонгож болно: PDF/зураг/бичлэг)</label>
+                <input type="file" multiple accept=".pdf,image/*,video/*,audio/*" onChange={(e)=>setForm({...form, files: Array.from(e.target.files || [])})} className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+                {form.files.length > 0 && <div className="text-xs text-emerald-600 mt-1">✓ {form.files.length} файл сонгосон</div>}
+              </div>
               <div><label className="block text-sm text-slate-700 mb-1">🔗 Линкүүд</label><textarea rows={2} value={form.extraLinks} onChange={(e)=>setForm({...form, extraLinks: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" placeholder="YouTube, Google Drive гэх мэт" /></div>
             </div>
             <div className="p-5 border-t border-slate-200 flex gap-2 flex-shrink-0">

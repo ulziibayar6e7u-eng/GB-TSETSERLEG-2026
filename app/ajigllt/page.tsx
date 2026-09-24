@@ -54,7 +54,7 @@ export default function AjiglltPage() {
     area_code: '',
     outcome_id: '' as string | number,
     level: '' as Level | '',
-    file: null as File | null,
+    files: [] as File[],
   })
   const [outcomes, setOutcomes] = useState<{ id: number; code: string; text: string; area_code: string; age_group: string }[]>([])
   const [filterChild, setFilterChild] = useState('')
@@ -159,7 +159,7 @@ export default function AjiglltPage() {
       area_code: '',
       outcome_id: '',
       level: '',
-      file: null,
+      files: [],
     })
     setShowForm(true)
   }
@@ -174,7 +174,7 @@ export default function AjiglltPage() {
       area_code: o.area_code || '',
       outcome_id: (o as unknown as { outcome_id?: number }).outcome_id || '',
       level: (o.level as Level) || '',
-      file: null,
+      files: [],
     })
     setShowForm(true)
   }
@@ -183,13 +183,15 @@ export default function AjiglltPage() {
     e.preventDefault()
     if (!me) return
     let photo_url: string | null = (editing as unknown as { photo_url?: string })?.photo_url || null
-    if (form.file) {
-      const path = `obs/${Date.now()}_${form.file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
-      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, form.file)
+    const media_urls: string[] = ((editing as unknown as { media_urls?: string[] })?.media_urls || []) as string[]
+    for (const f of form.files) {
+      const path = `obs/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
+      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, f)
       if (upErr) { alert('Файл алдаа: ' + upErr.message); return }
       const { data: pub } = supabase.storage.from('org-plans').getPublicUrl(path)
-      photo_url = pub?.publicUrl || null
+      if (pub?.publicUrl) media_urls.push(pub.publicUrl)
     }
+    if (media_urls[0]) photo_url = media_urls[0]
     const payload = {
       child_id: form.child_id,
       date: form.date,
@@ -200,6 +202,7 @@ export default function AjiglltPage() {
       level: form.level || null,
       observer_id: me.id,
       photo_url,
+      media_urls,
     }
     if (editing) {
       await supabase.from('observations').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', editing.id)
@@ -424,7 +427,8 @@ export default function AjiglltPage() {
               })()}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">📷 Зураг / 🎥 Бичлэг</label>
-                <input type="file" accept="image/*,video/*" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+                <input type="file" multiple accept="image/*,video/*" onChange={(e) => setForm({ ...form, files: Array.from(e.target.files || []) })} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+                {form.files.length > 0 && <div className="text-xs text-emerald-600 mt-1">✓ {form.files.length} файл сонгосон</div>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Түвшин</label>

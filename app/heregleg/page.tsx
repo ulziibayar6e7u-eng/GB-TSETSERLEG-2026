@@ -69,7 +69,7 @@ export default function HereglegPage() {
     }
   }, [me])
   const [editing, setEditing] = useState<Material | null>(null)
-  const [form, setForm] = useState({ category: 'material' as Cat, title: '', description: '', groupId: '', file: null as File | null, extraLinks: '' })
+  const [form, setForm] = useState({ category: 'material' as Cat, title: '', description: '', groupId: '', files: [] as File[], extraLinks: '' })
   const [saving, setSaving] = useState(false)
 
   const isReviewer = me && (me.is_admin || me.role === 'arga_zuich' || me.role === 'erhlegch')
@@ -97,12 +97,12 @@ export default function HereglegPage() {
 
   function openAdd() {
     setEditing(null)
-    setForm({ category: 'material', title: '', description: '', groupId: me?.groups[0]?.id?.toString() || '', file: null, extraLinks: '' })
+    setForm({ category: 'material', title: '', description: '', groupId: me?.groups[0]?.id?.toString() || '', files: [], extraLinks: '' })
     setShowForm(true)
   }
   function openEdit(m: Material) {
     setEditing(m)
-    setForm({ category: m.category, title: m.title, description: m.description || '', groupId: m.group_id?.toString() || '', file: null, extraLinks: (m.extra_links || []).join('\n') })
+    setForm({ category: m.category, title: m.title, description: m.description || '', groupId: m.group_id?.toString() || '', files: [], extraLinks: (m.extra_links || []).join('\n') })
     setShowForm(true)
   }
   async function save(submit: boolean) {
@@ -110,13 +110,15 @@ export default function HereglegPage() {
     if (!form.title.trim()) { alert('Гарчиг бөглөнө үү'); return }
     setSaving(true)
     let file_url = editing?.file_url || null
-    if (form.file) {
-      const path = `heregleg/${Date.now()}_${form.file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
-      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, form.file)
+    const media_urls: string[] = ((editing as any)?.media_urls || []) as string[]
+    for (const f of form.files) {
+      const path = `heregleg/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
+      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, f)
       if (upErr) { alert('Файл алдаа: ' + upErr.message); setSaving(false); return }
       const { data: pub } = supabase.storage.from('org-plans').getPublicUrl(path)
-      file_url = pub?.publicUrl || null
+      if (pub?.publicUrl) media_urls.push(pub.publicUrl)
     }
+    if (media_urls[0] && !file_url) file_url = media_urls[0]
     const payload = {
       author_id: me.id,
       group_id: form.groupId ? parseInt(form.groupId) : null,
@@ -124,6 +126,7 @@ export default function HereglegPage() {
       title: form.title.trim(),
       description: form.description || null,
       file_url,
+      media_urls,
       extra_links: form.extraLinks.split(/\r?\n/).map((s) => s.trim()).filter(Boolean),
       status: submit ? 'submitted' : (editing?.status || 'draft'),
     }
@@ -273,7 +276,11 @@ export default function HereglegPage() {
                 </div>
               )}
               <div><label className="block text-sm text-slate-700 mb-1">Тайлбар</label><textarea rows={4} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
-              <div><label className="block text-sm text-slate-700 mb-1">📎 Файл (PDF/DOCX/Зураг)</label><input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,image/*,video/*" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
+              <div>
+                <label className="block text-sm text-slate-700 mb-1">📎 Файл (олон сонгож болно: PDF/DOCX/Зураг/Бичлэг)</label>
+                <input type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,image/*,video/*" onChange={(e) => setForm({ ...form, files: Array.from(e.target.files || []) })} className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+                {form.files.length > 0 && <div className="text-xs text-emerald-600 mt-1">✓ {form.files.length} файл сонгосон</div>}
+              </div>
               <div><label className="block text-sm text-slate-700 mb-1">🔗 Линкүүд (нэг мөрөнд нэг)</label><textarea rows={2} value={form.extraLinks} onChange={(e) => setForm({ ...form, extraLinks: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
             </div>
             <div className="p-5 border-t border-slate-200 flex gap-2 flex-shrink-0 bg-white rounded-b-2xl">
