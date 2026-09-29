@@ -5,6 +5,17 @@ import AppShell from "@/components/AppShell";
 export const metadata: Metadata = {
   title: "Гурванбулаг Цэцэрлэг | Удирдлагын систем",
   description: "Баянхонгор аймгийн Гурванбулаг сумын Хүүхдийн цэцэрлэгийн нэгдсэн удирдлагын систем",
+  manifest: "/manifest.json",
+  themeColor: "#3b82f6",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "ГБ Цэцэрлэг",
+  },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

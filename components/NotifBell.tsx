@@ -38,7 +38,7 @@ export default function NotifBell() {
   const [items, setItems] = useState<Notif[]>([])
   const [unread, setUnread] = useState(0)
 
-  async function load() {
+  async function load(notify = false) {
     if (!me) return
     const { data } = await supabase
       .from('notifications')
@@ -47,14 +47,40 @@ export default function NotifBell() {
       .order('created_at', { ascending: false })
       .limit(30)
     const list = (data as Notif[]) || []
+    const newUnread = list.filter((n) => !n.seen).length
+    if (notify && newUnread > unread) {
+      playBeep()
+      const latest = list.find((n) => !n.seen)
+      if (latest && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        try { new Notification(latest.title, { body: latest.message || '', icon: '/icon.svg', tag: latest.id }) } catch {}
+      }
+    }
     setItems(list)
-    setUnread(list.filter((n) => !n.seen).length)
+    setUnread(newUnread)
+  }
+
+  function playBeep() {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain); gain.connect(ctx.destination)
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(880, ctx.currentTime)
+      osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.15)
+      gain.gain.setValueAtTime(0.3, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.5)
+    } catch {}
   }
 
   useEffect(() => {
     if (!me) return
     load()
-    const iv = setInterval(load, 30000)
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      try { Notification.requestPermission() } catch {}
+    }
+    const iv = setInterval(() => load(true), 20000)
     return () => clearInterval(iv)
   }, [me])
 
