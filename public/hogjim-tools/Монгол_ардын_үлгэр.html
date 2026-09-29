@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Монгол ардын үлгэр — Интерактив хичээл</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; }
+body { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fbbf24 100%); color: #1e293b; user-select: none; }
+.app { height: 100vh; display: flex; flex-direction: column; }
+.top { padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.7); backdrop-filter: blur(10px); border-bottom: 2px solid rgba(0,0,0,0.05); }
+.top .title { font-weight: 800; font-size: 18px; color: #78350f; }
+.top button { border: none; background: white; padding: 8px 14px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.stage { flex: 1; overflow: hidden; position: relative; }
+.screen { position: absolute; inset: 0; padding: 30px; overflow-y: auto; display: none; animation: fadeIn .4s ease; }
+.screen.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+.home { text-align: center; }
+.home h1 { font-size: 42px; color: #7c2d12; margin-bottom: 12px; text-shadow: 2px 2px 0 #fff; }
+.home .sub { font-size: 18px; color: #92400e; margin-bottom: 40px; }
+.tales { display: grid; gap: 20px; max-width: 900px; margin: 0 auto; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.tale { background: white; border-radius: 30px; padding: 28px 20px; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.12); transition: transform .3s; border: 4px solid transparent; }
+.tale:hover, .tale:active { transform: translateY(-8px) scale(1.03); }
+.tale .emoji { font-size: 80px; margin-bottom: 14px; display: block; animation: bounce 2s infinite; }
+.tale:nth-child(2) .emoji { animation-delay: 0.3s; }
+.tale:nth-child(3) .emoji { animation-delay: 0.6s; }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+.tale h3 { font-size: 22px; color: #78350f; margin-bottom: 8px; }
+.tale p { font-size: 14px; color: #78716c; }
+.scene { max-width: 800px; margin: 0 auto; background: white; border-radius: 30px; padding: 40px; box-shadow: 0 15px 40px rgba(0,0,0,0.12); text-align: center; min-height: 500px; display: flex; flex-direction: column; justify-content: center; }
+.scene .picture { font-size: 120px; margin: 10px 0 20px; animation: sway 3s ease-in-out infinite; }
+@keyframes sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+.scene .text { font-size: 20px; line-height: 1.7; color: #1e293b; margin-bottom: 25px; padding: 0 10px; }
+.dialog { display: inline-block; background: #fef3c7; padding: 12px 20px; border-radius: 20px; border-left: 5px solid #f59e0b; font-style: italic; color: #78350f; margin: 8px 0; }
+.scene .nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 25px; }
+.scene .nav button { border: none; padding: 14px 24px; border-radius: 18px; font-size: 18px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 15px rgba(0,0,0,0.15); min-width: 130px; }
+.btn-back { background: #f1f5f9; color: #475569; }
+.btn-next { background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; }
+.progress { display: flex; gap: 6px; justify-content: center; margin-top: 15px; flex-wrap: wrap; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: #e2e8f0; }
+.dot.done { background: #f59e0b; }
+.dot.active { background: #ea580c; transform: scale(1.4); }
+.question { max-width: 800px; margin: 0 auto; background: white; border-radius: 30px; padding: 40px; box-shadow: 0 15px 40px rgba(0,0,0,0.12); text-align: center; }
+.question h2 { font-size: 24px; color: #7c2d12; margin-bottom: 20px; }
+.q-emoji { font-size: 70px; margin-bottom: 15px; }
+.q-opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 500px; margin: 0 auto; }
+.q-opts button { border: 5px solid #fde68a; background: white; padding: 20px; border-radius: 24px; font-size: 55px; cursor: pointer; transition: transform .15s, border-color .15s; }
+.q-opts button:active { transform: scale(0.95); }
+.q-opts button.correct { border-color: #22c55e; background: #dcfce7; animation: shake 0.5s; }
+.q-opts button.wrong { border-color: #ef4444; background: #fee2e2; animation: shake 0.5s; }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+.feedback { margin-top: 20px; font-size: 22px; font-weight: 800; min-height: 30px; }
+.feedback.good { color: #16a34a; }
+.feedback.bad { color: #dc2626; }
+.finish { text-align: center; max-width: 700px; margin: 0 auto; }
+.stars { font-size: 90px; margin: 15px 0; animation: spin 3s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+.finish h1 { font-size: 36px; color: #7c2d12; }
+.finish p { font-size: 18px; color: #92400e; margin: 20px 0 30px; }
+.finish button { background: linear-gradient(135deg, #f59e0b, #ea580c); border: none; color: white; padding: 16px 36px; font-size: 18px; font-weight: 800; border-radius: 20px; cursor: pointer; }
+.moral { background: linear-gradient(135deg, #fef3c7, #fde68a); padding: 20px; border-radius: 20px; margin: 20px 0; font-size: 18px; color: #78350f; font-weight: 700; }
+.moral .icon { font-size: 40px; display: block; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div class="app">
+<div class="top">
+<div class="title" id="topTitle">📖 Монгол ардын үлгэр</div>
+<button onclick="goHome()">🏠 Нүүр</button>
+</div>
+<div class="stage">
+
+<div class="screen active" id="scr-home">
+<div class="home">
+<h1>📖 Монгол ардын үлгэр</h1>
+<div class="sub">Аль үлгэрийг сонсох вэ?</div>
+<div class="tales">
+<div class="tale" onclick="startTale('rabbit')">
+<span class="emoji">🐇</span>
+<h3>Ухаант туулай</h3>
+<p>Хүчнээс их нь ухаан</p>
+</div>
+<div class="tale" onclick="startTale('friend')">
+<span class="emoji">🦊</span>
+<h3>Нөхөрлөлийн үлгэр</h3>
+<p>Үнэн найзын үнэ цэнэ</p>
+</div>
+<div class="tale" onclick="startTale('erkhii')">
+<span class="emoji">🏹</span>
+<h3>Эрхий мэргэн</h3>
+<p>Хэлсэн үг — эрийн зэс</p>
+</div>
+</div>
+</div>
+</div>
+
+<div class="screen" id="scr-scene">
+<div class="scene">
+<div class="picture" id="scPic">🐇</div>
+<div class="text" id="scText"></div>
+<div class="progress" id="scDots"></div>
+<div class="nav">
+<button class="btn-back" onclick="prevScene()">◀ Өмнөх</button>
+<button class="btn-next" onclick="nextScene()">Дараах ▶</button>
+</div>
+</div>
+</div>
+
+<div class="screen" id="scr-q">
+<div class="question">
+<div class="q-emoji" id="qEmoji">❓</div>
+<h2 id="qText"></h2>
+<div class="q-opts" id="qOpts"></div>
+<div class="feedback" id="qFeedback"></div>
+</div>
+</div>
+
+<div class="screen" id="scr-finish">
+<div class="finish">
+<div class="stars">🌟</div>
+<h1>Сайн байна!</h1>
+<div class="moral" id="finalMoral"></div>
+<p>Үлгэрээ дуусгасанд баяр хүргэе!</p>
+<button onclick="goHome()">🏠 Дахин үлгэр сонсох</button>
+</div>
+</div>
+
+</div>
+</div>
+
+<script>
+const TALES = {
+  rabbit: {
+    title: '🐇 Ухаант туулай',
+    scenes: [
+      { pic: '🌳🐇', text: 'Эрт цагт нэгэн <b>туулай</b> мод бутны дунд амьдардаг байжээ.' },
+      { pic: '🦁', text: 'Нэгэн өдөр туулай явтал том <b>арсланг</b> тааралджээ. Арслан туулайг цохих гэсэн.' },
+      { pic: '🐇💭', text: 'Гэвч туулай айсангүй, ухаан гарган хэлэв:' },
+      { pic: '🐇🗣️', text: '<span class="dialog">"Хаан минь! Надаас илүү хүчтэй арслан бий. Хэрэв чи намайг иднэ гэвэл тэр чамайг довтолно."</span>' },
+      { pic: '🦁😠', text: 'Арслан их хилэгнэн: <span class="dialog">"Ямар арслан? Одоо үзүүл!"</span>' },
+      { pic: '💧', text: 'Туулай арсланг <b>гүн худгийн</b> дэргэд аваачив.' },
+      { pic: '🦁👀', text: 'Арслан худагт харангуут <b>өөрийнхөө дүрсийг</b> уснаас хараад "нөгөө арслан!" гэж бодов.' },
+      { pic: '💦', text: 'Арслан хилэгнэн үсрэн худагт орсонд амиа алдав.' },
+      { pic: '🐇🎉', text: 'Туулай баясан хэлэв: <span class="dialog">"Хүчнээс их нь ухаан!"</span>' }
+    ],
+    question: { emoji: '🤔', text: 'Туулай юугаа ашиглаж арслангаас амьд гарсан бэ?', options: [
+      { icon: '💪', correct: false }, { icon: '🧠', correct: true }, { icon: '🏃', correct: false }, { icon: '😴', correct: false }
+    ]},
+    moral: '💡 Хүчнээс их нь <b>ухаан</b>'
+  },
+  friend: {
+    title: '🦊 Нөхөрлөлийн үлгэр',
+    scenes: [
+      { pic: '🐇🦊🐺', text: 'Эрт цагт нэгэн ойд <b>гурван анд</b> — Туулай, Үнэг, Чоно гурав нөхөрлөн амьдардаг байжээ.' },
+      { pic: '🍖', text: 'Нэгэн өдөр гурвуулаа хамтдаа том <b>ан</b> олжээ.' },
+      { pic: '🐺😤', text: 'Чоно: <span class="dialog">"Би хамгийн хүчтэй тул хамгийн ихийг идэх ёстой!"</span>' },
+      { pic: '🦊😏', text: 'Үнэг: <span class="dialog">"Би хамгийн ухаантай, надгүй бол та нар олохгүй байсан!"</span>' },
+      { pic: '🐇😢', text: 'Туулай ганцхан: <span class="dialog">"Би хамгийн жижиг, тиймээс жаахан авъя..."</span>' },
+      { pic: '🍽️❌', text: 'Гэвч чоно, үнэг хоёр бүгдийг авч, туулайд юу ч үлдээгээгүй. Туулай гунигтай явжээ.' },
+      { pic: '🐻', text: 'Хэдэн хоногийн дараа чоно, үнэг том <b>баавгайтай</b> тааралдав.' },
+      { pic: '🐻⚡', text: 'Баавгай тэднийг довтолсонд туулайг санаж, тусламж дуудахыг санав.' },
+      { pic: '🐇💝', text: 'Туулай сонсоод гүйж очоод найзуудаа <b>аварчээ</b>.' },
+      { pic: '🐺🦊🐇', text: 'Чоно, үнэг хоёр уучлал гуйж: <span class="dialog">"Үнэн найз бол хамтдаа хагацдаггүй нь!"</span>' }
+    ],
+    question: { emoji: '💝', text: 'Үнэн найз бол ямар байх ёстой вэ?', options: [
+      { icon: '💰', correct: false }, { icon: '🤝', correct: true }, { icon: '👑', correct: false }, { icon: '💪', correct: false }
+    ]},
+    moral: '💝 Үнэн найз — <b>хамтдаа</b>, хагацдаггүй'
+  },
+  erkhii: {
+    title: '🏹 Эрхий мэргэн',
+    scenes: [
+      { pic: '☀️☀️☀️', text: 'Эрт цагт тэнгэрт <b>долоон нар</b> гарч ирэв. Хамаг газар шатаж, гол мөрөн ширгэсэн.' },
+      { pic: '🥀🌵', text: 'Хүн, мал, ургамал бүгд <b>амьсгаа авахын аргагүй</b> болов.' },
+      { pic: '🏹', text: 'Тэр үед <b>Эрхий мэргэн</b> гэдэг онц харваачин байжээ. Тэр эрхий хуруу нь урт бөгөөд онилсон бай нь өнгөрдөггүй байв.' },
+      { pic: '👥🙏', text: 'Ард түмэн түүнд хандан: <span class="dialog">"Эрхий мэргэн ээ, биднийг авраач!"</span>' },
+      { pic: '🏹💪', text: 'Эрхий мэргэн бахархан: <span class="dialog">"Долоон сумаар долоон нарыг харваж чадахгүй бол эрхий хуруугаа тас цохиж, нохой болно!"</span>' },
+      { pic: '🎯🎯🎯', text: 'Тэрбээр дараалан 6 сумыг харвасан бүгд онилжээ. <b>Зургаан нар унав!</b>' },
+      { pic: '🕊️', text: 'Долоо дахь сумыг татаж онилох мөчид нэгэн <b>хараацай</b> нислээ.' },
+      { pic: '🕊️✂️', text: 'Сум хараацайн <b>сүүлийг</b> тас цохиж, наранд тусаагүй.' },
+      { pic: '🕊️~', text: 'Тиймээс өнөөдөр <b>хараацайн сүүл</b> хоёр салаа хачигтай байдаг.' },
+      { pic: '🐕', text: 'Эрхий мэргэн үгэндээ хүрч: <span class="dialog">"Хэлсэн үг — эрийн зэс!"</span>. Тэр эрхий хурууг тас цохиж <b>нохой</b> болжээ.' }
+    ],
+    question: { emoji: '🐕', text: 'Эрхий мэргэн юу болсон бэ?', options: [
+      { icon: '🐕', correct: true }, { icon: '🦁', correct: false }, { icon: '🐺', correct: false }, { icon: '🐘', correct: false }
+    ]},
+    moral: '🗣️ Хэлсэн үг — <b>эрийн зэс</b>'
+  }
+}
+
+let current = null, sceneIndex = 0
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active') }
+function goHome() { current = null; sceneIndex = 0; document.getElementById('topTitle').textContent = '📖 Монгол ардын үлгэр'; showScreen('scr-home') }
+function startTale(id) { current = TALES[id]; sceneIndex = 0; document.getElementById('topTitle').textContent = current.title; renderScene(); showScreen('scr-scene'); playBeep(600) }
+function renderScene() {
+  const s = current.scenes[sceneIndex]
+  document.getElementById('scPic').textContent = s.pic
+  document.getElementById('scText').innerHTML = s.text
+  document.getElementById('scDots').innerHTML = current.scenes.map((_, i) => `<div class="dot ${i < sceneIndex ? 'done' : ''} ${i === sceneIndex ? 'active' : ''}"></div>`).join('')
+  speak(s.text.replace(/<[^>]+>/g, ''))
+}
+function prevScene() { if (sceneIndex > 0) { sceneIndex--; renderScene(); playBeep(500) } else goHome() }
+function nextScene() { if (sceneIndex < current.scenes.length - 1) { sceneIndex++; renderScene(); playBeep(700) } else showQuestion() }
+function showQuestion() {
+  const q = current.question
+  document.getElementById('qEmoji').textContent = q.emoji
+  document.getElementById('qText').textContent = q.text
+  document.getElementById('qFeedback').textContent = ''
+  document.getElementById('qFeedback').className = 'feedback'
+  document.getElementById('qOpts').innerHTML = q.options.map((o, i) => `<button onclick="answer(${i})">${o.icon}</button>`).join('')
+  showScreen('scr-q'); speak(q.text)
+}
+function answer(i) {
+  const q = current.question
+  const btns = document.querySelectorAll('#qOpts button')
+  btns.forEach(b => b.disabled = true)
+  if (q.options[i].correct) {
+    btns[i].classList.add('correct')
+    document.getElementById('qFeedback').textContent = '✅ Зөв!'
+    document.getElementById('qFeedback').className = 'feedback good'
+    playBeep(800); setTimeout(() => playBeep(1200), 200)
+    setTimeout(showFinish, 1500)
+  } else {
+    btns[i].classList.add('wrong')
+    document.getElementById('qFeedback').textContent = '❌ Дахин бод!'
+    document.getElementById('qFeedback').className = 'feedback bad'
+    playBeep(300)
+    setTimeout(() => { btns.forEach(b => { b.disabled = false; b.classList.remove('wrong') }) }, 1200)
+  }
+}
+function showFinish() { document.getElementById('finalMoral').innerHTML = '<span class="icon">💫</span>' + current.moral; showScreen('scr-finish'); playBeep(900); setTimeout(() => playBeep(1200), 150); setTimeout(() => playBeep(1500), 300) }
+function playBeep(freq) { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(), gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.type = 'sine'; osc.frequency.setValueAtTime(freq, ctx.currentTime); gain.gain.setValueAtTime(0.15, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3); osc.start(); osc.stop(ctx.currentTime + 0.3) } catch {} }
+function speak(text) { try { if ('speechSynthesis' in window) { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'mn-MN'; u.rate = 0.9; u.pitch = 1.1; speechSynthesis.speak(u) } } catch {} }
+</script>
+</body>
+</html>
