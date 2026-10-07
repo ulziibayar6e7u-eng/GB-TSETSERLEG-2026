@@ -65,7 +65,7 @@ export default function AjiglltPage() {
     const [a, ar, c, o, music, ass] = await Promise.all([
       supabase
         .from('observations')
-        .select('*, children(id, last_name, first_name, group_id, groups(id, name, icon, color)), employees(last_name, first_name), development_areas(code, name, icon, color)')
+        .select('*, children(id, last_name, first_name, group_id, groups(id, name, icon, color)), employees:observer_id(last_name, first_name)')
         .order('date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(200),
@@ -118,6 +118,19 @@ export default function AjiglltPage() {
       } as unknown as Observation)
     })
     combined.sort((x, y) => (y.date > x.date ? 1 : -1))
+    const areasList = (ar.data as Area[]) || []
+    const MUSIC_META: Record<string, Area> = {
+      music_new_song:   { code: 'music_new_song',   name: 'Шинэ дуу',          icon: '🎵', color: '#ec4899', sort_order: 0 },
+      music_listen:     { code: 'music_listen',     name: 'Сонсох хөгжим',     icon: '🎧', color: '#3b82f6', sort_order: 0 },
+      music_rhythm:     { code: 'music_rhythm',     name: 'Хэмнэл',            icon: '🥁', color: '#10b981', sort_order: 0 },
+      music_role:       { code: 'music_role',       name: 'Дүрд тоглох',       icon: '🎭', color: '#f59e0b', sort_order: 0 },
+      music_movement:   { code: 'music_movement',   name: 'Хөгжимт хөдөлгөөн', icon: '💃', color: '#a855f7', sort_order: 0 },
+    }
+    combined.forEach((o) => {
+      if (!o.development_areas && o.area_code) {
+        o.development_areas = MUSIC_META[o.area_code] || areasList.find((a) => a.code === o.area_code)
+      }
+    })
     const isLeader = me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich')
     const filtered = isLeader ? combined : combined.filter((o) => o.observer_id === me?.id)
     setObservations(filtered)
