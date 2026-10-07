@@ -48,7 +48,7 @@ function bagshMenu(me: Me): MenuSection[] {
     {
       title: 'Өдөр тутам',
       items: [
-        { href: '/irts', label: 'Ирц', icon: '⏰' },
+        ...(isMusicTeacher ? [] : [{ href: '/irts', label: 'Ирц', icon: '⏰' }]),
         { href: '/juuru', label: 'Жижүүр багш', icon: '🛎' },
         { href: isMusicTeacher ? '/hogjim-uil-ajilgaa' : '/uil-ajilgaa', label: 'Сургалт, үйл ажиллагаа', icon: '📸' },
         { href: '/dugilan', label: 'Дугуйлан', icon: '🎨' },

@@ -43,12 +43,15 @@ export default function Home() {
   useEffect(() => {
     ;(async () => {
       const d = new Date(); const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+      const obsQuery = (me && !canSeeAllChildren(me.role, me.is_admin))
+        ? supabase.from('observations').select('id', { count: 'exact', head: true }).eq('date', today).eq('observer_id', me.id)
+        : supabase.from('observations').select('id', { count: 'exact', head: true }).eq('date', today)
       const [emps, grps, kids, todayAtt, obs, plansSub, matSub] = await Promise.all([
         supabase.from('employees').select('id', { count: 'exact', head: true }),
         supabase.from('groups').select('id', { count: 'exact', head: true }),
         supabase.from('children').select('id', { count: 'exact', head: true }).eq('status', 'active'),
         supabase.from('attendance').select('status').eq('date', today),
-        supabase.from('observations').select('id', { count: 'exact', head: true }).eq('date', today),
+        obsQuery,
         supabase.from('plans').select('id', { count: 'exact', head: true }).eq('status', 'submitted'),
         supabase.from('teacher_materials').select('id', { count: 'exact', head: true }).eq('status', 'submitted'),
       ])
@@ -127,15 +130,19 @@ export default function Home() {
               <AlertCard href="/hamgaalal" icon="🛡" label="Хүүхэд хамгааллын анхаарал" value={0} color="bg-red-50 border-red-200 text-red-700" />
             </div>
           </>
-        ) : (me?.role === 'bagsh' || me?.role === 'bagsh_tuslah') ? (
+        ) : (me?.role === 'bagsh' || me?.role === 'bagsh_tuslah') ? (() => {
+          const isMusic = !!(me?.first_name === 'Өлзийбаяр' || me?.groups?.some((g: any) => g.code === 'hogjim'))
+          return (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <StatCard href={(me?.first_name === 'Өлзийбаяр' || me?.groups?.some((g: any) => g.code === 'hogjim')) ? '/hogjim-huuhed' : '/huuhed'} icon="👧" label="Миний хүүхдүүд" value={stats.myChildren} color="from-blue-500 to-blue-600" />
-              <StatCard href="/irts" icon="⏰" label="Өнөөдрийн ирц" value={`${irtsPct}%`} sub={`${stats.todayIrsen}/${stats.todayAll}`} color="from-emerald-500 to-emerald-600" />
+              <StatCard href={isMusic ? '/hogjim-huuhed' : '/huuhed'} icon="👧" label="Миний хүүхдүүд" value={stats.myChildren} color="from-blue-500 to-blue-600" />
+              {!isMusic && <StatCard href="/irts" icon="⏰" label="Өнөөдрийн ирц" value={`${irtsPct}%`} sub={`${stats.todayIrsen}/${stats.todayAll}`} color="from-emerald-500 to-emerald-600" />}
               <StatCard href="/ajigllt" icon="🎯" label="Өнөөдрийн ажиглалт" value={stats.todayObs} color="from-amber-500 to-amber-600" />
               <StatCard href="/tulvluguu" icon="📅" label="Засах төлөвлөгөө" value={stats.myPlansPending} color="from-purple-500 to-purple-600" />
             </div>
           </>
+          )
+        })()
         ) : (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
