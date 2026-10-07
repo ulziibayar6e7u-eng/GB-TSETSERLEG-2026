@@ -134,7 +134,10 @@ export default function AjiglltPage() {
       }
     })
     const isLeader = me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich')
-    const filtered = isLeader ? combined : combined.filter((o) => o.observer_id === me?.id)
+    // Хөгжмийн багш болон бүх хүүхдийн багш нар бүгдийг хардаг. Бусад нь зөвхөн өөрийн ажиглалтыг.
+    const isMusic = !!(me && (me.first_name?.includes('Өлзийбаяр') || me.groups?.some((g: any) => g.code === 'hogjim') || (me as any).positions?.name?.toLowerCase?.().includes('хөгжм')))
+    const filtered = (isLeader || isMusic) ? combined : combined.filter((o) => o.observer_id === me?.id)
+    console.log('[ajigllt] me:', me?.id, 'total:', combined.length, 'filtered:', filtered.length, 'isLeader:', isLeader, 'isMusic:', isMusic)
     setObservations(filtered)
     setAreas((ar.data as Area[]) || [])
     setChildren((c.data as Child[]) || [])
