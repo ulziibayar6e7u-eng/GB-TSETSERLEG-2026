@@ -62,27 +62,29 @@ export default function AjiglltPage() {
 
   async function load() {
     setLoading(true)
+    const safe = async (p: any) => { try { return await p } catch (e) { console.error('load error', e); return { data: [], error: e } } }
     const [a, ar, c, o, music, ass] = await Promise.all([
-      supabase
+      safe(supabase
         .from('observations')
         .select('*, children(id, last_name, first_name, group_id, groups(id, name, icon, color)), employees:observer_id(last_name, first_name)')
         .order('date', { ascending: false })
         .order('created_at', { ascending: false })
-        .limit(200),
-      supabase.from('development_areas').select('*').order('sort_order'),
-      supabase.from('children').select('*, groups(*)').eq('status', 'active').order('last_name'),
-      supabase.from('outcomes').select('id, code, text, area_code, age_group').eq('active', true).order('area_code').order('sort_order'),
-      supabase
+        .limit(200)),
+      safe(supabase.from('development_areas').select('*').order('sort_order')),
+      safe(supabase.from('children').select('*, groups(*)').eq('status', 'active').order('last_name')),
+      safe(supabase.from('outcomes').select('id, code, text, area_code, age_group').eq('active', true).order('area_code').order('sort_order')),
+      safe(supabase
         .from('music_assessments')
         .select('id, child_id, section, subsection, date, title, text, created_at, children(id, last_name, first_name, group_id, groups(id, name, icon, color)), employees:observer_id(last_name, first_name)')
         .order('date', { ascending: false })
-        .limit(100),
-      supabase
+        .limit(100)),
+      safe(supabase
         .from('assessments')
         .select('id, child_id, section, subsection, date, title, text, created_at')
         .order('date', { ascending: false })
-        .limit(100),
+        .limit(100)),
     ])
+    if ((a as any).error) console.error('observations load error:', (a as any).error)
     const combined: Observation[] = []
     ;((a.data as unknown as Observation[]) || []).forEach((o) => combined.push(o))
     // music_assessments-ыг Observation формат руу хөрвүүлэх
