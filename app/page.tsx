@@ -130,19 +130,17 @@ export default function Home() {
               <AlertCard href="/hamgaalal" icon="🛡" label="Хүүхэд хамгааллын анхаарал" value={0} color="bg-red-50 border-red-200 text-red-700" />
             </div>
           </>
-        ) : (me?.role === 'bagsh' || me?.role === 'bagsh_tuslah') ? (() => {
-          const isMusic = !!(me?.first_name?.includes('Өлзийбаяр') || me?.groups?.some((g: any) => g.code === 'hogjim') || (me as any)?.positions?.name?.toLowerCase?.().includes('хөгжм'))
-          return (
+        ) : (me?.role === 'bagsh' || me?.role === 'bagsh_tuslah') ? (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <StatCard href={isMusic ? '/hogjim-huuhed' : '/huuhed'} icon="👧" label="Миний хүүхдүүд" value={stats.myChildren} color="from-blue-500 to-blue-600" />
-              {!isMusic && <StatCard href="/irts" icon="⏰" label="Өнөөдрийн ирц" value={`${irtsPct}%`} sub={`${stats.todayIrsen}/${stats.todayAll}`} color="from-emerald-500 to-emerald-600" />}
+              <StatCard href={(me?.first_name?.includes('Өлзийбаяр') || me?.groups?.some((g: any) => g.code === 'hogjim') || (me as any)?.positions?.name?.toLowerCase?.().includes('хөгжм')) ? '/hogjim-huuhed' : '/huuhed'} icon="👧" label="Миний хүүхдүүд" value={stats.myChildren} color="from-blue-500 to-blue-600" />
+              {!(me?.first_name?.includes('Өлзийбаяр') || me?.groups?.some((g: any) => g.code === 'hogjim') || (me as any)?.positions?.name?.toLowerCase?.().includes('хөгжм')) && (
+                <StatCard href="/irts" icon="⏰" label="Өнөөдрийн ирц" value={`${irtsPct}%`} sub={`${stats.todayIrsen}/${stats.todayAll}`} color="from-emerald-500 to-emerald-600" />
+              )}
               <StatCard href="/ajigllt" icon="🎯" label="Өнөөдрийн ажиглалт" value={stats.todayObs} color="from-amber-500 to-amber-600" />
               <StatCard href="/tulvluguu" icon="📅" label="Засах төлөвлөгөө" value={stats.myPlansPending} color="from-purple-500 to-purple-600" />
             </div>
           </>
-          )
-        })()
         ) : (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">

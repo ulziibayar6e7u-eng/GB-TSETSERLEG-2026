@@ -121,12 +121,12 @@ export default function AjiglltPage() {
     })
     combined.sort((x, y) => (y.date > x.date ? 1 : -1))
     const areasList = (ar.data as Area[]) || []
-    const MUSIC_META: Record<string, Area> = {
-      music_new_song:   { code: 'music_new_song',   name: 'Шинэ дуу',          icon: '🎵', color: '#ec4899', sort_order: 0 },
-      music_listen:     { code: 'music_listen',     name: 'Сонсох хөгжим',     icon: '🎧', color: '#3b82f6', sort_order: 0 },
-      music_rhythm:     { code: 'music_rhythm',     name: 'Хэмнэл',            icon: '🥁', color: '#10b981', sort_order: 0 },
-      music_role:       { code: 'music_role',       name: 'Дүрд тоглох',       icon: '🎭', color: '#f59e0b', sort_order: 0 },
-      music_movement:   { code: 'music_movement',   name: 'Хөгжимт хөдөлгөөн', icon: '💃', color: '#a855f7', sort_order: 0 },
+    const MUSIC_META: Record<string, any> = {
+      music_new_song:   { code: 'music_new_song',   name: 'Шинэ дуу',          icon: '🎵', color: '#ec4899' },
+      music_listen:     { code: 'music_listen',     name: 'Сонсох хөгжим',     icon: '🎧', color: '#3b82f6' },
+      music_rhythm:     { code: 'music_rhythm',     name: 'Хэмнэл',            icon: '🥁', color: '#10b981' },
+      music_role:       { code: 'music_role',       name: 'Дүрд тоглох',       icon: '🎭', color: '#f59e0b' },
+      music_movement:   { code: 'music_movement',   name: 'Хөгжимт хөдөлгөөн', icon: '💃', color: '#a855f7' },
     }
     combined.forEach((o) => {
       if (!o.development_areas && o.area_code) {
