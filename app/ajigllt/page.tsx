@@ -162,7 +162,14 @@ export default function AjiglltPage() {
   }, [me, children])
 
   const filtered = observations.filter((o) => {
-    if (filterChild && o.child_id !== filterChild) return false
+    if (filterChild) {
+      if (filterChild.startsWith('g:')) {
+        const gid = Number(filterChild.slice(2))
+        if (o.children?.groups?.id !== gid) return false
+      } else if (o.child_id !== filterChild) {
+        return false
+      }
+    }
     if (filterArea && o.area_code !== filterArea) return false
     return true
   })
@@ -260,18 +267,35 @@ export default function AjiglltPage() {
           </div>
         </div>
 
-        {filtered.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex flex-col md:flex-row gap-3">
-          <select value={filterChild} onChange={(e) => setFilterChild(e.target.value)} className="flex-1 border border-slate-300 rounded-lg px-3 py-2">
-            <option value="">Бүх хүүхэд</option>
-            {availableChildren.map((c) => (<option key={c.id} value={c.id}>{c.last_name}.{c.first_name}</option>))}
-          </select>
-          <select value={filterArea} onChange={(e) => setFilterArea(e.target.value)} className="flex-1 border border-slate-300 rounded-lg px-3 py-2">
-            <option value="">Бүх судлагдахуун</option>
-            {areas.filter((a) => ['hel_yaria','bno','matematik','urlag','hodolgoon','niigem','aa_uhaan','hogjim','music'].includes(a.code)).map((a) => (<option key={a.code} value={a.code}>{a.icon} {a.name}</option>))}
-          </select>
-        </div>
-        )}
+        {filtered.length > 0 && (() => {
+          const isMusicT = !!(me && (me.first_name?.includes('Өлзийбаяр') || (me as any).groups?.some((g: any) => g.code === 'hogjim') || (me as any).positions?.name?.toLowerCase?.().includes('хөгжм')))
+          const MUSIC_SUBS = [
+            { code: 'music_new_song', name: 'Шинэ дуу', icon: '🎵' },
+            { code: 'music_listen', name: 'Сонсох хөгжим', icon: '🎧' },
+            { code: 'music_rhythm', name: 'Хэмнэл', icon: '🥁' },
+            { code: 'music_role', name: 'Дүрд тоглох', icon: '🎭' },
+            { code: 'music_movement', name: 'Хөгжимт хөдөлгөөн', icon: '💃' },
+          ]
+          const groupsList = Array.from(new Map(availableChildren.filter((c: any) => c.groups).map((c: any) => [c.groups.id, c.groups])).values())
+          return (
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex flex-col md:flex-row gap-3">
+            <select value={filterChild} onChange={(e) => setFilterChild(e.target.value)} className="flex-1 border border-slate-300 rounded-lg px-3 py-2">
+              <option value="">{isMusicT ? '🏫 Бүх бүлэг' : 'Бүх хүүхэд'}</option>
+              {isMusicT
+                ? groupsList.map((g: any) => (<option key={`g:${g.id}`} value={`g:${g.id}`}>{g.icon} {g.name}</option>))
+                : availableChildren.map((c) => (<option key={c.id} value={c.id}>{c.last_name}.{c.first_name}</option>))
+              }
+            </select>
+            <select value={filterArea} onChange={(e) => setFilterArea(e.target.value)} className="flex-1 border border-slate-300 rounded-lg px-3 py-2">
+              <option value="">Бүх судлагдахуун</option>
+              {isMusicT
+                ? MUSIC_SUBS.map((a) => (<option key={a.code} value={a.code}>{a.icon} {a.name}</option>))
+                : areas.filter((a) => ['hel_yaria','bno','matematik','urlag','hodolgoon','niigem','aa_uhaan'].includes(a.code)).map((a) => (<option key={a.code} value={a.code}>{a.icon} {a.name}</option>))
+              }
+            </select>
+          </div>
+          )
+        })()}
 
         {loading ? (
           <div className="p-12 text-center text-slate-500">Ачааллаж байна...</div>
