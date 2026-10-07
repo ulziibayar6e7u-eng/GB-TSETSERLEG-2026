@@ -131,7 +131,7 @@ export default function Home() {
             </div>
           </>
         ) : (me?.role === 'bagsh' || me?.role === 'bagsh_tuslah') ? (() => {
-          const isMusic = !!(me?.first_name === 'Өлзийбаяр' || me?.groups?.some((g: any) => g.code === 'hogjim'))
+          const isMusic = !!(me?.first_name?.includes('Өлзийбаяр') || me?.groups?.some((g: any) => g.code === 'hogjim') || (me as any)?.positions?.name?.toLowerCase?.().includes('хөгжм'))
           return (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

@@ -33,7 +33,7 @@ type Me = {
 
 // Багш бүрд харагдах цэс (өөрийн ажлын орон зай)
 function bagshMenu(me: Me): MenuSection[] {
-  const isMusicTeacher = me.groups.some((g) => g.code === 'hogjim') || me.first_name === 'Өлзийбаяр'
+  const isMusicTeacher = me.groups.some((g) => g.code === 'hogjim') || (me.first_name || '').includes('Өлзийбаяр') || !!(me.positions?.name || '').toLowerCase().includes('хөгжм')
   const isTuslah = me.role === 'bagsh_tuslah'
 
   const workspaceItems = isTuslah
