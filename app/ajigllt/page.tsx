@@ -127,7 +127,7 @@ export default function AjiglltPage() {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { if (me) load() }, [me?.id])
 
   const availableChildren = useMemo(() => {
     if (!me) return []
