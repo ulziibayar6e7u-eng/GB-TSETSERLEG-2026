@@ -351,11 +351,21 @@ export default function AjiglltPage() {
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">-- Сонгох --</option>
-                  {availableChildren.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.last_name}.{c.first_name}
-                    </option>
-                  ))}
+                  {(() => {
+                    const grouped: Record<string, typeof availableChildren> = {}
+                    availableChildren.forEach((c: any) => {
+                      const key = c.groups ? `${c.groups.icon} ${c.groups.name}` : '📋 Бусад'
+                      if (!grouped[key]) grouped[key] = []
+                      grouped[key].push(c)
+                    })
+                    return Object.keys(grouped).sort().map((gname) => (
+                      <optgroup key={gname} label={gname}>
+                        {grouped[gname].map((c: any) => (
+                          <option key={c.id} value={c.id}>{c.last_name}.{c.first_name}</option>
+                        ))}
+                      </optgroup>
+                    ))
+                  })()}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -393,21 +403,27 @@ export default function AjiglltPage() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Судлагдахуун</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {areas.filter((a) => ['hel_yaria','bno','matematik','urlag','hodolgoon','niigem','aa_uhaan','hogjim','music'].includes(a.code)).map((a) => (
-                    <button
-                      key={a.code}
-                      type="button"
-                      onClick={() => setForm({ ...form, area_code: form.area_code === a.code ? '' : a.code })}
-                      className={`px-3 py-2 rounded-lg text-sm border-2 transition text-left ${
-                        form.area_code === a.code
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <span className="mr-1">{a.icon}</span>
-                      {a.name}
-                    </button>
-                  ))}
+                  {(() => {
+                    const isMusicT = !!(me && (me.first_name === 'Өлзийбаяр' || (me as any).groups?.some((g: any) => g.code === 'hogjim')))
+                    const MUSIC_SUBS = [
+                      { code: 'music_new_song',   name: 'Шинэ дуу',          icon: '🎵' },
+                      { code: 'music_listen',     name: 'Сонсох хөгжим',     icon: '🎧' },
+                      { code: 'music_rhythm',     name: 'Хэмнэл',            icon: '🥁' },
+                      { code: 'music_role',       name: 'Дүрд тоглох',       icon: '🎭' },
+                      { code: 'music_movement',   name: 'Хөгжимт хөдөлгөөн', icon: '💃' },
+                    ]
+                    const list = isMusicT ? MUSIC_SUBS : areas.filter((a) => ['hel_yaria','bno','matematik','urlag','hodolgoon','niigem','aa_uhaan'].includes(a.code))
+                    return list.map((a: any) => (
+                      <button
+                        key={a.code}
+                        type="button"
+                        onClick={() => setForm({ ...form, area_code: form.area_code === a.code ? '' : a.code })}
+                        className={`px-3 py-2 rounded-lg text-sm border-2 transition text-left ${form.area_code === a.code ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}
+                      >
+                        <span className="mr-1">{a.icon}</span>{a.name}
+                      </button>
+                    ))
+                  })()}
                 </div>
               </div>
               {form.area_code && (() => {
