@@ -205,9 +205,11 @@ export default function AjiglltPage() {
       media_urls,
     }
     if (editing) {
-      await supabase.from('observations').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', editing.id)
+      const { error } = await supabase.from('observations').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', editing.id)
+      if (error) { alert('Алдаа: ' + error.message); return }
     } else {
-      await supabase.from('observations').insert(payload)
+      const { error } = await supabase.from('observations').insert(payload)
+      if (error) { alert('Алдаа: ' + error.message); return }
     }
     setShowForm(false)
     load()
@@ -240,32 +242,18 @@ export default function AjiglltPage() {
           </div>
         </div>
 
+        {filtered.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex flex-col md:flex-row gap-3">
-          <select
-            value={filterChild}
-            onChange={(e) => setFilterChild(e.target.value)}
-            className="flex-1 border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
+          <select value={filterChild} onChange={(e) => setFilterChild(e.target.value)} className="flex-1 border border-slate-300 rounded-lg px-3 py-2">
             <option value="">Бүх хүүхэд</option>
-            {availableChildren.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.last_name}.{c.first_name}
-              </option>
-            ))}
+            {availableChildren.map((c) => (<option key={c.id} value={c.id}>{c.last_name}.{c.first_name}</option>))}
           </select>
-          <select
-            value={filterArea}
-            onChange={(e) => setFilterArea(e.target.value)}
-            className="flex-1 border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
+          <select value={filterArea} onChange={(e) => setFilterArea(e.target.value)} className="flex-1 border border-slate-300 rounded-lg px-3 py-2">
             <option value="">Бүх судлагдахуун</option>
-            {areas.filter((a) => ['hel_yaria','bno','matematik','urlag','hodolgoon','niigem','aa_uhaan','hogjim','music'].includes(a.code)).map((a) => (
-              <option key={a.code} value={a.code}>
-                {a.icon} {a.name}
-              </option>
-            ))}
+            {areas.filter((a) => ['hel_yaria','bno','matematik','urlag','hodolgoon','niigem','aa_uhaan','hogjim','music'].includes(a.code)).map((a) => (<option key={a.code} value={a.code}>{a.icon} {a.name}</option>))}
           </select>
         </div>
+        )}
 
         {loading ? (
           <div className="p-12 text-center text-slate-500">Ачааллаж байна...</div>
