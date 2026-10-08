@@ -211,7 +211,7 @@ export default function GuyeetgelPage() {
 
       setAlerts([
         { icon: '⏰', label: 'Хугацаа хэтэрсэн үүрэг', count: overdue, link: '/uureg', color: 'from-red-500 to-orange-600' },
-        { icon: '📋', label: 'Хянагдаагүй төлөвлөгөө', count: submitted, link: '/batlamj', color: 'from-blue-500 to-cyan-600' },
+        { icon: '📋', label: 'Хянагдаагүй төлөвлөгөө', count: submitted, link: '/heregleg', color: 'from-blue-500 to-cyan-600' },
         { icon: '😴', label: 'Ажиглалт байхгүй багш', count: inactiveStaff, link: '/bagsh', color: 'from-amber-500 to-yellow-600' },
       ])
 

@@ -125,7 +125,7 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-              <AlertCard href="/batlamj" icon="📅" label="Хянагдах төлөвлөгөө" value={stats.plansPending} color="bg-blue-50 border-blue-200 text-blue-700" />
+              <AlertCard href="/heregleg" icon="📅" label="Хянагдах төлөвлөгөө" value={stats.plansPending} color="bg-blue-50 border-blue-200 text-blue-700" />
               <AlertCard href="/ajigllt" icon="🎯" label="Өнөөдрийн ажиглалт" value={stats.todayObs} color="bg-emerald-50 border-emerald-200 text-emerald-700" />
               <AlertCard href="/hamgaalal" icon="🛡" label="Хүүхэд хамгааллын анхаарал" value={0} color="bg-red-50 border-red-200 text-red-700" />
             </div>
