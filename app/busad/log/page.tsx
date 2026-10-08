@@ -84,7 +84,9 @@ export default function DailyLogPage() {
     if (!me) return
     setSaving(true)
     const media_urls: string[] = []
-    for (const f of form.files) {
+    const { compressImages } = await import('@/lib/image-compress')
+    const compressed = await compressImages(form.files)
+    for (const f of compressed) {
       const path = `logs/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
       const { error: upErr } = await supabase.storage.from('org-plans').upload(path, f)
       if (upErr) { alert('Файл алдаа: '+upErr.message); setSaving(false); return }

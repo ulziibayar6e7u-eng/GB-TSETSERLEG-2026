@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useMe, canSeeAllChildren } from '@/lib/useMe'
+import { compressImages, compressImage } from '@/lib/image-compress'
 
 type Group = { id: number; code?: string; name: string; icon: string; color: string }
 type Child = { id: string; last_name: string; first_name: string; group_id: number | null; groups?: Group }
@@ -209,7 +210,8 @@ export default function AjiglltPage() {
     if (!me) return
     let photo_url: string | null = (editing as unknown as { photo_url?: string })?.photo_url || null
     const media_urls: string[] = ((editing as unknown as { media_urls?: string[] })?.media_urls || []) as string[]
-    for (const f of form.files) {
+    const compressed = await compressImages(form.files)
+    for (const f of compressed) {
       const path = `obs/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
       const { error: upErr } = await supabase.storage.from('org-plans').upload(path, f)
       if (upErr) { alert('Файл алдаа: ' + upErr.message); return }

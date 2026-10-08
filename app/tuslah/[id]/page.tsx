@@ -179,8 +179,10 @@ function Inner({ id }: { id: string }) {
     setSaving(true)
     let file_url = editing?.file_url || null
     if (form.file) {
-      const path = `tuslah/${id}/${Date.now()}_${form.file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
-      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, form.file)
+      const { compressImage } = await import('@/lib/image-compress')
+      const comp = await compressImage(form.file)
+      const path = `tuslah/${id}/${Date.now()}_${comp.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
+      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, comp)
       if (upErr) { alert('Файл алдаа: ' + upErr.message); setSaving(false); return }
       const { data: pub } = supabase.storage.from('org-plans').getPublicUrl(path)
       file_url = pub?.publicUrl || null

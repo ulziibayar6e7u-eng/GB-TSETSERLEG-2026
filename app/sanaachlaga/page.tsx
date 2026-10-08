@@ -70,8 +70,10 @@ export default function SanaachlagaPage() {
     setSaving(true)
     let photo_url = editing?.photo_url || null
     if (form.file) {
-      const path = `initiatives/${Date.now()}_${form.file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
-      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, form.file)
+      const { compressImage } = await import('@/lib/image-compress')
+      const comp = await compressImage(form.file)
+      const path = `initiatives/${Date.now()}_${comp.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
+      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, comp)
       if (upErr) { alert('Файл алдаа: ' + upErr.message); setSaving(false); return }
       const { data: pub } = supabase.storage.from('org-plans').getPublicUrl(path)
       photo_url = pub?.publicUrl || null

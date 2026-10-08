@@ -83,8 +83,10 @@ export default function TogoochPage() {
     if (!tForm.comment.trim()) { alert('Санал бичнэ үү'); return }
     let photo_url: string | null = null
     if (tForm.photo) {
-      const path = `taste/${Date.now()}_${tForm.photo.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
-      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, tForm.photo)
+      const { compressImage } = await import('@/lib/image-compress')
+      const comp = await compressImage(tForm.photo)
+      const path = `taste/${Date.now()}_${comp.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
+      const { error: upErr } = await supabase.storage.from('org-plans').upload(path, comp)
       if (upErr) { alert('Зураг алдаа: '+upErr.message); return }
       const { data: pub } = supabase.storage.from('org-plans').getPublicUrl(path)
       photo_url = pub?.publicUrl || null

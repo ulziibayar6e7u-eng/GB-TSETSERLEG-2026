@@ -69,7 +69,9 @@ export default function HogjimActivityPage() {
     setSaving(true)
     let file_url = editing?.file_url || null
     const media_urls: string[] = (editing?.media_urls || []) as string[]
-    for (const f of form.files) {
+    const { compressImages } = await import('@/lib/image-compress')
+    const compressed = await compressImages(form.files)
+    for (const f of compressed) {
       const path = `music-activity/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
       const { error: upErr } = await supabase.storage.from('org-plans').upload(path, f)
       if (upErr) { alert('Файл алдаа: '+upErr.message); setSaving(false); return }
