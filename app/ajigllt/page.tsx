@@ -210,6 +210,9 @@ export default function AjiglltPage() {
     if (!me) return
     let photo_url: string | null = (editing as unknown as { photo_url?: string })?.photo_url || null
     const media_urls: string[] = ((editing as unknown as { media_urls?: string[] })?.media_urls || []) as string[]
+    const { checkVideoSize } = await import('@/lib/image-compress')
+    const sizeCheck = checkVideoSize(form.files, 20)
+    if (!sizeCheck.ok) { alert(sizeCheck.message); return }
     const compressed = await compressImages(form.files)
     for (const f of compressed) {
       const path = `obs/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
@@ -475,7 +478,7 @@ export default function AjiglltPage() {
               })()}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">📷 Зураг</label>
-                <input type="file" multiple accept="image/*" onChange={(e) => setForm({ ...form, files: Array.from(e.target.files || []) })} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+                <input type="file" multiple accept="image/*,video/*" onChange={(e) => setForm({ ...form, files: Array.from(e.target.files || []) })} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
                 {form.files.length > 0 && <div className="text-xs text-emerald-600 mt-1">✓ {form.files.length} файл сонгосон</div>}
               </div>
               <div>

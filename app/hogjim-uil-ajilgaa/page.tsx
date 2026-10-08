@@ -193,7 +193,7 @@ export default function HogjimActivityPage() {
               <div><label className="block text-sm text-slate-700 mb-1">Тэмдэглэл</label><textarea rows={4} value={form.note} onChange={(e)=>setForm({...form, note: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
               <div>
                 <label className="block text-sm text-slate-700 mb-1">📎 Файл (олон сонгож болно: PDF/зураг/бичлэг)</label>
-                <input type="file" multiple accept=".pdf,image/*,audio/*" onChange={(e)=>setForm({...form, files: Array.from(e.target.files || [])})} className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+                <input type="file" multiple accept=".pdf,image/*,video/*,audio/*" onChange={(e)=>setForm({...form, files: Array.from(e.target.files || [])})} className="w-full border border-slate-300 rounded-lg px-3 py-2" />
                 {form.files.length > 0 && <div className="text-xs text-emerald-600 mt-1">✓ {form.files.length} файл сонгосон</div>}
               </div>
               <div><label className="block text-sm text-slate-700 mb-1">🔗 Линкүүд</label><textarea rows={2} value={form.extraLinks} onChange={(e)=>setForm({...form, extraLinks: e.target.value})} className="w-full border border-slate-300 rounded-lg px-3 py-2" placeholder="YouTube, Google Drive гэх мэт" /></div>

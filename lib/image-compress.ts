@@ -37,3 +37,14 @@ export async function compressImage(file: File, maxDim = 1600, quality = 0.78): 
 export async function compressImages(files: File[], maxDim = 1600, quality = 0.78): Promise<File[]> {
   return Promise.all(files.map((f) => compressImage(f, maxDim, quality)))
 }
+
+/** Шалгах: бичлэг хэт том уу (default 20MB). Том бол false буцаана + сануулга. */
+export function checkVideoSize(files: File[], maxMB = 20): { ok: boolean; message?: string } {
+  const tooBig = files.find((f) => f.type.startsWith('video/') && f.size > maxMB * 1024 * 1024)
+  if (tooBig) {
+    const sizeMB = Math.round(tooBig.size / 1024 / 1024)
+    return { ok: false, message: `📹 "${tooBig.name}" бичлэг ${sizeMB}MB хэтэрсэн байна (${maxMB}MB хязгаартай).\n\n💡 Утасны камер тохиргооноос чанарыг бууруулах эсвэл богино бичлэг хийнэ үү.` }
+  }
+  return { ok: true }
+}
+
