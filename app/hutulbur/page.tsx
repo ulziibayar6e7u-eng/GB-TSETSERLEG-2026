@@ -544,8 +544,8 @@ export default function HutulburPage() {
                 <textarea rows={3} value={dlgNote} onChange={(e) => setDlgNote(e.target.value)} placeholder="Ажиглалт, дэлгэрэнгүй тайлбар..." className="w-full border border-slate-300 rounded-lg px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm text-slate-700 mb-1">📎 Зураг / 🎥 Бичлэг / Файл</label>
-                <input type="file" accept="image/*,video/*,.pdf" onChange={(e) => setDlgFile(e.target.files?.[0] || null)} className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+                <label className="block text-sm text-slate-700 mb-1">📎 Зураг / Файл</label>
+                <input type="file" accept="image/*,.pdf" onChange={(e) => setDlgFile(e.target.files?.[0] || null)} className="w-full border border-slate-300 rounded-lg px-3 py-2" />
               </div>
               <div className="flex gap-2 pt-2">
                 <button onClick={() => setDialog(null)} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg">Хаах</button>

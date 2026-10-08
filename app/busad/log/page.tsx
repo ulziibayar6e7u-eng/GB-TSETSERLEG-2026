@@ -268,7 +268,7 @@ export default function DailyLogPage() {
               <div><label className="block text-sm text-slate-700 mb-1">Тайлбар</label><textarea rows={5} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
               <div>
                 <label className="block text-sm text-slate-700 mb-1">📎 Зураг, бичлэг, файл (олон сонгож болно)</label>
-                <input type="file" multiple accept="image/*,video/*,.pdf" onChange={(e) => setForm({ ...form, files: Array.from(e.target.files || []) })} className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+                <input type="file" multiple accept="image/*,.pdf" onChange={(e) => setForm({ ...form, files: Array.from(e.target.files || []) })} className="w-full border border-slate-300 rounded-lg px-3 py-2" />
                 {form.files.length > 0 && <div className="text-xs text-emerald-600 mt-1">✓ {form.files.length} файл сонгосон</div>}
               </div>
               <div><label className="block text-sm text-slate-700 mb-1">🔗 Линкүүд</label><textarea rows={2} value={form.extraLinks} onChange={(e) => setForm({ ...form, extraLinks: e.target.value })} placeholder="Мөр бүрд нэг URL" className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>

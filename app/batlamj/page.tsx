@@ -92,7 +92,7 @@ function CommentCard({ c, onChange, meId }: { c: Comment; onChange: () => void; 
           ) : (
             <div className="space-y-2 mt-2">
               <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Юу хийсэн тухай тайлбар..." className="w-full border border-slate-300 rounded px-2 py-1 text-sm" />
-              <input type="file" accept="image/*,video/*,.pdf,.doc,.docx" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full text-xs" />
+              <input type="file" accept="image/*,.pdf,.doc,.docx" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full text-xs" />
               <div className="flex gap-2">
                 <button onClick={() => { setShowForm(false); setNote(''); setFile(null) }} className="text-xs px-3 py-1 border border-slate-300 rounded">Болих</button>
                 <button onClick={submit} disabled={saving} className="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white rounded font-medium">{saving ? '...' : 'Илгээх'}</button>

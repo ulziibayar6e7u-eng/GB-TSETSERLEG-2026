@@ -403,7 +403,7 @@ export default function JuuruPage() {
                   <textarea rows={3} value={weekForm[c].text} onChange={(e) => setWeekForm({ ...weekForm, [c]: { ...weekForm[c], text: e.target.value } })} placeholder={`${CATS[c].label} талаар...`} className="w-full border border-slate-300 rounded px-3 py-2 text-sm mb-2" />
                   <div>
                     <label className="text-xs text-slate-500 block mb-1">📎 Нотлох баримт (зураг/бичлэг/файл)</label>
-                    <input type="file" accept="image/*,video/*,.pdf,.doc,.docx" onChange={(e) => setWeekForm({ ...weekForm, [c]: { ...weekForm[c], file: e.target.files?.[0] || null } })} className="w-full text-xs" />
+                    <input type="file" accept="image/*,.pdf,.doc,.docx" onChange={(e) => setWeekForm({ ...weekForm, [c]: { ...weekForm[c], file: e.target.files?.[0] || null } })} className="w-full text-xs" />
                     {weekForm[c].file && <div className="text-[11px] text-blue-600 mt-1">✓ {weekForm[c].file!.name}</div>}
                   </div>
                 </div>

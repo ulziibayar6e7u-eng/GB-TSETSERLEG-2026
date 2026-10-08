@@ -474,8 +474,8 @@ export default function AjiglltPage() {
                 )
               })()}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">📷 Зураг / 🎥 Бичлэг</label>
-                <input type="file" multiple accept="image/*,video/*" onChange={(e) => setForm({ ...form, files: Array.from(e.target.files || []) })} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+                <label className="block text-sm font-medium text-slate-700 mb-1">📷 Зураг</label>
+                <input type="file" multiple accept="image/*" onChange={(e) => setForm({ ...form, files: Array.from(e.target.files || []) })} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
                 {form.files.length > 0 && <div className="text-xs text-emerald-600 mt-1">✓ {form.files.length} файл сонгосон</div>}
               </div>
               <div>
