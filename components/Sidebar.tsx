@@ -122,7 +122,6 @@ function argaZuichMenu(): MenuSection[] {
     {
       title: 'Хяналт',
       items: [
-        { href: '/bagsh', label: 'Багш нар', icon: '👩‍🏫' },
         { href: '/uil-ajilgaa', label: 'Сургалт, үйл ажиллагаа', icon: '📸' },
         { href: '/hutulbur', label: 'Хөтөлбөрийн хэрэгжилт', icon: '📚' },
         { href: '/heregleg', label: 'Хэрэглэгдэхүүн, хөтөлбөр', icon: '📎' },
@@ -161,7 +160,6 @@ function erhlegchMenu(): MenuSection[] {
     {
       title: 'Хяналт',
       items: [
-        { href: '/bagsh', label: 'Ажилтан бүрээр', icon: '👩‍🏫' },
         { href: '/guyeetgel', label: 'Гүйцэтгэлийн анализ', icon: '📈' },
         { href: '/uil-ajilgaa', label: 'Сургалт, үйл ажиллагаа', icon: '📸' },
         { href: '/hamgaalal', label: 'Хүүхэд хамгаалал', icon: '🛡' },

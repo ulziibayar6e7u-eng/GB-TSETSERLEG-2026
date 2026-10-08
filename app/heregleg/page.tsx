@@ -149,6 +149,28 @@ export default function HereglegPage() {
     await supabase.from('teacher_materials').delete().eq('id', m.id)
     load()
   }
+  async function approveMaterial(m: Material) {
+    const note = prompt('Батлах тэмдэглэл (сонголттой):') || ''
+    await supabase.from('teacher_materials').update({
+      status: 'approved',
+      reviewer_note: note || null,
+      reviewer_id: me?.id || null,
+      approved_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('id', m.id)
+    load()
+  }
+  async function returnMaterial(m: Material) {
+    const note = prompt('Буцаах шалтгаан (заавал):')
+    if (!note || !note.trim()) { alert('Шалтгаан бичих ёстой'); return }
+    await supabase.from('teacher_materials').update({
+      status: 'returned',
+      reviewer_note: note.trim(),
+      reviewer_id: me?.id || null,
+      updated_at: new Date().toISOString(),
+    }).eq('id', m.id)
+    load()
+  }
 
   if (meLoading) return <div className="p-8 text-slate-500">Ачааллаж байна...</div>
   if (!me) return null
@@ -241,7 +263,10 @@ export default function HereglegPage() {
                       {mine && <button onClick={() => openEdit(m)} className="text-blue-600 hover:text-blue-800 text-xs px-3 py-1.5">Засах</button>}
                       {mine && <button onClick={() => remove(m)} className="text-red-600 hover:text-red-800 text-xs px-3 py-1.5">Устгах</button>}
                       {isReviewer && m.status === 'submitted' && (
-                        <a href="/batlamj" className="ml-auto text-orange-600 hover:text-orange-800 text-xs font-medium">Батламжийн ширээнд хянах →</a>
+                        <>
+                          <button onClick={() => approveMaterial(m)} className="ml-auto bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg font-semibold">✅ Батлах</button>
+                          <button onClick={() => returnMaterial(m)} className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg font-semibold">↩️ Буцаах</button>
+                        </>
                       )}
                     </div>
                   </div>
