@@ -23,7 +23,8 @@ export default function IrtsStaffPage() {
   const supabase = useMemo(() => createClient(), [])
   const { me, loading: meLoading } = useMe()
   const [isOnDuty, setIsOnDuty] = useState(false)
-  const canMark = me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich' || isOnDuty)
+  const [isDutyTeacher, setIsDutyTeacher] = useState(false)
+  const canMark = me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich' || isOnDuty || isDutyTeacher)
   const [date, setDate] = useState(today())
   const [emps, setEmps] = useState<Employee[]>([])
   const [attMap, setAttMap] = useState<Map<string, StaffAtt>>(new Map())
@@ -33,12 +34,14 @@ export default function IrtsStaffPage() {
   useEffect(() => {
     (async () => {
       setLoading(true)
-      const [e, a, duty] = await Promise.all([
+      const [e, a, duty, anyDuty] = await Promise.all([
         supabase.from('employees').select('id, last_name, first_name, role, positions(name)').order('first_name'),
         supabase.from('staff_attendance').select('*').eq('date', date),
         me ? supabase.from('duty_schedules').select('id').eq('date', date).eq('teacher_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
+        me ? supabase.from('duty_schedules').select('id').eq('teacher_id', me.id).limit(1).maybeSingle() : Promise.resolve({ data: null }),
       ])
       setIsOnDuty(!!(duty as { data: unknown }).data)
+      setIsDutyTeacher(!!(anyDuty as { data: unknown }).data)
       setEmps((e.data as unknown as Employee[]) || [])
       const m = new Map<string, StaffAtt>()
       ;((a.data as StaffAtt[]) || []).forEach((r) => m.set(r.employee_id, r))
