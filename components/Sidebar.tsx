@@ -54,6 +54,7 @@ function bagshMenu(me: Me): MenuSection[] {
         { href: '/heregleg', label: 'Хэрэглэгдэхүүн, хөтөлбөр', icon: '📎' },
         { href: '/zaah-argyn-negdel', label: 'Заах аргын нэгдэл', icon: '🧭' },
         { href: '/zaah-argyn-negdel/report', label: 'Заах аргын нэгтгэл', icon: '📊' },
+        { href: '/hamgaalal', label: 'Хүүхэд хамгаалал', icon: '🛡' },
       ],
     },
     {
