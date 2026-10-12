@@ -69,14 +69,14 @@ export default function HereglegPage() {
     }
   }, [me])
   const [editing, setEditing] = useState<Material | null>(null)
-  const [form, setForm] = useState({ category: 'material' as Cat, title: '', description: '', groupId: '', files: [] as File[], extraLinks: '' })
+  const [form, setForm] = useState({ category: 'material' as Cat, title: '', description: '', groupId: '', material_date: new Date().toISOString().slice(0,10), files: [] as File[], extraLinks: '' })
   const [saving, setSaving] = useState(false)
 
   const isReviewer = me && (me.is_admin || me.role === 'arga_zuich' || me.role === 'erhlegch')
 
   async function load() {
     setLoading(true)
-    const { data } = await supabase.from('teacher_materials').select('*, employees:author_id(last_name, first_name), reviewer:reviewer_id(last_name, first_name), groups(name, icon, color)').order('updated_at', { ascending: false }).limit(200)
+    const { data } = await supabase.from('teacher_materials').select('*, employees:author_id(last_name, first_name), reviewer:reviewer_id(last_name, first_name), groups(name, icon, color)').order('material_date', { ascending: false, nullsFirst: false }).order('updated_at', { ascending: false }).limit(200)
     setItems((data as unknown as Material[]) || [])
     const urls = ((data as any[])||[]).map(m => m.file_url).filter(Boolean)
     if (urls.length > 0) {
@@ -97,12 +97,12 @@ export default function HereglegPage() {
 
   function openAdd() {
     setEditing(null)
-    setForm({ category: 'material', title: '', description: '', groupId: me?.groups[0]?.id?.toString() || '', files: [], extraLinks: '' })
+    setForm({ category: 'material', title: '', description: '', groupId: me?.groups[0]?.id?.toString() || '', material_date: new Date().toISOString().slice(0,10), files: [], extraLinks: '' })
     setShowForm(true)
   }
   function openEdit(m: Material) {
     setEditing(m)
-    setForm({ category: m.category, title: m.title, description: m.description || '', groupId: m.group_id?.toString() || '', files: [], extraLinks: (m.extra_links || []).join('\n') })
+    setForm({ category: m.category, title: m.title, description: m.description || '', groupId: m.group_id?.toString() || '', material_date: (m as any).material_date || new Date().toISOString().slice(0,10), files: [], extraLinks: (m.extra_links || []).join('\n') })
     setShowForm(true)
   }
   async function save(submit: boolean) {
@@ -125,6 +125,7 @@ export default function HereglegPage() {
       author_id: me.id,
       group_id: form.groupId ? parseInt(form.groupId) : null,
       category: form.category,
+      material_date: form.material_date || null,
       title: form.title.trim(),
       description: form.description || null,
       file_url,
@@ -223,6 +224,7 @@ export default function HereglegPage() {
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${st.color}`}>{st.icon} {st.label}</span>
                           <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">{cat.label}</span>
                           {m.groups && <span className="text-xs text-slate-500">{m.groups.icon} {m.groups.name}</span>}
+                          {(m as any).material_date && <span className="text-xs text-slate-500">📅 {(m as any).material_date}</span>}
                         </div>
                         <h3 className="font-semibold text-slate-800">{m.title}</h3>
                         {m.description && <div className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">{m.description}</div>}
@@ -292,6 +294,7 @@ export default function HereglegPage() {
                   ))}
                 </div>
               </div>
+              <div><label className="block text-sm text-slate-700 mb-1">📅 Огноо (нөхөж бүртгэх боломжтой)</label><input type="date" value={form.material_date} onChange={(e) => setForm({ ...form, material_date: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
               <div><label className="block text-sm text-slate-700 mb-1">Гарчиг *</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2" /></div>
               {me.groups.length > 0 && (
                 <div>
