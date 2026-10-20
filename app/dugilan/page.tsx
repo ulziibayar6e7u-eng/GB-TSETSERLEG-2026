@@ -279,7 +279,13 @@ export default function DugilanPage() {
                       href={`/dugilan/${c.id}`}
                       className="flex-1 text-center text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-2 rounded-lg"
                     >
-                      Хүүхдүүд
+                      👧 Хүүхдүүд
+                    </Link>
+                    <Link
+                      href={`/dugilan/${c.id}?tab=activities`}
+                      className="flex-1 text-center text-sm bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium py-2 rounded-lg"
+                    >
+                      📸 Үйл ажиллагаа
                     </Link>
                     <button
                       onClick={() => remove(c)}
