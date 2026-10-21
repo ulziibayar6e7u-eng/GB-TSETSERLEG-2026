@@ -51,8 +51,10 @@ export default function UilAjilgaaPage() {
       const actQ  = supabase.from('plans').select('period, author_id').gte('period', start).lte('period', end)
       const cluQ  = supabase.from('club_activities').select('date, author_id').gte('date', start).lte('date', end)
       const gtQ   = supabase.from('group_teachers').select('employee_id, groups(code, name, icon)')
+      const musQ  = supabase.from('music_activity').select('date, author_id').gte('date', start).lte('date', end)
+      const tmQ   = supabase.from('teacher_materials').select('material_date, created_at, author_id').gte('created_at', start).lte('created_at', end + 'T23:59:59')
       const lesQ  = !hogjimDb ? Promise.resolve({ data: [] as any[] }) : hogjimDb.from('activities').select('id, group_id, activity_date, title, note, media, files').gte('activity_date', start).lte('activity_date', end).order('activity_date', { ascending: false })
-      const [o, a, c, gt, les] = await Promise.all([obsQ, actQ, cluQ, gtQ, lesQ])
+      const [o, a, c, gt, mus, tm, les] = await Promise.all([obsQ, actQ, cluQ, gtQ, musQ, tmQ, lesQ])
 
       // Хичээлийн бичлэг нь багшаар биш бүлгээр (group_id = groups.code) хадгалагддаг → бүлгийн багш нарт хамааруулна
       const groupTeachers = new Map<string, string[]>()
@@ -81,11 +83,13 @@ export default function UilAjilgaaPage() {
       ;((o.data as { date: string; observer_id: string | null }[]) || []).forEach((r) => addRow(r.date, r.observer_id, 'observations'))
       ;((a.data as { period: string; author_id: string | null }[]) || []).forEach((r) => addRow(r.period, r.author_id, 'activities'))
       ;((c.data as { date: string; author_id: string | null }[]) || []).forEach((r) => addRow(r.date, r.author_id, 'clubActs'))
+      ;((mus.data as { date: string; author_id: string | null }[]) || []).forEach((r) => addRow(r.date, r.author_id, 'activities'))
+      ;((tm.data as { material_date: string | null; created_at: string; author_id: string | null }[]) || []).forEach((r) => addRow(r.material_date || r.created_at.slice(0,10), r.author_id, 'activities'))
       lessons.forEach((r) => addRow(r.activity_date, null, 'activities'))
       setRows(monthOrder.map((m) => bucket.get(m)!))
 
       // Сүүлийн үйл ажиллагаа — plans + хичээлийн бичлэг + music_activity + club_activities + observations
-      const [pl, ma, ob2, ca, tm] = await Promise.all([
+      const [pl, ma, ob2, ca, tmList] = await Promise.all([
         supabase.from('plans').select('id, period, title, description, file_url, author_id, employees:author_id(last_name, first_name)').gte('period', start).lte('period', end).order('period', { ascending: false }).limit(50),
         supabase.from('music_activity').select('id, date, category, title, note, file_url, author_id, groups(name, icon), employees:author_id(last_name, first_name)').gte('date', start).lte('date', end).order('date', { ascending: false }).limit(50),
         supabase.from('observations').select('id, date, activity, observation, photo_url, observer_id, employees:observer_id(last_name, first_name), children(last_name, first_name, groups(name, icon))').gte('date', start).lte('date', end).order('date', { ascending: false }).limit(50),
@@ -97,7 +101,7 @@ export default function UilAjilgaaPage() {
       ;((ma.data as any[]) || []).forEach(r => list.push({ ...r, _kind: 'music', _date: r.date }))
       ;((ob2.data as any[]) || []).forEach(r => list.push({ ...r, _kind: 'obs', _date: r.date }))
       ;((ca.data as any[]) || []).forEach(r => list.push({ ...r, groups: r.clubs, _kind: 'club', _date: r.date }))
-      ;((tm.data as any[]) || []).forEach(r => list.push({ ...r, _kind: 'plan', _date: (r.created_at || '').slice(0,10) }))
+      ;((tmList.data as any[]) || []).forEach(r => list.push({ ...r, _kind: 'plan', _date: (r.created_at || '').slice(0,10) }))
       const filtered = teacherId === 'all' ? list : list.filter(r => (r.author_id || r.observer_id) === teacherId)
       // Хичээлийн бичлэг аль хэдийн багшаар шүүгдсэн
       lessons.forEach(r => filtered.push({
