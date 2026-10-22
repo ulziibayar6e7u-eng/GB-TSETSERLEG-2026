@@ -358,10 +358,35 @@ function EntryCard({ entry: r, me, supabase }: any) {
       </div>
       <div className="text-sm font-medium text-slate-800">{title}</div>
       {desc && <div className="text-xs text-slate-600 mt-1 whitespace-pre-wrap line-clamp-3">{desc}</div>}
+      {(() => {
+        const urls: string[] = []
+        if (Array.isArray(r.media_urls)) r.media_urls.forEach((u: string) => urls.push(u))
+        if (Array.isArray(r.media)) r.media.forEach((m: any) => { const u = typeof m === 'string' ? m : m?.src; if (u) urls.push(u) })
+        if (Array.isArray(r.files)) r.files.forEach((f: any) => { const u = typeof f === 'string' ? f : f?.src; if (u) urls.push(u) })
+        if (r.file_url && !urls.includes(r.file_url)) urls.push(r.file_url)
+        if (r.photo_url && !urls.includes(r.photo_url)) urls.push(r.photo_url)
+        const extraLinks: string[] = Array.isArray(r.extra_links) ? r.extra_links : []
+        if (urls.length === 0 && extraLinks.length === 0) return null
+        return (
+          <div className="mt-2 grid grid-cols-3 md:grid-cols-5 gap-1.5">
+            {urls.map((url, i) => {
+              const isImg = /\.(png|jpe?g|gif|webp)$/i.test(url)
+              const isVid = /\.(mp4|webm|mov|m4v)$/i.test(url)
+              return (
+                <a key={i} href={url} target="_blank" rel="noopener" className="block aspect-square rounded border border-slate-200 bg-slate-50 hover:border-blue-400 overflow-hidden">
+                  {isImg ? <img src={url} alt="" className="w-full h-full object-cover" />
+                   : isVid ? <video src={url} className="w-full h-full object-cover" />
+                   : <div className="flex items-center justify-center h-full text-slate-400 text-xs">📎</div>}
+                </a>
+              )
+            })}
+            {extraLinks.map((u, i) => (
+              <a key={`l${i}`} href={u} target="_blank" rel="noopener" className="aspect-square rounded border border-blue-200 bg-blue-50 hover:bg-blue-100 flex items-center justify-center text-xs text-blue-700 font-medium">🔗 Линк</a>
+            ))}
+          </div>
+        )
+      })()}
       <div className="mt-2 flex flex-wrap gap-2 items-center">
-        {(r.file_url || r.photo_url) && (
-          <a href={r.file_url || r.photo_url} target="_blank" rel="noopener" className="text-xs text-blue-600 hover:text-blue-800">📎 Файл харах</a>
-        )}
         <button onClick={() => setOpen(!open)} className="text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 px-2 py-1 rounded-lg font-medium">
           💬 Зөвлөгөө {open ? '▲' : '▼'}
         </button>
