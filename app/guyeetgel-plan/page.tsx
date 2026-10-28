@@ -253,7 +253,8 @@ export default function PerformancePlanPage() {
                 </select>
               )}
               {canEdit && plans.length === 0 && <button onClick={createFromTemplate} className="bg-emerald-500 text-white hover:bg-emerald-600 px-3 py-1.5 rounded-lg text-sm font-semibold">⚡ Шаблоноос үүсгэх</button>}
-              {plans.length > 0 && <button onClick={() => window.print()} className="bg-white text-indigo-700 hover:bg-white/90 px-3 py-1.5 rounded-lg text-sm font-semibold">📄 Жилийн тайлан хэвлэх</button>}
+              {plans.length > 0 && <a href={`/guyeetgel-plan/report?year=${schoolYear}&period=half&emp=${targetEmpId}`} target="_blank" className="bg-white text-indigo-700 hover:bg-white/90 px-3 py-1.5 rounded-lg text-sm font-semibold">📄 Хагас жилийн биелэлт</a>}
+              {plans.length > 0 && <a href={`/guyeetgel-plan/report?year=${schoolYear}&period=year&emp=${targetEmpId}`} target="_blank" className="bg-white text-indigo-700 hover:bg-white/90 px-3 py-1.5 rounded-lg text-sm font-semibold">📄 Жилийн эцсийн биелэлт</a>}
               {canEdit && <button onClick={openAdd} className="bg-white text-indigo-700 hover:bg-white/90 px-3 py-1.5 rounded-lg text-sm font-semibold">+ Шинэ зорилт</button>}
             </div>
           </div>
