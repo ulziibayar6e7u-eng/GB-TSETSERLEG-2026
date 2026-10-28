@@ -115,6 +115,25 @@ export default function PerformancePlanPage() {
     await supabase.from('performance_plan').delete().eq('id', p.id)
     load()
   }
+
+  async function createFromTemplate() {
+    if (!confirm('Багшийн стандарт шаблоноос 8 зорилт үүсгэх үү? (Та дараа нь засаж, хасаж болно)')) return
+    const endOfYear = `${schoolYear + 1}-06-30`
+    const template = [
+      { category: 'observation', title: 'Жилд ажиглалт хийх', target_count: 100, target_date: endOfYear, auto_rule: 'observations' },
+      { category: 'activity',    title: 'Хичээлийн бичлэг оруулах', target_count: 60, target_date: endOfYear, auto_rule: 'plans' },
+      { category: 'material',    title: 'Хөтөлбөр, хэрэглэгдэхүүн илгээх', target_count: 36, target_date: endOfYear, auto_rule: 'teacher_materials' },
+      { category: 'club',        title: 'Дугуйлангийн үйл ажиллагаа', target_count: 24, target_date: endOfYear, auto_rule: 'club_activities' },
+      { category: 'music',       title: 'Хөгжмийн үйл ажиллагаа (хөгжмийн багш)', target_count: 60, target_date: endOfYear, auto_rule: 'music_activity' },
+      { category: 'training',    title: 'Багш нарын зөвлөгөөнд оролцсон', target_count: 10, target_date: endOfYear, auto_rule: null },
+      { category: 'training',    title: 'Мэргэжлийн сургалтанд хамрагдсан', target_count: 2, target_date: endOfYear, auto_rule: null },
+      { category: 'other',       title: 'Нээлттэй хичээл явуулах', target_count: 2, target_date: endOfYear, auto_rule: null },
+    ]
+    const rows = template.map(t => ({ ...t, employee_id: targetEmpId, school_year: schoolYear }))
+    const { error } = await supabase.from('performance_plan').insert(rows)
+    if (error) { alert('Алдаа: '+error.message); return }
+    load()
+  }
   async function toggleManual(p: Plan) {
     await supabase.from('performance_plan').update({ manual_done: !p.manual_done }).eq('id', p.id)
     load()
@@ -169,6 +188,7 @@ export default function PerformancePlanPage() {
                   {teachers.map((t: any) => <option key={t.id} value={t.id} className="text-slate-800">{t.last_name}.{t.first_name}</option>)}
                 </select>
               )}
+              {canEdit && plans.length === 0 && <button onClick={createFromTemplate} className="bg-emerald-500 text-white hover:bg-emerald-600 px-3 py-1.5 rounded-lg text-sm font-semibold">⚡ Шаблоноос үүсгэх</button>}
               {canEdit && <button onClick={openAdd} className="bg-white text-indigo-700 hover:bg-white/90 px-3 py-1.5 rounded-lg text-sm font-semibold">+ Шинэ зорилт</button>}
             </div>
           </div>
@@ -187,8 +207,11 @@ export default function PerformancePlanPage() {
         {total === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500">
             <div className="text-5xl mb-3">📊</div>
-            <div className="mb-3">Хичээлийн жилийн эхэнд ажлаа төлөвлөгөөлөөрэй</div>
-            {canEdit && <button onClick={openAdd} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">+ Эхний зорилт нэмэх</button>}
+            <div className="mb-4">Хичээлийн жилийн эхэнд ажлаа төлөвлөгөөлөөрэй</div>
+            <div className="flex gap-2 justify-center">
+              {canEdit && <button onClick={createFromTemplate} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">⚡ Шаблоноос 8 зорилт автомат үүсгэх</button>}
+              {canEdit && <button onClick={openAdd} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">+ Эхний зорилт нэмэх</button>}
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
