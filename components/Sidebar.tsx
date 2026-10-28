@@ -65,6 +65,7 @@ function bagshMenu(me: Me): MenuSection[] {
         { href: '/uureg/report', label: 'Үүргийн нэгтгэл', icon: '📊' },
         { href: '/sanaachlaga', label: 'Санаачилсан ажил', icon: '💡' },
         { href: '/chuluu', label: 'Чөлөө', icon: '📅' },
+        { href: '/guyeetgel-plan', label: 'Гүйцэтгэлийн төлөвлөгөө', icon: '📊' },
       ],
     },
     {
@@ -237,6 +238,7 @@ function busadMenu(me?: Me): MenuSection[] {
         { href: '/uureg/report', label: 'Үүргийн нэгтгэл', icon: '📊' },
         { href: '/sanaachlaga', label: 'Санаачилсан ажил', icon: '💡' },
         { href: '/chuluu', label: 'Чөлөө', icon: '📅' },
+        { href: '/guyeetgel-plan', label: 'Гүйцэтгэлийн төлөвлөгөө', icon: '📊' },
       ],
     },
     {

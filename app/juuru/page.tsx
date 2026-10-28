@@ -201,6 +201,17 @@ export default function JuuruPage() {
     setRepForm({ date: today(), category: 'training', title: '', description: '', file: null, extraLinks: '' })
     load()
   }
+  async function editReport(r: any) {
+    const newTitle = prompt('Гарчиг:', r.title || '')
+    if (newTitle === null) return
+    const newDesc = prompt('Тайлбар, тэмдэглэл:', r.description || '')
+    if (newDesc === null) return
+    const { error } = await supabase.from('duty_reports').update({
+      title: newTitle || null, description: newDesc || null
+    }).eq('id', r.id)
+    if (error) { alert('Алдаа: '+error.message); return }
+    load()
+  }
   async function removeReport(id: string) {
     if (!confirm('Устгах уу?')) return
     await supabase.from('duty_reports').delete().eq('id', id)
@@ -370,7 +381,10 @@ export default function JuuruPage() {
                               </div>
                             </div>
                             {(me.is_admin || me.role === 'erhlegch' || r.teacher_id === me.id) && (
-                              <button onClick={() => removeReport(r.id)} className="text-red-600 hover:text-red-800 text-xs px-2 py-1">Устгах</button>
+                              <div className="flex gap-1">
+                                <button onClick={() => editReport(r)} className="text-blue-600 hover:text-blue-800 text-xs px-2 py-1">Засах</button>
+                                <button onClick={() => removeReport(r.id)} className="text-red-600 hover:text-red-800 text-xs px-2 py-1">Устгах</button>
+                              </div>
                             )}
                           </div>
                         </div>
