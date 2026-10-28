@@ -216,9 +216,22 @@ export default function PerformancePlanPage() {
   const canEdit = isLeader || targetEmpId === me.id
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-6 lg:p-8 print:p-0">
+      <style jsx global>{`
+        @media print {
+          .no-print { display: none !important; }
+          nav, aside, button { display: none !important; }
+          body { background: white !important; }
+        }
+      `}</style>
+      <div className="hidden print:block mb-6 text-center">
+        <h1 className="text-2xl font-bold">Гурванбулаг сумын Хүүхдийн цэцэрлэг</h1>
+        <h2 className="text-xl mt-2">Багшийн гүйцэтгэлийн төлөвлөгөөний биелэлт</h2>
+        <p className="mt-2">{schoolYear}-{schoolYear + 1} оны хичээлийн жил</p>
+        {plans[0]?.employees && <p className="mt-1">Багш: {plans[0].employees.last_name}.{plans[0].employees.first_name}</p>}
+      </div>
       <div className="max-w-6xl mx-auto">
-        <div className="rounded-2xl p-6 text-white mb-6 shadow-lg bg-gradient-to-br from-indigo-500 via-blue-500 to-cyan-500">
+        <div className="rounded-2xl p-6 text-white mb-6 shadow-lg bg-gradient-to-br from-indigo-500 via-blue-500 to-cyan-500 print:hidden">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <div className="text-5xl">📊</div>
@@ -240,6 +253,7 @@ export default function PerformancePlanPage() {
                 </select>
               )}
               {canEdit && plans.length === 0 && <button onClick={createFromTemplate} className="bg-emerald-500 text-white hover:bg-emerald-600 px-3 py-1.5 rounded-lg text-sm font-semibold">⚡ Шаблоноос үүсгэх</button>}
+              {plans.length > 0 && <button onClick={() => window.print()} className="bg-white text-indigo-700 hover:bg-white/90 px-3 py-1.5 rounded-lg text-sm font-semibold">📄 Жилийн тайлан хэвлэх</button>}
               {canEdit && <button onClick={openAdd} className="bg-white text-indigo-700 hover:bg-white/90 px-3 py-1.5 rounded-lg text-sm font-semibold">+ Шинэ зорилт</button>}
             </div>
           </div>
