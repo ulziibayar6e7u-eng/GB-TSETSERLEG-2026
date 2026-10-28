@@ -117,20 +117,71 @@ export default function PerformancePlanPage() {
   }
 
   async function createFromTemplate() {
-    if (!confirm('Багшийн стандарт шаблоноос 8 зорилт үүсгэх үү? (Та дараа нь засаж, хасаж болно)')) return
+    if (!confirm('Багшийн гүйцэтгэлийн төлөвлөгөөний 5 бүлгийн ~45 зорилтыг автомат үүсгэх үү? (Та дараа нь засаж, хасаж болно)')) return
     const endOfYear = `${schoolYear + 1}-06-30`
+    const midYear = `${schoolYear + 1}-01-15`
+    const t = (category: string, title: string, target_count: number, target_date: string, auto_rule: string|null = null) =>
+      ({ category, title, target_count, target_date, auto_rule, employee_id: targetEmpId, school_year: schoolYear })
     const template = [
-      { category: 'observation', title: 'Жилд ажиглалт хийх', target_count: 100, target_date: endOfYear, auto_rule: 'observations' },
-      { category: 'activity',    title: 'Хичээлийн бичлэг оруулах', target_count: 60, target_date: endOfYear, auto_rule: 'plans' },
-      { category: 'material',    title: 'Хөтөлбөр, хэрэглэгдэхүүн илгээх', target_count: 36, target_date: endOfYear, auto_rule: 'teacher_materials' },
-      { category: 'club',        title: 'Дугуйлангийн үйл ажиллагаа', target_count: 24, target_date: endOfYear, auto_rule: 'club_activities' },
-      { category: 'music',       title: 'Хөгжмийн үйл ажиллагаа (хөгжмийн багш)', target_count: 60, target_date: endOfYear, auto_rule: 'music_activity' },
-      { category: 'training',    title: 'Багш нарын зөвлөгөөнд оролцсон', target_count: 10, target_date: endOfYear, auto_rule: null },
-      { category: 'training',    title: 'Мэргэжлийн сургалтанд хамрагдсан', target_count: 2, target_date: endOfYear, auto_rule: null },
-      { category: 'other',       title: 'Нээлттэй хичээл явуулах', target_count: 2, target_date: endOfYear, auto_rule: null },
+      // 1. ХИЧЭЭЛ, СУРГАЛТЫН АЖИЛ (12 зорилт)
+      t('activity',    '1.1 Хичээлийн төлөвлөлт - жилийн хичээлийн төлөвлөгөө боловсруулах', 1, endOfYear, 'teacher_materials'),
+      t('activity',    '1.2 7 хоногийн ээлжит сургалтын төлөвлөгөө боловсруулах', 36, endOfYear, 'teacher_materials'),
+      t('activity',    '1.3 Өдөр тутмын хичээлийн бэлтгэл', 120, endOfYear, 'plans'),
+      t('activity',    '1.4 Хичээлээс гарсан ажиглалт хийх (1-2 хичээл сард)', 12, endOfYear, null),
+      t('activity',    '1.5 Хүүхдийн сурах арга барилыг хөгжүүлэх үйл ажиллагаа', 20, endOfYear, null),
+      t('activity',    '1.6 Хичээлийн бэлтгэлийг цаг тухайд нь 100% хийх', 1, endOfYear, null),
+      t('activity',    '1.7 Орчин үеийн технологи ашиглан хичээл заах', 10, endOfYear, null),
+      t('activity',    '1.8 Хүүхдийн насны онцлогт тохирсон хэрэглэгдэхүүн ашиглах', 1, endOfYear, 'teacher_materials'),
+      t('activity',    '1.9 Хичээлийн явцад хүүхэд бүрийн оролцоог хангах', 1, endOfYear, null),
+      t('observation', '1.10 Хүүхэд бүрийн ахиц, сурах амжилтыг ажиглан бүртгэх', 100, endOfYear, 'observations'),
+      t('observation', '1.11 Үнэлгээний үр дүнг эцэг эх, арга зүйчдэд тайлагнах', 2, endOfYear, null),
+      t('observation', '1.12 Жилийн эцсийн нэгдсэн үнэлгээ 95%-с дээш хувьтай хийх', 1, endOfYear, null),
+
+      // 2. БАГШ ХӨГЖИЛ (10 зорилт)
+      t('training',    '2.1 Мэргэжил дээшлүүлэх цахим сургалтанд (Google Classroom) хамрагдах', 4, endOfYear, null),
+      t('training',    '2.2 Багш нарын зөвлөгөөнд идэвхтэй оролцох', 10, endOfYear, null),
+      t('training',    '2.3 Нээлттэй хичээл үзэж, туршлага судлах', 4, endOfYear, null),
+      t('training',    '2.4 Өөрөө нээлттэй хичээл явуулах', 2, endOfYear, null),
+      t('training',    '2.5 Мэргэжлийн ном, уншлага хийх (сард 1)', 10, endOfYear, null),
+      t('training',    '2.6 Онол-практикийн чуулган, семинарт оролцох', 2, endOfYear, null),
+      t('training',    '2.7 Арга зүйн нэгдлийн ажилд оролцох', 10, endOfYear, null),
+      t('training',    '2.8 Ажил амьдралын тэнцвэрт байдлыг хангах', 1, endOfYear, null),
+      t('training',    '2.9 Эрүүл мэндийн шалгалтад хамрагдах', 2, endOfYear, null),
+      t('training',    '2.10 Багшлахуйн ур чадварт үнэлгээ хийх (өөрийн)', 2, endOfYear, null),
+
+      // 3. СУРГАЛТЫН ХӨТӨЛБӨР, АРГА ЗҮЙ, СУДАЛГАА (16 зорилт)
+      t('material',    '3.1 7 хоногийн төлөвлөгөөг арга зүйчээр батлуулах', 36, endOfYear, 'teacher_materials'),
+      t('material',    '3.2 Сургалтын хэрэглэгдэхүүн баяжилт боловсруулах', 20, endOfYear, 'teacher_materials'),
+      t('material',    '3.3 Нэмэлт хөтөлбөр, арга хэмжээний төлөвлөгөө', 4, endOfYear, 'teacher_materials'),
+      t('material',    '3.4 Сарын арга хэмжээний төлөвлөгөө гаргах', 9, endOfYear, 'teacher_materials'),
+      t('material',    '3.5 Хүүхдийн гарын авлага, дасгал ажил бэлтгэх', 10, endOfYear, 'teacher_materials'),
+      t('material',    '3.6 85%-с дээш хүүхэд үйл ажиллагаанд оролцсон байх', 1, endOfYear, null),
+      t('activity',    '3.7 Шинэ дуу зааж өгөх (хөгжмийн багш)', 20, endOfYear, 'music_activity'),
+      t('activity',    '3.8 Сонсох хөгжмийн үйл ажиллагаа', 15, endOfYear, 'music_activity'),
+      t('activity',    '3.9 Хэмнэлийн үйл ажиллагаа', 15, endOfYear, 'music_activity'),
+      t('activity',    '3.10 Дүрд тоглох үйл ажиллагаа', 10, endOfYear, 'music_activity'),
+      t('activity',    '3.11 Хөгжимт хөдөлгөөний үйл ажиллагаа', 15, endOfYear, 'music_activity'),
+      t('activity',    '3.12 Дугуйлангийн үйл ажиллагаа', 24, endOfYear, 'club_activities'),
+      t('other',       '3.13 Жилийн эцсийн судалгаа боловсруулах', 1, endOfYear, null),
+      t('other',       '3.14 Багш нарт зориулсан арга зүйн зөвлөгөө өгөх', 4, endOfYear, null),
+      t('other',       '3.15 Хүүхдийн хөгжлийн судалгаа явуулах', 2, endOfYear, null),
+      t('other',       '3.16 Хичээлийн ээлж, зохион байгуулалтын ажил', 1, endOfYear, null),
+
+      // 4. ЭЦЭГ ЭХ, НИЙГЭМ, ХАМТ ОЛОНТОЙ ХАРИЛЦАА (5 зорилт)
+      t('other',       '4.1 Эцэг эхтэй хамтын ажиллагаа - уулзалт, зөвлөлдөх', 4, endOfYear, null),
+      t('other',       '4.2 Эцэг эхийн сургалт зохион байгуулах', 2, endOfYear, null),
+      t('other',       '4.3 Эцэг эхтэй харилцах 80%-с дээш идэвхтэй байх', 1, endOfYear, null),
+      t('other',       '4.4 Хамт олны үйл ажиллагаа, арга хэмжээнд оролцох', 10, endOfYear, null),
+      t('other',       '4.5 Нийгэмд тустай ажил зохион байгуулах', 2, endOfYear, null),
+
+      // 5. ЖЕНДЕР, ХҮНИЙ ЭРХ, ХҮҮХЭД ХАМГААЛАЛ, ЭРҮҮЛ АХУЙ (5 зорилт)
+      t('other',       '5.1 Хүүхэд хамгааллын бодлого, журмыг мөрдөх', 1, endOfYear, null),
+      t('other',       '5.2 Жендерийн тэгш байдлыг хангах', 1, endOfYear, null),
+      t('other',       '5.3 Хүний эрхийг хүндэтгэх орчин бүрдүүлэх', 1, endOfYear, null),
+      t('other',       '5.4 Эрүүл ахуйн шаардлагыг хангах, сурталчлах', 1, endOfYear, null),
+      t('other',       '5.5 Аюулгүй ажиллагааны зааварчилгаа өгөх', 4, endOfYear, null),
     ]
-    const rows = template.map(t => ({ ...t, employee_id: targetEmpId, school_year: schoolYear }))
-    const { error } = await supabase.from('performance_plan').insert(rows)
+    const { error } = await supabase.from('performance_plan').insert(template)
     if (error) { alert('Алдаа: '+error.message); return }
     load()
   }
