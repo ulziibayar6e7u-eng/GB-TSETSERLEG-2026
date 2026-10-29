@@ -60,12 +60,12 @@ function bagshMenu(me: Me): MenuSection[] {
     {
       title: 'Ажил үүрэг',
       items: [
-        { href: '/tulvluguu-bail', label: 'Байгууллагын төлөвлөгөө', icon: '📆' },
+        
         { href: '/uureg', label: 'Үүрэг даалгавар', icon: '📌' },
         { href: '/uureg/report', label: 'Үүргийн нэгтгэл', icon: '📊' },
         { href: '/sanaachlaga', label: 'Санаачилсан ажил', icon: '💡' },
         { href: '/chuluu', label: 'Чөлөө', icon: '📅' },
-        { href: '/guyeetgel-plan', label: 'Гүйцэтгэлийн төлөвлөгөө', icon: '📊' },
+        { href: '/guyeetgel-plan', label: 'Төлөвлөгөө биелэлт', icon: '📊' },
       ],
     },
     {
@@ -148,7 +148,7 @@ function argaZuichMenu(): MenuSection[] {
         { href: '/uureg/report', label: 'Үүргийн нэгтгэл', icon: '📊' },
         { href: '/sanaachlaga', label: 'Санаачилсан ажил', icon: '💡' },
         { href: '/chuluu', label: 'Чөлөө', icon: '📅' },
-        { href: '/guyeetgel-plan', label: 'Гүйцэтгэлийн төлөвлөгөө', icon: '📊' },
+        { href: '/guyeetgel-plan', label: 'Төлөвлөгөө биелэлт', icon: '📊' },
         { href: '/nyitlag', label: 'Олон нийтийн үйл ажиллагаа', icon: '🎪' },
         { href: '/zar', label: 'Зар мэдээ', icon: '📢' },
       ],
@@ -177,7 +177,7 @@ function erhlegchMenu(): MenuSection[] {
     {
       title: 'Байгууллагын төлөвлөлт',
       items: [
-        { href: '/tulvluguu-bail', label: 'Байгууллагын төлөвлөгөө', icon: '📆' },
+        
       ],
     },
     {
@@ -196,7 +196,7 @@ function erhlegchMenu(): MenuSection[] {
         { href: '/uureg/report', label: 'Үүргийн нэгтгэл', icon: '📊' },
         { href: '/sanaachlaga', label: 'Санаачилсан ажил', icon: '💡' },
         { href: '/chuluu', label: 'Чөлөө', icon: '📅' },
-        { href: '/guyeetgel-plan', label: 'Гүйцэтгэлийн төлөвлөгөө', icon: '📊' },
+        { href: '/guyeetgel-plan', label: 'Төлөвлөгөө биелэлт', icon: '📊' },
         { href: '/nyitlag', label: 'Олон нийтийн үйл ажиллагаа', icon: '🎪' },
         { href: '/zar', label: 'Зар мэдээ', icon: '📢' },
       ],
@@ -235,12 +235,12 @@ function busadMenu(me?: Me): MenuSection[] {
     {
       title: 'Ажил',
       items: [
-        { href: '/tulvluguu-bail', label: 'Байгууллагын төлөвлөгөө', icon: '📆' },
+        
         { href: '/uureg', label: 'Үүрэг даалгавар', icon: '📌' },
         { href: '/uureg/report', label: 'Үүргийн нэгтгэл', icon: '📊' },
         { href: '/sanaachlaga', label: 'Санаачилсан ажил', icon: '💡' },
         { href: '/chuluu', label: 'Чөлөө', icon: '📅' },
-        { href: '/guyeetgel-plan', label: 'Гүйцэтгэлийн төлөвлөгөө', icon: '📊' },
+        { href: '/guyeetgel-plan', label: 'Төлөвлөгөө биелэлт', icon: '📊' },
       ],
     },
     {

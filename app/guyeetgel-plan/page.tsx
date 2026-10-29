@@ -252,6 +252,7 @@ export default function PerformancePlanPage() {
                   {teachers.map((t: any) => <option key={t.id} value={t.id} className="text-slate-800">{t.last_name}.{t.first_name}</option>)}
                 </select>
               )}
+              <a href="/guyeetgel-plan/mapping" target="_blank" className="bg-white/20 border border-white/30 text-white hover:bg-white/30 px-3 py-1.5 rounded-lg text-sm">🗺️ Эх үүсвэрийн зураглал</a>
               {canEdit && plans.length === 0 && <button onClick={createFromTemplate} className="bg-emerald-500 text-white hover:bg-emerald-600 px-3 py-1.5 rounded-lg text-sm font-semibold">⚡ Шаблоноос үүсгэх</button>}
               {plans.length > 0 && <a href={`/guyeetgel-plan/report?year=${schoolYear}&period=half&emp=${targetEmpId}`} target="_blank" className="bg-white text-indigo-700 hover:bg-white/90 px-3 py-1.5 rounded-lg text-sm font-semibold">📄 Хагас жилийн биелэлт</a>}
               {plans.length > 0 && <a href={`/guyeetgel-plan/report?year=${schoolYear}&period=year&emp=${targetEmpId}`} target="_blank" className="bg-white text-indigo-700 hover:bg-white/90 px-3 py-1.5 rounded-lg text-sm font-semibold">📄 Жилийн эцсийн биелэлт</a>}
