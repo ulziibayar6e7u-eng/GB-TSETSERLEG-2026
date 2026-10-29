@@ -50,7 +50,7 @@ export default function PerformancePlanPage() {
     if (!me) return
     (async () => {
       if (isLeader) {
-        const { data } = await supabase.from('employees').select('id, last_name, first_name, role, positions(name)').in('role', ['bagsh', 'bagsh_tuslah']).order('first_name')
+        const { data } = await supabase.from('employees').select('id, last_name, first_name, role, positions(name)').order('first_name')
         setTeachers((data as any) || [])
       }
       if (!targetEmpId) setTargetEmpId(me.id)
@@ -117,11 +117,119 @@ export default function PerformancePlanPage() {
   }
 
   async function createFromTemplate() {
-    if (!confirm('Багшийн гүйцэтгэлийн төлөвлөгөөний 5 бүлгийн ~45 зорилтыг автомат үүсгэх үү? (Та дараа нь засаж, хасаж болно)')) return
+    const targetEmp = teachers.find(t => t.id === targetEmpId) || (me?.id === targetEmpId ? me : null)
+    const role = (targetEmp as any)?.role || me?.role
+    const positionName = ((targetEmp as any)?.positions?.name || '').toLowerCase()
+    const isTeacher = role === 'bagsh' || role === 'bagsh_tuslah'
+    const planType = isTeacher ? 'performance' : 'activity'
+    const label = isTeacher ? 'Багшийн гүйцэтгэлийн төлөвлөгөөний 48 зорилт' : 'Үйл ажиллагааны төлөвлөгөөний стандарт зорилтууд'
+    if (!confirm(`${label}-ыг автомат үүсгэх үү? (Та дараа нь засаж, хасаж болно)`)) return
     const endOfYear = `${schoolYear + 1}-06-30`
-    const midYear = `${schoolYear + 1}-01-15`
     const t = (category: string, title: string, target_count: number, target_date: string, auto_rule: string|null = null) =>
-      ({ category, title, target_count, target_date, auto_rule, employee_id: targetEmpId, school_year: schoolYear })
+      ({ category, title, target_count, target_date, auto_rule, plan_type: planType, employee_id: targetEmpId, school_year: schoolYear })
+
+    // === Role-based templates ===
+    if (!isTeacher) {
+      let items: any[] = []
+      if (positionName.includes('эмч')) {
+        items = [
+          t('other', '1.1 Хүүхдийн эрүүл мэндийн хяналт шалгалт хийх', 100, endOfYear, 'health_records'),
+          t('other', '1.2 Ажилтны эрүүл мэндийн шалгалт', 25, endOfYear, 'health_records'),
+          t('other', '1.3 Эрүүл мэндийн сургалт, зөвлөгөө явуулах', 10, endOfYear, null),
+          t('other', '1.4 Хүүхдийн ваксины бүртгэл хөтлөх', 1, endOfYear, null),
+          t('other', '1.5 Багшийн туслахуудын цэвэрлэгээг хянах', 36, endOfYear, 'cleaning_checklist'),
+          t('other', '1.6 Тогоочийн журналыг (дээж, амтлуулсан, ариутгал) хянах', 100, endOfYear, null),
+          t('other', '1.7 Үйлчлэгч нарын тайланг хянан зөвлөх', 50, endOfYear, null),
+          t('other', '1.8 Хүүхэд хамгаалал, эрүүл ахуйн журам мөрдөх', 1, endOfYear, 'safety_activities'),
+          t('other', '1.9 Эцэг эхэд эрүүл мэндийн сургалт зохион байгуулах', 4, endOfYear, null),
+          t('other', '1.10 Байгууллагын эрүүл мэндийн бодлогыг хэрэгжүүлэх', 1, endOfYear, null),
+        ]
+      } else if (positionName.includes('нярав')) {
+        items = [
+          t('other', '1.1 Нийлүүлэгчээс материал хүлээн авах', 100, endOfYear, null),
+          t('other', '1.2 Тогоочид хоолны материал тараах', 200, endOfYear, null),
+          t('other', '1.3 Багш, ажилтан нарт ариун цэврийн материал тараах', 50, endOfYear, null),
+          t('other', '1.4 Агуулахын үлдэгдлийг хянах', 12, endOfYear, null),
+          t('other', '1.5 Нийлүүлэгчидтэй гэрээ байгуулах, шинэчлэх', 5, endOfYear, null),
+          t('other', '1.6 Хүлээн авалт, тараалтын тайлан гаргах', 12, endOfYear, null),
+          t('other', '1.7 Жилийн эцсийн тооллого хийх', 1, endOfYear, null),
+        ]
+      } else if (positionName.includes('тогооч') && !positionName.includes('туслах')) {
+        items = [
+          t('other', '1.1 Өдөр тутмын хоол бэлтгэх (хоолны хэмжээ бүртгэх)', 180, endOfYear, null),
+          t('other', '1.2 Дээжийн бүртгэл хөтлөх', 180, endOfYear, null),
+          t('other', '1.3 Хоол амтлуулсан бүртгэл', 60, endOfYear, null),
+          t('other', '1.4 Хүүхдийн тоо, хоолны хэмжээг тэнцүүлэх', 180, endOfYear, null),
+          t('other', '1.5 Аяга таваг ариутгах график мөрдөх', 540, endOfYear, null),
+          t('other', '1.6 Эрүүл ахуйн шаардлагыг хангах', 1, endOfYear, null),
+          t('other', '1.7 Эмчийн хяналт, зөвлөгөөг хэрэгжүүлэх', 20, endOfYear, null),
+          t('other', '1.8 Хоолны цэс боловсруулахад оролцох', 12, endOfYear, null),
+        ]
+      } else if (positionName.includes('үйлчлэг') || (positionName.includes('гал тогоо') && positionName.includes('туслах'))) {
+        items = [
+          t('other', '1.1 Өдөр тутмын цэвэрлэгээ хийх', 180, endOfYear, 'cleaning_checklist'),
+          t('other', '1.2 Их цэвэрлэгээ (7 хоногт 1)', 36, endOfYear, 'cleaning_checklist'),
+          t('other', '1.3 Ариутгал, халдваргүйжүүлэлт', 100, endOfYear, null),
+          t('other', '1.4 Агааржуулалт хийх', 180, endOfYear, null),
+          t('other', '1.5 Өдрийн тайлан хөтлөх', 180, endOfYear, null),
+          t('other', '1.6 Эмчийн хяналтын зөвлөмж хэрэгжүүлэх', 20, endOfYear, null),
+          t('other', '1.7 Эрүүл ахуй, аюулгүй ажиллагаа мөрдөх', 1, endOfYear, null),
+        ]
+      } else if (positionName.includes('харуул')) {
+        items = [
+          t('other', '1.1 Хоногийн ээлжийн бүртгэл', 180, endOfYear, null),
+          t('other', '1.2 Гарц-орцны бүртгэл хөтлөх', 180, endOfYear, null),
+          t('other', '1.3 Аюулгүй байдлыг шалгах (гадаа хаалга, цонх, гэрэлтүүлэг)', 365, endOfYear, null),
+          t('other', '1.4 Онцгой тохиолдлын тайлан', 10, endOfYear, null),
+          t('other', '1.5 Ээлж хүлээлцэх', 180, endOfYear, null),
+          t('other', '1.6 Галын аюулгүй байдал хянах', 180, endOfYear, null),
+        ]
+      } else if (positionName.includes('туслах') && (positionName.includes('багш') || positionName.includes('бага'))) {
+        items = [
+          t('other', '1.1 Хүүхдийн дадал хэвшил олгох (гар угаах, шүд угаах, ам зайлах)', 540, endOfYear, null),
+          t('other', '1.2 Хүүхдийн ахиц, дадал судалгаа', 100, endOfYear, null),
+          t('other', '1.3 Ариун цэврийн журнал хөтлөх', 180, endOfYear, null),
+          t('other', '1.4 Цэвэрлэгээ хяналтын хуудас', 36, endOfYear, 'cleaning_checklist'),
+          t('other', '1.5 Багштай хамтран ажиллах', 1, endOfYear, null),
+          t('other', '1.6 Хүүхдийн ирцийг багшид мэдэгдэх', 180, endOfYear, null),
+          t('other', '1.7 Санаачилсан ажил хийх', 4, endOfYear, null),
+        ]
+      } else if (role === 'arga_zuich' || positionName.includes('арга зүйч')) {
+        items = [
+          t('other', '1.1 Багш нарын хичээлд суух, зөвлөх', 48, endOfYear, 'teach_method'),
+          t('other', '1.2 Багш нарын төлөвлөгөөг батлах', 100, endOfYear, 'teacher_materials'),
+          t('other', '1.3 Арга зүйн нэгдлийн ажил зохион байгуулах', 10, endOfYear, 'teach_method'),
+          t('other', '1.4 Багш нарт зориулсан сургалт', 10, endOfYear, null),
+          t('other', '1.5 Чанга уншлагын арга зүйг нэвтрүүлэх', 20, endOfYear, null),
+          t('other', '1.6 Хичээлийн чанарт хяналт тавих', 100, endOfYear, null),
+          t('other', '1.7 Хүүхдийн хөгжлийн судалгаа гаргах', 2, endOfYear, null),
+          t('other', '1.8 Жилийн эцсийн тайлан', 1, endOfYear, null),
+        ]
+      } else if (role === 'erhlegch' || positionName.includes('эрхлэгч')) {
+        items = [
+          t('other', '1.1 Байгууллагын төлөвлөгөөг хэрэгжүүлэх', 1, endOfYear, null),
+          t('other', '1.2 Ажилтан нарт үүрэг даалгавар өгөх, хяналт тавих', 100, endOfYear, null),
+          t('other', '1.3 Багш нарын гүйцэтгэлийг үнэлэх', 25, endOfYear, null),
+          t('other', '1.4 Эцэг эхтэй уулзалт зохион байгуулах', 4, endOfYear, null),
+          t('other', '1.5 Байгууллагын сар, улирлын тайлан', 12, endOfYear, null),
+          t('other', '1.6 Санхүү, нөөцийн зохистой зарцуулалт', 1, endOfYear, null),
+          t('other', '1.7 Хүүхэд хамгааллын бодлого хэрэгжүүлэх', 1, endOfYear, 'safety_activities'),
+          t('other', '1.8 Байгууллагын хөгжил, инноваци', 1, endOfYear, null),
+        ]
+      } else {
+        items = [
+          t('other', '1.1 Албан үүргээ хугацаанд нь гүйцэтгэх', 1, endOfYear, null),
+          t('other', '1.2 Өдрийн тайлан хөтлөх', 180, endOfYear, null),
+          t('other', '1.3 Байгууллагын арга хэмжээнд оролцох', 10, endOfYear, 'public_event_attendance'),
+          t('other', '1.4 Санаачилсан ажил', 2, endOfYear, null),
+        ]
+      }
+      const { error } = await supabase.from('performance_plan').insert(items)
+      if (error) { alert('Алдаа: '+error.message); return }
+      load()
+      return
+    }
+    // === Teacher template ===
     const template = [
       // 1. ХИЧЭЭЛ, СУРГАЛТЫН АЖИЛ (12 зорилт)
       t('activity',    '1.1 Хичээлийн төлөвлөлт - жилийн хичээлийн төлөвлөгөө боловсруулах', 1, endOfYear, 'teacher_materials'),
@@ -236,8 +344,13 @@ export default function PerformancePlanPage() {
             <div className="flex items-center gap-4">
               <div className="text-5xl">📊</div>
               <div>
-                <h1 className="text-2xl font-bold">Гүйцэтгэлийн төлөвлөгөө</h1>
-                <p className="text-sm opacity-90 mt-1">Автомат биелэлт шалгалт · Хугацаа хэтэрсэн ажил</p>
+                <h1 className="text-2xl font-bold">Төлөвлөгөө биелэлт</h1>
+                <p className="text-sm opacity-90 mt-1">{(() => {
+                  const t = teachers.find(x => x.id === targetEmpId) || me
+                  const role = (t as any)?.role || me?.role
+                  const isT = role === 'bagsh' || role === 'bagsh_tuslah'
+                  return isT ? '👩‍🏫 Багшийн гүйцэтгэлийн төлөвлөгөө (48 зорилт)' : '👤 Үйл ажиллагааны төлөвлөгөө'
+                })()}</p>
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">
