@@ -68,8 +68,8 @@ export default function PerformancePlanPage() {
       file_url, file_name: file.name, uploaded_at: new Date().toISOString(),
     }, { onConflict: 'employee_id,school_year' })
     if (error) { alert('Алдаа: '+error.message); setUploading(false); return }
-    // Хэрэв .docx бол — автомат extract хийх санал
-    if (file.name.toLowerCase().endsWith('.docx') && confirm('Word файлаас зорилтуудыг автомат гарган импортлох уу?')) {
+    // .docx бол шууд импортлох
+    if (file.name.toLowerCase().endsWith('.docx')) {
       await importFromDocx(file)
     }
     setUploading(false)
