@@ -67,9 +67,75 @@ export default function PerformancePlanPage() {
       employee_id: targetEmpId, school_year: schoolYear,
       file_url, file_name: file.name, uploaded_at: new Date().toISOString(),
     }, { onConflict: 'employee_id,school_year' })
+    if (error) { alert('Алдаа: '+error.message); setUploading(false); return }
+    // Хэрэв .docx бол — автомат extract хийх санал
+    if (file.name.toLowerCase().endsWith('.docx') && confirm('Word файлаас зорилтуудыг автомат гарган импортлох уу?')) {
+      await importFromDocx(file)
+    }
     setUploading(false)
-    if (error) { alert('Алдаа: '+error.message); return }
     loadPlanDoc()
+  }
+
+  async function importFromDocx(file: File) {
+    try {
+      const mammoth = (await import('mammoth')).default || (await import('mammoth'))
+      const arrayBuffer = await file.arrayBuffer()
+      const result = await (mammoth as any).extractRawText({ arrayBuffer })
+      const text: string = result.value || ''
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 10 && l.length < 300)
+
+      // Шалгуур: "Арга хэмжээ N" эсвэл "N.N" хэлбэртэй мөрүүдийг зорилт гэж үзэх
+      const items: any[] = []
+      let chapterNum = '1'
+      const endOfYear = `${schoolYear + 1}-06-30`
+      const detectAuto = (title: string): string|null => {
+        const t = title.toLowerCase()
+        if (t.includes('ажиглалт')) return 'observations'
+        if (t.includes('хөгжмийн')) return 'music_activity'
+        if (t.includes('дугуйлан')) return 'club_activities'
+        if (t.includes('хөтөлбөр') || t.includes('төлөвлөгөө боловсруул') || t.includes('батлуул') || t.includes('хэрэглэгдэхүүн')) return 'teacher_materials'
+        if (t.includes('хичээлийн төлөвлөлт') || t.includes('хичээлийн бэлтгэл')) return 'plans'
+        return null
+      }
+      const detectCount = (title: string): number => {
+        const m = title.match(/\((\d{1,3})\)/) || title.match(/(\d{1,3})\s*(удаа|ширхэг|хичээл|ажил)/i)
+        return m ? parseInt(m[1]) : 1
+      }
+      const detectChapter = (line: string): string|null => {
+        const m = line.match(/^(\d\.\d)/)
+        return m ? m[1] : null
+      }
+      lines.forEach((line) => {
+        const chM = detectChapter(line)
+        if (chM) { chapterNum = chM; return }
+        const argaM = line.match(/^Арга\s*хэмжээ\s*[-–]?\s*(\d+)/i)
+        if (argaM) {
+          const num = parseInt(argaM[1])
+          const title = line.replace(/^Арга\s*хэмжээ\s*[-–]?\s*\d+\s*/i, '').replace(/^[:=\-\s]+/, '').trim() || `Арга хэмжээ ${num}`
+          const auto = detectAuto(title)
+          const count = detectCount(title)
+          items.push({
+            employee_id: targetEmpId, school_year: schoolYear, plan_type: 'performance',
+            category: auto ? (auto === 'observations' ? 'observation' : auto === 'music_activity' ? 'music' : auto === 'club_activities' ? 'club' : auto === 'teacher_materials' ? 'material' : 'activity') : 'other',
+            title, target_count: count, target_date: endOfYear, auto_rule: auto,
+            chapter_num: chapterNum, item_num: num,
+          })
+        }
+      })
+
+      if (items.length === 0) {
+        alert('Word файлаас "Арга хэмжээ" хэлбэртэй зорилт олдсонгүй. Шаблоноос үүсгэх товч ашиглана уу.')
+        return
+      }
+      if (!confirm(`${items.length} зорилт олдлоо. Одоогийн зорилтыг устгаад шинэчилж оруулах уу?`)) return
+      await supabase.from('performance_plan').delete().eq('employee_id', targetEmpId).eq('school_year', schoolYear)
+      const { error } = await supabase.from('performance_plan').insert(items)
+      if (error) { alert('Алдаа: '+error.message); return }
+      load()
+      alert(`✅ ${items.length} зорилт амжилттай импортлогдлоо!`)
+    } catch (e: any) {
+      alert('Файл задлахад алдаа гарлаа: ' + (e?.message || e))
+    }
   }
 
   async function removePlanDoc() {
