@@ -43,8 +43,40 @@ export default function PerformancePlanPage() {
   const [editing, setEditing] = useState<Plan|null>(null)
   const [form, setForm] = useState({ category: 'observation', title: '', target_count: 10, target_date: '', auto_rule: 'observations' as string|null, note: '' })
   const [saving, setSaving] = useState(false)
+  const [planDoc, setPlanDoc] = useState<any>(null)
+  const [uploading, setUploading] = useState(false)
 
   const isLeader = !!(me && (me.is_admin || me.role === 'erhlegch' || me.role === 'arga_zuich'))
+
+  async function loadPlanDoc() {
+    if (!targetEmpId) return
+    const { data } = await supabase.from('plan_document').select('*').eq('employee_id', targetEmpId).eq('school_year', schoolYear).maybeSingle()
+    setPlanDoc(data)
+  }
+  useEffect(() => { loadPlanDoc() }, [targetEmpId, schoolYear])
+
+  async function uploadPlanFile(file: File) {
+    if (!me) return
+    setUploading(true)
+    const path = `plan-docs/${schoolYear}_${targetEmpId}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
+    const { error: upErr } = await supabase.storage.from('org-plans').upload(path, file)
+    if (upErr) { alert('Файл алдаа: '+upErr.message); setUploading(false); return }
+    const { data: pub } = supabase.storage.from('org-plans').getPublicUrl(path)
+    const file_url = pub?.publicUrl || null
+    const { error } = await supabase.from('plan_document').upsert({
+      employee_id: targetEmpId, school_year: schoolYear,
+      file_url, file_name: file.name, uploaded_at: new Date().toISOString(),
+    }, { onConflict: 'employee_id,school_year' })
+    setUploading(false)
+    if (error) { alert('Алдаа: '+error.message); return }
+    loadPlanDoc()
+  }
+
+  async function removePlanDoc() {
+    if (!planDoc || !confirm('Файлыг устгах уу?')) return
+    await supabase.from('plan_document').delete().eq('id', planDoc.id)
+    setPlanDoc(null)
+  }
 
   useEffect(() => {
     if (!me) return
@@ -372,6 +404,31 @@ export default function PerformancePlanPage() {
               {canEdit && <button onClick={openAdd} className="bg-white text-indigo-700 hover:bg-white/90 px-3 py-1.5 rounded-lg text-sm font-semibold">+ Шинэ зорилт</button>}
             </div>
           </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-4 flex items-center gap-3 flex-wrap">
+          <div className="text-3xl">📄</div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-slate-800">Жилийн төлөвлөгөөний эх файл</div>
+            {planDoc?.file_url ? (
+              <div className="text-sm text-slate-600 mt-0.5">
+                <a href={planDoc.file_url} target="_blank" rel="noopener" className="text-blue-600 hover:text-blue-800">📎 {planDoc.file_name || 'Файл харах'}</a>
+                <span className="text-xs text-slate-400 ml-2">{planDoc.uploaded_at?.slice(0,10)}</span>
+              </div>
+            ) : (
+              <div className="text-sm text-slate-500 mt-0.5">Word, PDF форматаар хавсаргаж болно (жишээ: албан ёсны төлөвлөгөө)</div>
+            )}
+          </div>
+          {canEdit && (
+            <div className="flex gap-2">
+              <label className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm font-medium cursor-pointer">
+                {uploading ? 'Хуулж байна...' : (planDoc ? '📄 Солих' : '📎 Файл хавсаргах')}
+                <input type="file" className="hidden" accept=".pdf,.doc,.docx,.ppt,.pptx,.xlsx,.xls,image/*"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPlanFile(f) }} disabled={uploading} />
+              </label>
+              {planDoc && <button onClick={removePlanDoc} className="text-red-600 hover:text-red-800 text-sm px-2">Устгах</button>}
+            </div>
+          )}
         </div>
 
         {total > 0 && (
