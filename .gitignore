@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# дотоод лавлах (нууц, холбоос агуулсан): git-д оруулахгүй
+SYSTEM_INFO.md
