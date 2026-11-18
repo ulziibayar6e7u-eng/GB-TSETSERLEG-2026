@@ -59,6 +59,9 @@ export default function AjiglltPage() {
   })
   const [outcomes, setOutcomes] = useState<{ id: number; code: string; text: string; area_code: string; age_group: string }[]>([])
   const [filterChild, setFilterChild] = useState('')
+  const [exp, setExp] = useState<{ open: boolean; childId: string; all: boolean; month: string; busy: boolean; progress: string }>({
+    open: false, childId: '', all: true, month: new Date().toISOString().slice(0, 7), busy: false, progress: '',
+  })
   const [filterArea, setFilterArea] = useState('')
 
   async function load() {
@@ -245,6 +248,85 @@ export default function AjiglltPage() {
     load()
   }
 
+  // Бичлэгийн дундаас нэг кадрыг зураг (JPEG data URL) болгон авна. Амжилтгүй бол null.
+  function videoFrame(url: string): Promise<string | null> {
+    return new Promise((resolve) => {
+      const v = document.createElement('video')
+      let done = false
+      const finish = (r: string | null) => { if (!done) { done = true; v.removeAttribute('src'); v.load(); resolve(r) } }
+      const timer = setTimeout(() => finish(null), 20000)
+      v.muted = true
+      v.preload = 'auto'
+      v.crossOrigin = 'anonymous'
+      v.playsInline = true
+      v.onerror = () => { clearTimeout(timer); finish(null) }
+      v.onloadedmetadata = () => {
+        const d = isFinite(v.duration) ? v.duration : 0
+        v.currentTime = d > 0 ? Math.min(d / 2, d - 0.1 > 0 ? d - 0.1 : 0) : 0
+      }
+      v.onseeked = () => {
+        try {
+          const w0 = v.videoWidth, h0 = v.videoHeight
+          if (!w0 || !h0) { clearTimeout(timer); return finish(null) }
+          const s = Math.min(1, 640 / Math.max(w0, h0))
+          const c = document.createElement('canvas')
+          c.width = Math.round(w0 * s); c.height = Math.round(h0 * s)
+          c.getContext('2d')!.drawImage(v, 0, 0, c.width, c.height)
+          clearTimeout(timer)
+          finish(c.toDataURL('image/jpeg', 0.7))
+        } catch { clearTimeout(timer); finish(null) }
+      }
+      v.src = url
+    })
+  }
+
+  // Нэг хүүхдийн ажиглалтыг зурагтай нь Word файлаар татах. Эрхийг сервер шалгана.
+  async function downloadChild() {
+    if (!exp.childId) { alert('Хүүхэд сонгоно уу'); return }
+    setExp((x) => ({ ...x, busy: true }))
+    try {
+      const period = exp.all ? 'all' : exp.month
+      const post = (extra: object) => fetch('/api/ajigllt-export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ childId: exp.childId, period, ...extra }),
+      })
+      // 1) Бичлэг байвал жагсаалтыг аваад, браузер дээрээ кадр (зураг) болгоно
+      const frames: Record<string, string> = {}
+      const lr = await post({ listVideos: true })
+      if (lr.ok) {
+        const { videos } = (await lr.json()) as { videos: string[] }
+        for (let i = 0; i < videos.length; i++) {
+          setExp((x) => ({ ...x, progress: `Бичлэгээс зураг авч байна ${i + 1}/${videos.length}` }))
+          const f = await videoFrame(videos[i])
+          if (f) frames[videos[i]] = f
+        }
+      }
+      setExp((x) => ({ ...x, progress: '' }))
+      // 2) Файл бүтээлгэх
+      const res = await post({ frames })
+      if (!res.ok) {
+        const j = await res.json().catch(() => null)
+        alert(j?.error || 'Татаж чадсангүй')
+        return
+      }
+      const blob = await res.blob()
+      const c = children.find((x) => x.id === exp.childId)
+      const name = c ? `${c.last_name}.${c.first_name}` : 'khuukhed'
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Ajiglalt_${name}_${exp.all ? 'bukh-hugatsaa' : exp.month}.docx`
+      a.click()
+      URL.revokeObjectURL(url)
+      setExp((x) => ({ ...x, open: false }))
+    } catch {
+      alert('Сүлжээний алдаа. Дахин оролдоно уу.')
+    } finally {
+      setExp((x) => ({ ...x, busy: false }))
+    }
+  }
+
   async function remove(o: Observation) {
     if (!confirm('Энэ ажиглалтыг устгах уу?')) return
     await supabase.from('observations').delete().eq('id', o.id)
@@ -262,6 +344,7 @@ export default function AjiglltPage() {
             <p className="text-sm text-slate-500 mt-1">Нийт {filtered.length} тэмдэглэл</p>
           </div>
           <div className="flex gap-2">
+            <button onClick={()=>setExp((x)=>({ ...x, open: true, childId: '' }))} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg font-medium shadow-sm">📄 Хүүхдээр татах</button>
             <button onClick={()=>setShowReport(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-medium shadow-sm">📊 Сарын нэгтгэл</button>
             <button
               onClick={() => openAdd()}
@@ -353,6 +436,11 @@ export default function AjiglltPage() {
                       )}
                     </div>
                     <div className="flex gap-1 flex-shrink-0">
+                      {!String(o.id).startsWith('music-') && !String(o.id).startsWith('ass-') && (
+                        <button onClick={() => setExp((x) => ({ ...x, open: true, childId: o.child_id }))} className="text-indigo-600 hover:text-indigo-800 text-xs px-2 py-1">
+                          Татах
+                        </button>
+                      )}
                       <button onClick={() => openEdit(o)} className="text-blue-600 hover:text-blue-800 text-xs px-2 py-1">
                         Засах
                       </button>
@@ -519,6 +607,42 @@ export default function AjiglltPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {exp.open && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="p-5 border-b border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-800">📄 Хүүхдийн ажиглалт татах (Word)</h2>
+              <p className="text-xs text-slate-500 mt-1">Сонгосон хүүхдийн ажиглалтыг зурагтай нь нэг файл болгоно.</p>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Хүүхэд</label>
+                <select value={exp.childId} onChange={(e) => setExp({ ...exp, childId: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2">
+                  <option value="">-- Сонгох --</option>
+                  {availableChildren.map((c) => (
+                    <option key={c.id} value={c.id}>{c.last_name}.{c.first_name}{c.groups ? ` (${c.groups.name})` : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Хугацаа</label>
+                <div className="flex gap-3 items-center flex-wrap">
+                  <label className="flex items-center gap-1 text-sm"><input type="radio" checked={exp.all} onChange={() => setExp({ ...exp, all: true })} /> Бүх хугацаа</label>
+                  <label className="flex items-center gap-1 text-sm"><input type="radio" checked={!exp.all} onChange={() => setExp({ ...exp, all: false })} /> Сараар</label>
+                  {!exp.all && <input type="month" value={exp.month} onChange={(e) => setExp({ ...exp, month: e.target.value })} className="border border-slate-300 rounded-lg px-2 py-1 text-sm" />}
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => setExp({ ...exp, open: false })} disabled={exp.busy} className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-medium">Болих</button>
+                <button onClick={downloadChild} disabled={exp.busy || !exp.childId} className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-medium">
+                  {exp.busy ? (exp.progress || 'Бэлтгэж байна...') : '⬇️ Татах'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
