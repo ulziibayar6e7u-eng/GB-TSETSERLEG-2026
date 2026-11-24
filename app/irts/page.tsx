@@ -20,6 +20,9 @@ function today() {
   return new Date().toISOString().split('T')[0]
 }
 
+// Ирцийн хуудсанд харуулдаггүй бүлгүүд (сонголтын жагсаалтаас нууцлагдана)
+const EXCLUDED_CODES = new Set(['hogjim', 'huvilbart'])
+
 export default function IrtsPage() {
   const supabase = useMemo(() => createClient(), [])
   const { me, loading: meLoading } = useMe()
@@ -39,10 +42,12 @@ export default function IrtsPage() {
 
       if (!me) return
       const canAll = canSeeAllChildren(me.role, me.is_admin)
+      // Нууцлагдсан бүлгийг эхний сонголт болгохгүй (өөрөөр хүүхэд харагдахгүй)
       if (canAll) {
-        setGroupId((prev) => prev ?? gs[0]?.id ?? null)
-      } else if (me.groups.length > 0) {
-        setGroupId((prev) => prev ?? me.groups[0].id)
+        setGroupId((prev) => prev ?? gs.find((g) => !EXCLUDED_CODES.has(g.code))?.id ?? null)
+      } else {
+        const first = me.groups.find((g) => !EXCLUDED_CODES.has(g.code))
+        if (first) setGroupId((prev) => prev ?? first.id)
       }
     })()
   }, [me, supabase])
@@ -115,7 +120,7 @@ export default function IrtsPage() {
     return s
   }, [children, attMap])
 
-  const excludedCodes = new Set(['hogjim', 'huvilbart'])
+  const excludedCodes = EXCLUDED_CODES
   const currentGroup = groups.find((g) => g.id === groupId)
   const availableGroups = (me && !canSeeAllChildren(me.role, me.is_admin)
     ? groups.filter((g) => me.groups.some((mg) => mg.id === g.id))

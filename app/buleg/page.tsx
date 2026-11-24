@@ -76,18 +76,20 @@ export default function BulegPage() {
 
   async function addTeacher() {
     if (!selected || !addEmpId) return
-    await supabase.from('group_teachers').insert({
+    const { error } = await supabase.from('group_teachers').insert({
       group_id: selected.id,
       employee_id: addEmpId,
       role_in_group: addRole,
     })
+    if (error) alert('Багш нэмэхэд алдаа гарлаа: ' + error.message)
     setAddEmpId('')
     loadAll()
   }
 
   async function removeTeacher(id: number) {
     if (!confirm('Багшийг бүлгээс хасах уу?')) return
-    await supabase.from('group_teachers').delete().eq('id', id)
+    const { error } = await supabase.from('group_teachers').delete().eq('id', id)
+    if (error) alert('Хасахад алдаа гарлаа: ' + error.message)
     loadAll()
   }
 
