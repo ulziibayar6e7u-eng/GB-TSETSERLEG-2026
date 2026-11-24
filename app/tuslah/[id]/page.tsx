@@ -5,6 +5,7 @@ import { use, useEffect, useMemo, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import { useMe } from '@/lib/useMe'
+import { videoFrame } from '@/lib/video-frame'
 
 type Employee = { id: string; last_name: string; first_name: string; positions?: { name: string } }
 type Child = { id: string; last_name: string; first_name: string }
@@ -88,6 +89,7 @@ function Inner({ id }: { id: string }) {
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [reviewNote, setReviewNote] = useState('')
   const [viewMode, setViewMode] = useState<'list' | 'monthly'>('list')
+  const [exp, setExp] = useState({ open: false, category: 'all', all: true, month: new Date().toISOString().slice(0, 7), busy: false, progress: '' })
 
   const [tuslahGroups, setTuslahGroups] = useState<number[]>([])
   const [hygieneMonths, setHygieneMonths] = useState<{ month: string; rinse: number; wash: number; brush: number }[]>([])
@@ -265,6 +267,48 @@ function Inner({ id }: { id: string }) {
     URL.revokeObjectURL(url)
   }
 
+  // Туслахын бүртгэлийг зурагтай нь Word файлаар татах. Эрхийг сервер шалгана.
+  async function downloadWord() {
+    setExp((x) => ({ ...x, busy: true }))
+    try {
+      const period = exp.all ? 'all' : exp.month
+      const post = (extra: object) => fetch('/api/tuslah-export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeId: id, category: exp.category, period, ...extra }),
+      })
+      const frames: { [url: string]: string } = {}
+      const lr = await post({ listVideos: true })
+      if (lr.ok) {
+        const { videos } = (await lr.json()) as { videos: string[] }
+        for (let i = 0; i < videos.length; i++) {
+          setExp((x) => ({ ...x, progress: `Бичлэгээс зураг авч байна ${i + 1}/${videos.length}` }))
+          const f = await videoFrame(videos[i])
+          if (f) frames[videos[i]] = f
+        }
+      }
+      setExp((x) => ({ ...x, progress: '' }))
+      const res = await post({ frames })
+      if (!res.ok) {
+        const j = await res.json().catch(() => null)
+        alert(j?.error || 'Татаж чадсангүй')
+        return
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Tuslah_${emp?.last_name || ''}.${emp?.first_name || ''}_${exp.category}_${exp.all ? 'bukh-hugatsaa' : exp.month}.docx`
+      a.click()
+      URL.revokeObjectURL(url)
+      setExp((x) => ({ ...x, open: false }))
+    } catch {
+      alert('Сүлжээний алдаа. Дахин оролдоно уу.')
+    } finally {
+      setExp((x) => ({ ...x, busy: false }))
+    }
+  }
+
   async function remove(r: Record) {
     if (!confirm('Устгах уу?')) return
     await supabase.from('tuslah_records').delete().eq('id', r.id)
@@ -318,12 +362,53 @@ function Inner({ id }: { id: string }) {
               {CATS[k].icon} {CATS[k].label}
             </button>
           ))}
-          {isOwner && (
-            <button onClick={openAdd} className="ml-auto bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium text-sm">
-              + Бүртгэл нэмэх
-            </button>
-          )}
+          <div className="ml-auto flex gap-2">
+            {(isOwner || canReview || isSameGroupBagsh) && (
+              <button onClick={() => setExp((x) => ({ ...x, open: true }))} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium text-sm">
+                📄 Word татах
+              </button>
+            )}
+            {isOwner && (
+              <button onClick={openAdd} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium text-sm">
+                + Бүртгэл нэмэх
+              </button>
+            )}
+          </div>
         </div>
+
+        {exp.open && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+              <div className="p-5 border-b border-slate-200">
+                <h2 className="text-lg font-semibold text-slate-800">📄 Бүртгэл татах (Word)</h2>
+                <p className="text-xs text-slate-500 mt-1">{emp.last_name}.{emp.first_name}-ийн бүртгэлийг зурагтай нь нэг файл болгоно.</p>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Ангилал</label>
+                  <select value={exp.category} onChange={(e) => setExp({ ...exp, category: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2">
+                    <option value="all">Бүх ангилал</option>
+                    {(Object.keys(CATS) as CatKey[]).map((k) => (<option key={k} value={k}>{CATS[k].icon} {CATS[k].label}</option>))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Хугацаа</label>
+                  <div className="flex gap-3 items-center flex-wrap">
+                    <label className="flex items-center gap-1 text-sm"><input type="radio" checked={exp.all} onChange={() => setExp({ ...exp, all: true })} /> Бүх хугацаа</label>
+                    <label className="flex items-center gap-1 text-sm"><input type="radio" checked={!exp.all} onChange={() => setExp({ ...exp, all: false })} /> Сараар</label>
+                    {!exp.all && <input type="month" value={exp.month} onChange={(e) => setExp({ ...exp, month: e.target.value })} className="border border-slate-300 rounded-lg px-2 py-1 text-sm" />}
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => setExp({ ...exp, open: false })} disabled={exp.busy} className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-medium">Болих</button>
+                  <button onClick={downloadWord} disabled={exp.busy} className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-medium">
+                    {exp.busy ? (exp.progress || 'Бэлтгэж байна...') : '⬇️ Татах'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {records.length > 0 && (() => {
           const byMonth = new Map<string, number>()

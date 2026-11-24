@@ -58,15 +58,17 @@ window.STAFF_LIST_DEFAULT = [
   // ── Заах аргын нэгдэл ──
   { id: "methodist_1",        role: "methodist",        name: "С.Саранчимэг",      phone: "" },
   { id: "music_teacher_1",    role: "music_teacher",    name: "Г.Өлзийбаяр",       phone: "" },
-  { id: "teacher_alt_1",      role: "teacher_alt",      name: "О.Билэгсайхан",     phone: "" },
+  // 2026-11-24: О.Билэгсайхан дунд бүлгийн багш болсон, Н.Амарбаясгалан хувилбарт сургалтын багш болсон.
+  // Түүхийг алдахгүйн тулд хүн бүрийн id-г хэвээр үлдээж, зөвхөн role-ийг сольсон.
+  { id: "teacher_alt_1",      role: "teacher_dund",     name: "О.Билэгсайхан",     phone: "" },
   { id: "teacher_beltgel_1",  role: "teacher_beltgel",  name: "Б.Тунгалаг",        phone: "" },
   { id: "assistant_beltgel_1",role: "assistant_beltgel",name: "П.Сайнзаяа",        phone: "" },
   { id: "teacher_ahlah_1",    role: "teacher_ahlah",    name: "Л.Отгонзаяа",       phone: "" },
   { id: "assistant_ahlah_1",  role: "assistant_ahlah",  name: "Ө.Элбэгзаяа",       phone: "" },
-  { id: "teacher_dund_1",     role: "teacher_dund",     name: "П.Эрдэнэцэцэг",     phone: "" },
+  { id: "assistant_ahlah_2",  role: "assistant_ahlah",  name: "Б.Булгамаа",        phone: "" },
   { id: "assistant_dund_1",   role: "assistant_dund",   name: "Д.Уранчимэг",       phone: "" },
   { id: "teacher_baga_1",     role: "teacher_baga",     name: "М.Баяржаргал",      phone: "" },
-  { id: "assistant_baga_1",   role: "assistant_baga",   name: "Н.Амарбаясгалан",   phone: "" },
+  { id: "assistant_baga_1",   role: "teacher_alt",      name: "Н.Амарбаясгалан",   phone: "" },
   // ── Захиргаа, аж ахуй ──
   { id: "accountant_1",       role: "accountant",       name: "Б.Дэлгэрдалай",     phone: "" },
   { id: "storekeeper_1",      role: "storekeeper",      name: "Б.Тэгшдэлгэр",      phone: "" },
@@ -84,6 +86,26 @@ try {
   const saved = localStorage.getItem('staff_list_v2');
   window.STAFF_LIST = saved ? JSON.parse(saved) : [...window.STAFF_LIST_DEFAULT];
 } catch(e) { window.STAFF_LIST = [...window.STAFF_LIST_DEFAULT]; }
+
+// Нэг удаагийн шинэчлэл (2026-11-24): browser-т хадгалагдсан хуучин жагсаалтад өөрчлөлтийг хэрэгжүүлнэ.
+// Эрхлэгчийн өөрөө хийсэн бусад засварыг хэвээр үлдээнэ.
+try {
+  if (!localStorage.getItem('staff_patch_2026_11_24')) {
+    const REMOVE = ['teacher_dund_1'];                       // П.Эрдэнэцэцэг
+    const DEFAULT_BY_ID = Object.fromEntries(window.STAFF_LIST_DEFAULT.map(s => [s.id, s]));
+    const list = window.STAFF_LIST.filter(s => !REMOVE.includes(s.id));
+    ['teacher_alt_1', 'assistant_baga_1'].forEach(id => {     // албан тушаал нь солигдсон
+      const cur = list.find(s => s.id === id), d = DEFAULT_BY_ID[id];
+      if (cur && d) { cur.role = d.role; cur.name = d.name; }
+    });
+    ['assistant_ahlah_2'].forEach(id => {                     // шинээр нэмэгдсэн (Б.Булгамаа)
+      if (!list.find(s => s.id === id) && DEFAULT_BY_ID[id]) list.push({ ...DEFAULT_BY_ID[id] });
+    });
+    window.STAFF_LIST = list;
+    localStorage.setItem('staff_list_v2', JSON.stringify(list));
+    localStorage.setItem('staff_patch_2026_11_24', '1');
+  }
+} catch(e) { console.warn(e); }
 
 // STAFF_LIST хадгалах
 window.saveStaffList = function() {
